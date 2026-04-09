@@ -23,6 +23,7 @@ module.exports = (env, argv) => [
       rules: [{ test: /\.ts$/, use: "ts-loader", exclude: /node_modules/ }],
     },
     resolve: { extensions: [".ts", ".js"] },
+    devtool: false,
     mode: argv.mode || "production",
     target: "web",
   },
@@ -38,6 +39,7 @@ module.exports = (env, argv) => [
       rules: [{ test: /\.ts$/, use: "ts-loader", exclude: /node_modules/ }],
     },
     resolve: { extensions: [".ts", ".js"] },
+    devtool: false,
     plugins: [
       new HtmlWebpackPlugin({
         template: "./src/ui.html",
