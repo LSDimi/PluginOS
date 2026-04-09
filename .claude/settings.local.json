@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"https://www.google.com/search?q=Figma+plugin+API+install+programmatically+run+trigger+REST+API+2024+2025\" -H \"User-Agent: Mozilla/5.0\")",
+      "Bash(curl -s \"https://www.google.com/search?q=Figma+MCP+server+use_figma+tool+plugin+API+code+execute\" -H \"User-Agent: Mozilla/5.0\")",
+      "Bash(curl -s \"https://www.google.com/search?q=headless+Figma+plugin+sandbox+run+outside+client+figma-plugin-ds\" -H \"User-Agent: Mozilla/5.0\")",
+      "Bash(curl -s \"https://www.google.com/search?q=Figma+plugin+sideload+install+URL+org+deployment+distribution+mechanism\" -H \"User-Agent: Mozilla/5.0\")",
+      "Bash(curl -s \"https://www.google.com/search?q=%22figma+agent%22+OR+%22run+figma+plugin+programmatically%22+OR+%22automate+figma+plugin%22+open+source+github\" -H \"User-Agent: Mozilla/5.0\")",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:developers.figma.com)",
+      "WebFetch(domain:forum.figma.com)",
+      "Bash(npm list:*)",
+      "Bash(gh api:*)",
+      "Bash(gh search:*)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(npm search:*)",
+      "WebFetch(domain:help.figma.com)",
+      "Bash(npm view:*)",
+      "WebFetch(domain:www.figma.com)",
+      "WebFetch(domain:docs.figma-console-mcp.southleft.com)",
+      "Bash(curl -s \"https://www.google.com/search?q=most+popular+figma+plugins+2025+by+installs\" -H \"User-Agent: Mozilla/5.0\")",
+      "Bash(curl -s \"https://www.google.com/search?q=top+figma+plugins+2025+list+categories\" -H \"User-Agent: Mozilla/5.0\")",
+      "Bash(curl -s \"https://www.google.com/search?q=best+figma+plugins+for+designers+2025+comprehensive+list\" -H \"User-Agent: Mozilla/5.0\")",
+      "WebFetch(domain:www.toools.design)",
+      "WebFetch(domain:tilda.education)",
+      "WebFetch(domain:story.to.design)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)"
+    ]
+  }
+}

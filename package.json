@@ -1,0 +1,11 @@
+{
+  "name": "pluginos",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces --if-present",
+    "dev:server": "npm run dev -w packages/mcp-server",
+    "dev:plugin": "npm run dev -w packages/bridge-plugin"
+  }
+}

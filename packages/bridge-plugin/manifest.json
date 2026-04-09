@@ -1,0 +1,24 @@
+{
+  "name": "PluginOS Bridge",
+  "id": "pluginos-bridge",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": [
+      "ws://localhost:9500",
+      "ws://localhost:9501",
+      "ws://localhost:9502",
+      "ws://localhost:9503",
+      "ws://localhost:9504",
+      "ws://localhost:9505",
+      "ws://localhost:9506",
+      "ws://localhost:9507",
+      "ws://localhost:9508",
+      "ws://localhost:9509",
+      "ws://localhost:9510"
+    ]
+  },
+  "permissions": ["teamlibrary"]
+}
