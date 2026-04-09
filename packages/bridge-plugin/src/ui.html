@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 12px;
+      margin: 8px;
+      color: var(--figma-color-text, #333);
+      background: var(--figma-color-bg, #fff);
+    }
+    .status { display: flex; align-items: center; gap: 6px; }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #e74c3c;
+    }
+    .dot.connected { background: #2ecc71; }
+    .info { margin-top: 8px; color: var(--figma-color-text-secondary, #888); font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div class="status">
+    <div class="dot" id="dot"></div>
+    <span id="status-text">Connecting...</span>
+  </div>
+  <div class="info" id="info"></div>
+</body>
+</html>

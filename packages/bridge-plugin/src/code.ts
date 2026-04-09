@@ -1,0 +1,99 @@
+import { getOperation, listOperations } from "./operations/index";
+import { safeSerialize } from "./utils/serializer";
+
+// Show the UI (which handles WebSocket)
+figma.showUI(__html__, { width: 200, height: 60, visible: true });
+
+// Send file status to MCP server on connection
+function sendFileStatus(): void {
+  const fileKey = figma.fileKey;
+  const fileName = figma.root.name;
+  const currentPage = figma.currentPage.name;
+
+  figma.ui.postMessage({
+    type: "ws-send",
+    payload: {
+      type: "status",
+      fileKey: fileKey || "unknown",
+      fileName,
+      currentPage,
+    },
+  });
+}
+
+// Handle messages from the UI (which come from the WebSocket)
+figma.ui.onmessage = async (msg: any) => {
+  if (msg.type === "ws-connected") {
+    sendFileStatus();
+    return;
+  }
+
+  if (msg.type === "ws-disconnected") {
+    return;
+  }
+
+  if (msg.type === "ws-message") {
+    const data = msg.payload;
+    await handleServerMessage(data);
+  }
+};
+
+async function handleServerMessage(msg: any): Promise<void> {
+  const { id, type } = msg;
+
+  try {
+    if (type === "run_operation") {
+      const { operation, params } = msg;
+
+      // Special internal operation: list all operations
+      if (operation === "__list_operations") {
+        const manifests = listOperations(params?.category || undefined);
+        sendResult(id, true, manifests);
+        return;
+      }
+
+      const handler = getOperation(operation);
+      if (!handler) {
+        sendResult(id, false, undefined, `Unknown operation: '${operation}'`);
+        return;
+      }
+
+      const startTime = Date.now();
+      const result = await handler.execute(params || {});
+      const duration = Date.now() - startTime;
+      sendResult(id, true, { ...safeSerialize(result) as object, _duration_ms: duration });
+    } else if (type === "execute") {
+      const { code, timeout } = msg;
+      const wrappedCode = `(async function() {\n${code}\n})()`;
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Execution timed out after ${timeout}ms`)),
+          timeout
+        )
+      );
+
+      const codePromise = eval(wrappedCode);
+      const result = await Promise.race([codePromise, timeoutPromise]);
+      sendResult(id, true, safeSerialize(result));
+    }
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    sendResult(id, false, undefined, errorMessage);
+  }
+}
+
+function sendResult(
+  id: string,
+  success: boolean,
+  result?: unknown,
+  error?: string
+): void {
+  figma.ui.postMessage({
+    type: "ws-send",
+    payload: { id, type: "result", success, result, error },
+  });
+}
+
+// Update status when page changes
+figma.on("currentpagechange", sendFileStatus);
