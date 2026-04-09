@@ -1,4 +1,4 @@
-import { registerOperation } from "./index";
+import { registerOperation } from "./registry";
 
 // --- find_instances ---
 registerOperation({

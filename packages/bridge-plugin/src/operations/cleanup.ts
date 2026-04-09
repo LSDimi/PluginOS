@@ -1,4 +1,4 @@
-import { registerOperation } from "./index";
+import { registerOperation } from "./registry";
 
 // --- rename_layers ---
 registerOperation({
