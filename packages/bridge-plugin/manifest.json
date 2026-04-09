@@ -7,7 +7,8 @@
   "ui": "dist/ui.html",
   "documentAccess": "dynamic-page",
   "networkAccess": {
-    "allowedDomains": [
+    "allowedDomains": ["none"],
+    "devAllowedDomains": [
       "ws://localhost:9500",
       "ws://localhost:9501",
       "ws://localhost:9502",
@@ -19,7 +20,8 @@
       "ws://localhost:9508",
       "ws://localhost:9509",
       "ws://localhost:9510"
-    ]
+    ],
+    "reasoning": "Connects to local PluginOS MCP server via WebSocket for agent-driven operations"
   },
   "permissions": ["teamlibrary"]
 }
