@@ -2,6 +2,14 @@ const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const HtmlInlineScriptPlugin = require("html-inline-script-webpack-plugin");
 
+const noModernSyntax = {
+  arrowFunction: true,
+  const: true,
+  destructuring: true,
+  forOf: true,
+  optionalChaining: false,
+};
+
 module.exports = (env, argv) => [
   // Plugin code (sandbox)
   {
@@ -9,6 +17,7 @@ module.exports = (env, argv) => [
     output: {
       filename: "code.js",
       path: path.resolve(__dirname, "dist"),
+      environment: noModernSyntax,
     },
     module: {
       rules: [{ test: /\.ts$/, use: "ts-loader", exclude: /node_modules/ }],
@@ -23,6 +32,7 @@ module.exports = (env, argv) => [
     output: {
       filename: "ui-bundle.js",
       path: path.resolve(__dirname, "dist"),
+      environment: noModernSyntax,
     },
     module: {
       rules: [{ test: /\.ts$/, use: "ts-loader", exclude: /node_modules/ }],
