@@ -8,11 +8,11 @@ Traditional Figma MCP integrations register dozens of tools — each with a full
 
 PluginOS takes a fundamentally different approach:
 
-- **4 MCP tools, unlimited operations.** The server is a thin router. Operations are discovered dynamically, not hardcoded as tool schemas. Your agent's context stays clean.
+- **5 MCP tools, unlimited operations.** The server is a thin router. Operations are discovered dynamically, not hardcoded as tool schemas. Your agent's context stays clean.
 - **15x cheaper per workflow.** A complex multi-step task (audit, fix, rename, export) costs ~6,600 tokens with PluginOS vs ~105,000 with traditional approaches. That's 94% savings that compound across users and sessions.
 - **Pre-summarized results.** Operations return structured summaries ("Checked 12 text nodes. 10 pass WCAG AA, 2 fail."), not raw node dumps. Agents reason better with less noise.
 - **Extensible by design.** Add custom operations as simple manifest + execute pairs. Drop them in, register, done — no server changes needed.
-- **Embeddable.** 4 tools integrate cleanly into any agent. No namespace pollution, no config bloat.
+- **Embeddable.** 5 tools integrate cleanly into any agent. No namespace pollution, no config bloat.
 
 ## Quick Start
 
@@ -65,7 +65,7 @@ The agent calls `execute_figma` with a short script → plugin runs it with full
 
 ```
 Agent ─── MCP (stdio) ──→ PluginOS Server ─── WebSocket ──→ Bridge Plugin ──→ Figma
-          4 tools            thin router         localhost       13+ operations    full API
+          5 tools            thin router         localhost       28 operations     full API
           ~600 tokens        sends names +       ports 9500-     executes locally  figma.*
           per turn           params only         9510            returns summaries
 ```
@@ -90,18 +90,31 @@ Scripts travel over WebSocket (free) — they never enter the LLM context.
 | `check_touch_targets` | accessibility | Touch target size check |
 | `find_instances` | components | Find component instances |
 | `analyze_overrides` | components | Report instance overrides |
+| `create_frame` | components | Create frames with auto-layout |
+| `clone_node` | components | Clone and reposition nodes |
 | `rename_layers` | cleanup | Batch rename layers |
 | `remove_hidden` | cleanup | Remove hidden layers |
 | `round_values` | cleanup | Round fractional values |
+| `delete_node` | cleanup | Delete nodes by ID |
 | `list_variables` | tokens | List all variables |
 | `export_tokens` | tokens | Export tokens as JSON |
 | `audit_spacing` | layout | Audit spacing values |
+| `move_node` | layout | Move nodes to new positions |
+| `resize_node` | layout | Resize nodes |
+| `set_fills` | colors | Set fill colors on nodes |
+| `extract_palette` | colors | Extract unique colors with counts |
+| `find_non_style_colors` | colors | Find hardcoded (unstyled) colors |
+| `audit_text_styles` | typography | Audit font/size/weight consistency |
+| `list_fonts` | typography | List all fonts with usage counts |
+| `set_text` | content | Set text content on nodes |
+| `populate_text` | content | Fill text with lorem or custom text |
+| `extract_css` | export | Extract CSS properties from nodes |
 
 ## Token Economics
 
 | Scenario | Traditional MCP | PluginOS | Savings |
 |----------|----------------|----------|---------|
-| Tool schema overhead (per turn) | ~12,000 tokens | ~600 tokens | 95% |
+| Tool schema overhead (per turn) | ~12,000 tokens | ~650 tokens | 95% |
 | Single operation call | ~1,500 tokens | ~230 tokens | 85% |
 | Complex workflow (8 steps) | ~105,000 tokens | ~6,600 tokens | 94% |
 | 10 users × 5 runs/day × 30 days | ~157M tokens | ~10M tokens | 94% |
@@ -154,7 +167,7 @@ packages/
 npm install
 npm run dev:server    # MCP server with hot reload
 npm run dev:plugin    # Webpack watch for bridge plugin
-npm test              # 16 tests across all packages
+npm test              # 22 tests across all packages
 ```
 
 ## License
