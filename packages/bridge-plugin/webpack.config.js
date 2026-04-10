@@ -27,7 +27,7 @@ module.exports = (env, argv) => [
     mode: argv.mode || "production",
     target: "web",
   },
-  // Plugin UI (iframe) — must be a single self-contained HTML file
+  // Plugin UI (iframe) — full UI served by HTTP server for bootloader
   {
     entry: "./src/ui-entry.ts",
     output: {
@@ -50,5 +50,18 @@ module.exports = (env, argv) => [
     ],
     mode: argv.mode || "production",
     target: "web",
+  },
+  // Bootloader — minimal HTML shell that fetches fresh UI from MCP server
+  {
+    entry: {},
+    output: { path: path.resolve(__dirname, "dist") },
+    plugins: [
+      new HtmlWebpackPlugin({
+        template: "./src/bootloader.html",
+        filename: "bootloader.html",
+        inject: false,
+      }),
+    ],
+    mode: argv.mode || "production",
   },
 ];

@@ -1,4 +1,5 @@
 import { WebSocketServer, WebSocket } from "ws";
+import type { Server } from "http";
 import type {
   ServerToPluginMessage,
   ResultMessage,
@@ -22,10 +23,12 @@ interface PendingRequest {
 
 interface WebSocketServerOptions {
   portRange?: [number, number];
+  httpServer?: Server;
 }
 
 export class PluginOSWebSocketServer {
   private wss: WebSocketServer | null = null;
+  private httpServer: Server | null = null;
   private files = new Map<string, ConnectedFile>();
   private activeFileKey: string | null = null;
   private port: number | null = null;
@@ -36,6 +39,7 @@ export class PluginOSWebSocketServer {
     this.options = {
       portRange: options?.portRange ?? [9500, 9510],
     };
+    this.httpServer = options?.httpServer ?? null;
   }
 
   async start(): Promise<number> {
@@ -54,24 +58,33 @@ export class PluginOSWebSocketServer {
 
   private tryPort(port: number): Promise<void> {
     return new Promise((resolve, reject) => {
-      const wss = new WebSocketServer({
-        port,
-        verifyClient: (info, cb) => {
-          const origin = info.origin;
-          const allowed =
-            !origin ||
-            origin === "null" ||
-            origin.startsWith("https://www.figma.com") ||
-            origin.startsWith("https://figma.com");
-          cb(allowed);
-        },
-      });
-      wss.on("listening", () => {
+      const verifyClient = (info: { origin: string }, cb: (result: boolean) => void) => {
+        const origin = info.origin;
+        const allowed =
+          !origin ||
+          origin === "null" ||
+          origin.startsWith("https://www.figma.com") ||
+          origin.startsWith("https://figma.com");
+        cb(allowed);
+      };
+
+      if (this.httpServer) {
+        // Attach WebSocket to existing HTTP server
+        const wss = new WebSocketServer({ server: this.httpServer, verifyClient });
         this.wss = wss;
         this.setupServer();
-        resolve();
-      });
-      wss.on("error", reject);
+        this.httpServer.listen(port, () => resolve());
+        this.httpServer.on("error", reject);
+      } else {
+        // Standalone WebSocket server (tests)
+        const wss = new WebSocketServer({ port, verifyClient });
+        wss.on("listening", () => {
+          this.wss = wss;
+          this.setupServer();
+          resolve();
+        });
+        wss.on("error", reject);
+      }
     });
   }
 

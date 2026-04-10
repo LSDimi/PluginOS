@@ -1,14 +1,40 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { PluginOSWebSocketServer } from "./websocket.js";
 import { createPluginOSServer } from "./server.js";
+import { createHttpServer } from "./http-server.js";
+import { readFileSync, existsSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
 export { createPluginOSServer } from "./server.js";
 export { PluginOSWebSocketServer } from "./websocket.js";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function loadUiContent(): string {
+  const candidates = [
+    join(__dirname, "../../bridge-plugin/dist/ui.html"),
+    join(process.cwd(), "packages/bridge-plugin/dist/ui.html"),
+  ];
+  for (const path of candidates) {
+    if (existsSync(path)) {
+      return readFileSync(path, "utf-8");
+    }
+  }
+  return "<html><body><p>PluginOS UI not found. Run: npm run build -w packages/bridge-plugin</p></body></html>";
+}
+
+let cachedUi: string | null = null;
+
 async function main() {
-  const wsServer = new PluginOSWebSocketServer();
+  const httpServer = createHttpServer(() => {
+    if (!cachedUi) cachedUi = loadUiContent();
+    return cachedUi;
+  });
+
+  const wsServer = new PluginOSWebSocketServer({ httpServer });
   const port = await wsServer.start();
-  console.error(`PluginOS WebSocket server listening on port ${port}`);
+  console.error(`PluginOS WebSocket + HTTP server on port ${port}`);
 
   const mcpServer = createPluginOSServer(wsServer);
   const transport = new StdioServerTransport();

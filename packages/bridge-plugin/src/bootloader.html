@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { margin: 0; font-family: Inter, system-ui, sans-serif; font-size: 11px; background: var(--figma-color-bg); color: var(--figma-color-text); display: flex; align-items: center; padding: 8px 12px; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .red { background: #f24822; }
+    .green { background: #1bc47d; }
+    .yellow { background: #f5a623; }
+    #info { color: var(--figma-color-text-secondary, #999); }
+  </style>
+</head>
+<body>
+  <div class="dot red" id="dot"></div>
+  <div>
+    <div id="status">Loading...</div>
+    <div id="info">Connecting to PluginOS server</div>
+  </div>
+  <script>
+    var PORT_MIN = 9500;
+    var PORT_MAX = 9510;
+
+    function setStatus(connected, port, message) {
+      var dot = document.getElementById("dot");
+      var status = document.getElementById("status");
+      var info = document.getElementById("info");
+      dot.className = connected ? "dot green" : "dot red";
+      status.textContent = connected ? "Connected (port " + port + ")" : "Disconnected";
+      info.textContent = message || (connected ? "Ready for operations" : "Searching for server...");
+    }
+
+    function tryBootload() {
+      var portIndex = PORT_MIN;
+
+      function tryNext() {
+        if (portIndex > PORT_MAX) {
+          setStatus(false, null, "Server not found. Run: npx pluginos");
+          setTimeout(tryBootload, 5000);
+          return;
+        }
+
+        var port = portIndex;
+        portIndex++;
+
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "http://localhost:" + port + "/ui", true);
+        xhr.timeout = 2000;
+        xhr.onload = function() {
+          if (xhr.status === 200) {
+            document.open();
+            document.write(xhr.responseText);
+            document.close();
+          } else {
+            tryNext();
+          }
+        };
+        xhr.onerror = function() { tryNext(); };
+        xhr.ontimeout = function() { tryNext(); };
+        xhr.send();
+      }
+
+      tryNext();
+    }
+
+    tryBootload();
+  </script>
+</body>
+</html>

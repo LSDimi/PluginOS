@@ -4,7 +4,7 @@
   "api": "1.0.0",
   "editorType": ["figma"],
   "main": "dist/code.js",
-  "ui": "dist/ui.html",
+  "ui": "dist/bootloader.html",
   "documentAccess": "dynamic-page",
   "networkAccess": {
     "allowedDomains": ["none"],
@@ -19,9 +19,20 @@
       "ws://localhost:9507",
       "ws://localhost:9508",
       "ws://localhost:9509",
-      "ws://localhost:9510"
+      "ws://localhost:9510",
+      "http://localhost:9500",
+      "http://localhost:9501",
+      "http://localhost:9502",
+      "http://localhost:9503",
+      "http://localhost:9504",
+      "http://localhost:9505",
+      "http://localhost:9506",
+      "http://localhost:9507",
+      "http://localhost:9508",
+      "http://localhost:9509",
+      "http://localhost:9510"
     ],
-    "reasoning": "Connects to local PluginOS MCP server via WebSocket for agent-driven operations"
+    "reasoning": "Connects to local PluginOS MCP server via WebSocket for operations and HTTP for bootloader UI updates"
   },
   "permissions": ["teamlibrary"]
 }
