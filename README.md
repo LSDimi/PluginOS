@@ -1,6 +1,18 @@
 # PluginOS
 
-Agent-native Figma operations platform. Run any Figma plugin operation from any LLM agent at ~230 tokens per call instead of ~28,000.
+Agent-native Figma operations platform. Run any Figma plugin operation from any LLM agent at **~230 tokens per call** instead of ~28,000.
+
+## Why PluginOS
+
+Traditional Figma MCP integrations register dozens of tools — each with a full JSON schema the LLM must read on every conversation turn. For a server with 80+ tools, that's **~12,000 tokens of overhead before the agent even does anything.**
+
+PluginOS takes a fundamentally different approach:
+
+- **4 MCP tools, unlimited operations.** The server is a thin router. Operations are discovered dynamically, not hardcoded as tool schemas. Your agent's context stays clean.
+- **15x cheaper per workflow.** A complex multi-step task (audit, fix, rename, export) costs ~6,600 tokens with PluginOS vs ~105,000 with traditional approaches. That's 94% savings that compound across users and sessions.
+- **Pre-summarized results.** Operations return structured summaries ("Checked 12 text nodes. 10 pass WCAG AA, 2 fail."), not raw node dumps. Agents reason better with less noise.
+- **Extensible by design.** Add custom operations as simple manifest + execute pairs. Drop them in, register, done — no server changes needed.
+- **Embeddable.** 4 tools integrate cleanly into any agent. No namespace pollution, no config bloat.
 
 ## Quick Start
 
@@ -39,9 +51,33 @@ Agent-native Figma operations platform. Run any Figma plugin operation from any 
 
 ### 3. Use it
 
-Tell your agent: "Check the contrast ratios in my design"
+Tell your agent:
 
-The agent calls `run_operation("check_contrast", {scope: "page"})` → the bridge plugin executes locally → returns structured results → agent sees a clean summary.
+> "Check the contrast ratios in my design"
+
+The agent calls `run_operation("check_contrast", {scope: "page"})` → the bridge plugin executes locally → returns structured results → agent sees a clean summary. ~230 tokens, done.
+
+> "Rename all instances by removing version numbers from their names"
+
+The agent calls `execute_figma` with a short script → plugin runs it with full `figma.*` access → returns a summary. ~700 tokens for arbitrary custom logic.
+
+## How It Works
+
+```
+Agent ─── MCP (stdio) ──→ PluginOS Server ─── WebSocket ──→ Bridge Plugin ──→ Figma
+          4 tools            thin router         localhost       13+ operations    full API
+          ~600 tokens        sends names +       ports 9500-     executes locally  figma.*
+          per turn           params only         9510            returns summaries
+```
+
+**Two execution paths:**
+
+| Path | When | Token cost | How |
+|------|------|-----------|-----|
+| **Fast** | Built-in operation exists | ~230 tokens | `run_operation("check_contrast", {scope: "page"})` |
+| **Fallback** | Custom/one-off logic needed | ~700 tokens | `execute_figma("return figma.currentPage.findAll().length")` |
+
+Scripts travel over WebSocket (free) — they never enter the LLM context.
 
 ## Available Operations
 
@@ -63,24 +99,63 @@ The agent calls `run_operation("check_contrast", {scope: "page"})` → the bridg
 
 ## Token Economics
 
-| Action | Tokens |
-|--------|--------|
-| Any built-in operation | ~230 |
-| Custom `execute_figma` | ~700 |
-| Raw `use_figma` (status quo) | ~8,000-28,000 |
+| Scenario | Traditional MCP | PluginOS | Savings |
+|----------|----------------|----------|---------|
+| Tool schema overhead (per turn) | ~12,000 tokens | ~600 tokens | 95% |
+| Single operation call | ~1,500 tokens | ~230 tokens | 85% |
+| Complex workflow (8 steps) | ~105,000 tokens | ~6,600 tokens | 94% |
+| 10 users × 5 runs/day × 30 days | ~157M tokens | ~10M tokens | 94% |
+
+## Adding Custom Operations
+
+Create a file in `packages/bridge-plugin/src/operations/`:
+
+```typescript
+import { registerOperation } from "./registry";
+
+registerOperation({
+  manifest: {
+    name: "my_operation",
+    description: "What it does",
+    category: "custom",
+    params: {
+      scope: { type: "string", required: false, description: "'page' or 'selection'" },
+    },
+    returns: "{ result, summary }",
+  },
+  async execute(params) {
+    // Full figma.* API access here
+    const nodes = figma.currentPage.findAll();
+    return { result: nodes.length, summary: `Found ${nodes.length} nodes.` };
+  },
+});
+```
+
+Register it in `operations/index.ts` and rebuild. The agent discovers it automatically via `list_operations`.
 
 ## Architecture
 
 ```
-Agent ─── MCP protocol ──→ PluginOS MCP Server ─── WebSocket ──→ Bridge Plugin (Figma)
-                           (thin router)                         (operations + figma.* access)
+packages/
+  shared/          Types, protocol messages, categories
+  mcp-server/      MCP server (stdio) + WebSocket server
+  bridge-plugin/   Figma plugin (webpack → code.js + ui.html)
 ```
 
-The MCP server sends only operation names + params (~100 bytes). All heavy computation happens inside the Figma plugin. Scripts never touch the LLM context.
+- **Monorepo** with npm workspaces
+- **MCP protocol** over stdio (server ↔ agent)
+- **WebSocket** on localhost:9500-9510 (server ↔ plugin)
+- **Port scanning** — plugin auto-discovers the server
+- **Request correlation** — unique IDs match responses to commands
 
-## Adding Custom Operations
+## Development
 
-See `packages/bridge-plugin/src/operations/` for examples. Each operation exports a manifest + execute function. Register in `operations/index.ts`.
+```bash
+npm install
+npm run dev:server    # MCP server with hot reload
+npm run dev:plugin    # Webpack watch for bridge plugin
+npm test              # 16 tests across all packages
+```
 
 ## License
 
