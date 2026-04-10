@@ -52,4 +52,11 @@ describe("protocol", () => {
   it("returns null for invalid JSON", () => {
     expect(parseMessage("not json")).toBeNull();
   });
+
+  it("preserves optional fileKey on RunOperationMessage round-trip", () => {
+    const msg = createRunOperationMessage("test_op", { a: 1 });
+    const withKey = { ...msg, fileKey: "abc123" };
+    const parsed = parseMessage(JSON.stringify(withKey));
+    expect(parsed).toHaveProperty("fileKey", "abc123");
+  });
 });

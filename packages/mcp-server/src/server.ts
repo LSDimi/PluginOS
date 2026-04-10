@@ -78,12 +78,16 @@ export function createPluginOSServer(wsServer: PluginOSWebSocketServer) {
         .optional()
         .default({})
         .describe("Operation parameters"),
+      file_key: z
+        .string()
+        .optional()
+        .describe("Target a specific connected file by its key. If omitted, uses the active file."),
     },
-    async ({ name, params }) => {
+    async ({ name, params, file_key }) => {
       const msg = createRunOperationMessage(name, params);
 
       try {
-        const result = await wsServer.sendAndWait(msg, 30000);
+        const result = await wsServer.sendAndWait(msg, 30000, file_key);
         if (result.success) {
           return {
             content: [
@@ -134,13 +138,17 @@ export function createPluginOSServer(wsServer: PluginOSWebSocketServer) {
         .optional()
         .default(5000)
         .describe("Timeout in ms (max 30000)"),
+      file_key: z
+        .string()
+        .optional()
+        .describe("Target a specific connected file by its key."),
     },
-    async ({ code, timeout }) => {
+    async ({ code, timeout, file_key }) => {
       const safeTimeout = Math.min(timeout, 30000);
       const msg = createExecuteMessage(code, safeTimeout);
 
       try {
-        const result = await wsServer.sendAndWait(msg, safeTimeout + 2000);
+        const result = await wsServer.sendAndWait(msg, safeTimeout + 2000, file_key);
         if (result.success) {
           return {
             content: [
@@ -185,6 +193,28 @@ export function createPluginOSServer(wsServer: PluginOSWebSocketServer) {
           {
             type: "text" as const,
             text: JSON.stringify(status, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "list_files",
+    "List all Figma files currently connected to PluginOS via the bridge plugin.",
+    {},
+    async () => {
+      const files = wsServer.listFiles();
+      const status = wsServer.getStatus();
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({
+              active_file: status.fileKey,
+              connected_files: files,
+              total: files.length,
+            }),
           },
         ],
       };

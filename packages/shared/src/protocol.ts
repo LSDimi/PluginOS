@@ -5,6 +5,7 @@ export interface RunOperationMessage {
   type: "run_operation";
   operation: string;
   params: Record<string, unknown>;
+  fileKey?: string;
 }
 
 export interface ExecuteMessage {
@@ -12,6 +13,7 @@ export interface ExecuteMessage {
   type: "execute";
   code: string;
   timeout: number;
+  fileKey?: string;
 }
 
 // --- Message types: Plugin → MCP Server ---

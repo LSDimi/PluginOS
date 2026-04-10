@@ -99,4 +99,23 @@ describe("MCP Server ↔ Plugin integration", () => {
     expect(result.success).toBe(true);
     expect(Array.isArray(result.result)).toBe(true);
   });
+
+  it("targets specific file by fileKey", async () => {
+    const { createRunOperationMessage } = await import("@pluginos/shared");
+    const msg = createRunOperationMessage("lint_styles", { scope: "page" });
+    const result = await server.sendAndWait(msg, 5000, "test123");
+    expect(result.success).toBe(true);
+  });
+
+  it("lists connected files", () => {
+    const files = server.listFiles();
+    expect(files).toHaveLength(1);
+    expect(files[0].fileKey).toBe("test123");
+    expect(files[0].fileName).toBe("Test File");
+  });
+
+  it("reports connectedFiles count in status", () => {
+    const status = server.getStatus();
+    expect(status.connectedFiles).toBe(1);
+  });
 });

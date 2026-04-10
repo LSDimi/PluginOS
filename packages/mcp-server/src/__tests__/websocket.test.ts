@@ -15,68 +15,113 @@ describe("PluginOSWebSocketServer", () => {
     expect(port).toBe(9550);
   });
 
-  it("accepts a WebSocket connection", async () => {
+  it("accepts connections and tracks files", async () => {
     server = new PluginOSWebSocketServer({ portRange: [9551, 9551] });
     await server.start();
 
     const client = new WebSocket("ws://localhost:9551");
-    await new Promise<void>((resolve) => client.on("open", resolve));
-    expect(server.isConnected()).toBe(true);
+    await new Promise<void>((r) => client.on("open", r));
+
+    client.send(JSON.stringify({
+      type: "status",
+      fileKey: "file1",
+      fileName: "Test File",
+      currentPage: "Page 1",
+    }));
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(server.isConnected("file1")).toBe(true);
+    expect(server.listFiles()).toHaveLength(1);
+    expect(server.getStatus().connectedFiles).toBe(1);
+
     client.close();
+    await new Promise((r) => setTimeout(r, 50));
   });
 
-  it("sends a message and receives a response", async () => {
+  it("tracks multiple files and sets active", async () => {
     server = new PluginOSWebSocketServer({ portRange: [9552, 9552] });
     await server.start();
 
-    const client = new WebSocket("ws://localhost:9552");
-    await new Promise<void>((resolve) => client.on("open", resolve));
+    const client1 = new WebSocket("ws://localhost:9552");
+    await new Promise<void>((r) => client1.on("open", r));
+    client1.send(JSON.stringify({ type: "status", fileKey: "file1", fileName: "File 1", currentPage: "P1" }));
 
-    client.on("message", (data) => {
-      const msg = JSON.parse(data.toString());
-      client.send(
-        JSON.stringify({
-          id: msg.id,
-          type: "result",
-          success: true,
-          result: { echoed: true },
-        })
-      );
-    });
+    const client2 = new WebSocket("ws://localhost:9552");
+    await new Promise<void>((r) => client2.on("open", r));
+    client2.send(JSON.stringify({ type: "status", fileKey: "file2", fileName: "File 2", currentPage: "P1" }));
 
-    const result = await server.sendAndWait({
-      id: "test_1",
-      type: "run_operation",
-      operation: "test",
-      params: {},
-    });
+    await new Promise((r) => setTimeout(r, 50));
 
-    expect(result.success).toBe(true);
-    expect(result.result).toEqual({ echoed: true });
-    client.close();
+    expect(server.listFiles()).toHaveLength(2);
+    expect(server.getActiveFileKey()).toBe("file2"); // Most recent
+    expect(server.setActiveFile("file1")).toBe(true);
+    expect(server.getActiveFileKey()).toBe("file1");
+
+    client1.close();
+    client2.close();
+    await new Promise((r) => setTimeout(r, 50));
   });
 
-  it("times out if no response", async () => {
+  it("sends message and receives response", async () => {
     server = new PluginOSWebSocketServer({ portRange: [9553, 9553] });
     await server.start();
 
     const client = new WebSocket("ws://localhost:9553");
-    await new Promise<void>((resolve) => client.on("open", resolve));
+    await new Promise<void>((r) => client.on("open", r));
+    client.send(JSON.stringify({ type: "status", fileKey: "file1", fileName: "F1", currentPage: "P1" }));
 
-    await expect(
-      server.sendAndWait(
-        { id: "test_2", type: "execute", code: "return 1", timeout: 500 },
-        500
-      )
-    ).rejects.toThrow(/timed out/i);
+    client.on("message", (data) => {
+      const msg = JSON.parse(data.toString());
+      if (msg.type === "run_operation") {
+        client.send(JSON.stringify({ id: msg.id, type: "result", success: true, result: 42 }));
+      }
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    const { createRunOperationMessage } = await import("@pluginos/shared");
+    const msg = createRunOperationMessage("test_op", {});
+    const result = await server.sendAndWait(msg);
+    expect(result.success).toBe(true);
+    expect(result.result).toBe(42);
+
     client.close();
+    await new Promise((r) => setTimeout(r, 50));
   });
 
-  it("tracks file status from plugin", async () => {
+  it("times out if no response", async () => {
     server = new PluginOSWebSocketServer({ portRange: [9554, 9554] });
     await server.start();
 
     const client = new WebSocket("ws://localhost:9554");
+    await new Promise<void>((r) => client.on("open", r));
+    client.send(JSON.stringify({ type: "status", fileKey: "file1", fileName: "F1", currentPage: "P1" }));
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    const { createRunOperationMessage } = await import("@pluginos/shared");
+    const msg = createRunOperationMessage("test_op", {});
+    await expect(server.sendAndWait(msg, 500)).rejects.toThrow(/timed out/i);
+
+    client.close();
+    await new Promise((r) => setTimeout(r, 50));
+  });
+
+  it("rejects when targeting non-existent file", async () => {
+    server = new PluginOSWebSocketServer({ portRange: [9555, 9555] });
+    await server.start();
+
+    const { createRunOperationMessage } = await import("@pluginos/shared");
+    const msg = createRunOperationMessage("test_op", {});
+    await expect(server.sendAndWait(msg, 1000, "nonexistent")).rejects.toThrow(/not connected/i);
+  });
+
+  it("tracks file status from plugin", async () => {
+    server = new PluginOSWebSocketServer({ portRange: [9556, 9556] });
+    await server.start();
+
+    const client = new WebSocket("ws://localhost:9556");
     await new Promise<void>((resolve) => client.on("open", resolve));
 
     client.send(
@@ -88,7 +133,6 @@ describe("PluginOSWebSocketServer", () => {
       })
     );
 
-    // Give it a moment to process
     await new Promise((r) => setTimeout(r, 50));
 
     const status = server.getStatus();

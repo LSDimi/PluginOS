@@ -6,28 +6,33 @@ import type {
 } from "@pluginos/shared";
 import { parseMessage } from "@pluginos/shared";
 
+interface ConnectedFile {
+  ws: WebSocket;
+  fileKey: string;
+  fileName: string;
+  currentPage: string;
+  lastActivity: number;
+}
+
+interface PendingRequest {
+  resolve: (value: ResultMessage) => void;
+  reject: (reason: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+
 interface WebSocketServerOptions {
-  portRange: [number, number];
+  portRange?: [number, number];
 }
 
 export class PluginOSWebSocketServer {
   private wss: WebSocketServer | null = null;
-  private client: WebSocket | null = null;
+  private files = new Map<string, ConnectedFile>();
+  private activeFileKey: string | null = null;
   private port: number | null = null;
-  private pending = new Map<
-    string,
-    {
-      resolve: (result: ResultMessage) => void;
-      reject: (error: Error) => void;
-      timer: ReturnType<typeof setTimeout>;
-    }
-  >();
-  private fileKey: string | null = null;
-  private fileName: string | null = null;
-  private currentPage: string | null = null;
-  private options: WebSocketServerOptions;
+  private pending = new Map<string, PendingRequest>();
+  private options: { portRange: [number, number] };
 
-  constructor(options?: Partial<WebSocketServerOptions>) {
+  constructor(options?: WebSocketServerOptions) {
     this.options = {
       portRange: options?.portRange ?? [9500, 9510],
     };
@@ -72,7 +77,7 @@ export class PluginOSWebSocketServer {
 
   private setupServer(): void {
     this.wss!.on("connection", (ws) => {
-      this.client = ws;
+      let fileKey: string | null = null;
 
       ws.on("message", (data) => {
         const msg = parseMessage(data.toString());
@@ -87,50 +92,98 @@ export class PluginOSWebSocketServer {
           }
         } else if (msg.type === "status") {
           const status = msg as StatusMessage;
-          this.fileKey = status.fileKey;
-          this.fileName = status.fileName;
-          this.currentPage = status.currentPage;
+          const key = status.fileKey || "unknown";
+          fileKey = key;
+          this.files.set(key, {
+            ws,
+            fileKey: key,
+            fileName: status.fileName,
+            currentPage: status.currentPage,
+            lastActivity: Date.now(),
+          });
+          this.activeFileKey = key;
         }
       });
 
       ws.on("close", () => {
-        this.client = null;
-        this.fileKey = null;
-        this.fileName = null;
-        for (const [id, pending] of this.pending) {
-          clearTimeout(pending.timer);
-          pending.reject(new Error("Plugin disconnected"));
+        if (fileKey && this.files.has(fileKey)) {
+          this.files.delete(fileKey);
+          if (this.activeFileKey === fileKey) {
+            const remaining = Array.from(this.files.values());
+            remaining.sort((a, b) => b.lastActivity - a.lastActivity);
+            this.activeFileKey = remaining.length > 0 ? remaining[0].fileKey : null;
+          }
+        }
+        // Reject pending requests for this client
+        for (const [id, p] of this.pending) {
+          clearTimeout(p.timer);
           this.pending.delete(id);
+          p.reject(new Error("Plugin disconnected"));
         }
       });
     });
   }
 
-  isConnected(): boolean {
-    return this.client?.readyState === WebSocket.OPEN;
+  isConnected(fileKey?: string): boolean {
+    if (fileKey) return this.files.has(fileKey);
+    return this.files.size > 0;
+  }
+
+  getActiveFileKey(): string | null {
+    return this.activeFileKey;
+  }
+
+  setActiveFile(fileKey: string): boolean {
+    if (!this.files.has(fileKey)) return false;
+    this.activeFileKey = fileKey;
+    return true;
+  }
+
+  listFiles(): Array<{ fileKey: string; fileName: string; currentPage: string }> {
+    return Array.from(this.files.values()).map((f) => ({
+      fileKey: f.fileKey,
+      fileName: f.fileName,
+      currentPage: f.currentPage,
+    }));
   }
 
   getStatus() {
+    const active = this.activeFileKey ? this.files.get(this.activeFileKey) : null;
     return {
-      connected: this.isConnected(),
-      fileKey: this.fileKey,
-      fileName: this.fileName,
-      currentPage: this.currentPage,
+      connected: this.files.size > 0,
+      fileKey: active?.fileKey ?? null,
+      fileName: active?.fileName ?? null,
+      currentPage: active?.currentPage ?? null,
       port: this.port,
+      connectedFiles: this.files.size,
     };
   }
 
   sendAndWait(
     message: ServerToPluginMessage,
-    timeout: number = 30000
+    timeout: number = 30000,
+    fileKey?: string
   ): Promise<ResultMessage> {
     return new Promise((resolve, reject) => {
-      if (!this.isConnected()) {
+      const targetKey = fileKey || this.activeFileKey;
+      if (!targetKey || !this.files.has(targetKey)) {
         reject(
-          new Error("Plugin not connected. Open PluginOS Bridge in Figma.")
+          new Error(
+            fileKey
+              ? `File "${fileKey}" not connected.`
+              : "No plugin connected. Open PluginOS Bridge in Figma."
+          )
         );
         return;
       }
+      const file = this.files.get(targetKey)!;
+      if (file.ws.readyState !== WebSocket.OPEN) {
+        reject(new Error(`Connection to "${file.fileName}" is not open.`));
+        return;
+      }
+
+      file.lastActivity = Date.now();
+      this.activeFileKey = targetKey;
 
       const timer = setTimeout(() => {
         this.pending.delete(message.id);
@@ -138,17 +191,22 @@ export class PluginOSWebSocketServer {
       }, timeout);
 
       this.pending.set(message.id, { resolve, reject, timer });
-      this.client!.send(JSON.stringify(message));
+      file.ws.send(JSON.stringify(message));
     });
   }
 
   async close(): Promise<void> {
-    for (const [, pending] of this.pending) {
-      clearTimeout(pending.timer);
-      pending.reject(new Error("Server closing"));
+    for (const [, p] of this.pending) {
+      clearTimeout(p.timer);
+      p.reject(new Error("Server closing"));
     }
     this.pending.clear();
-    this.client?.close();
+
+    for (const f of this.files.values()) {
+      f.ws.close();
+    }
+    this.files.clear();
+    this.activeFileKey = null;
 
     return new Promise((resolve) => {
       if (this.wss) {
