@@ -44,7 +44,15 @@ registerOperation({
     for (var i = 0; i < textNodes.length; i++) {
       var node = textNodes[i];
       if (pattern && !pattern.test(node.name)) continue;
-      await figma.loadFontAsync(node.fontName as FontName);
+      var fontName = node.fontName;
+      if (fontName === figma.mixed) {
+        var ranges = node.getStyledTextSegments(["fontName"]);
+        for (var r = 0; r < ranges.length; r++) {
+          await figma.loadFontAsync(ranges[r].fontName);
+        }
+      } else {
+        await figma.loadFontAsync(fontName);
+      }
       var text = params.max_chars ? content.slice(0, params.max_chars) : content;
       node.characters = text;
       populated++;

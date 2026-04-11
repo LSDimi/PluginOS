@@ -158,7 +158,15 @@ registerOperation({
       var node = figma.getNodeById(id);
       if (node && node.type === "TEXT") {
         var textNode = node as TextNode;
-        await figma.loadFontAsync(textNode.fontName as FontName);
+        var fontName = textNode.fontName;
+        if (fontName === figma.mixed) {
+          var ranges = textNode.getStyledTextSegments(["fontName"]);
+          for (var r = 0; r < ranges.length; r++) {
+            await figma.loadFontAsync(ranges[r].fontName);
+          }
+        } else {
+          await figma.loadFontAsync(fontName);
+        }
         textNode.characters = params.text;
         updated++;
       } else {
