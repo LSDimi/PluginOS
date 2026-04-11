@@ -103,7 +103,7 @@ registerOperation({
 
     if (!dryRun) {
       for (const item of [...hidden].reverse()) {
-        const node = figma.getNodeById(item.nodeId);
+        const node = await figma.getNodeByIdAsync(item.nodeId);
         if (node) node.remove();
       }
       figma.commitUndo();

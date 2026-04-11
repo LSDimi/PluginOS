@@ -17,6 +17,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function loadUiContent(): string {
   const candidates = [
+    // Bundled alongside dist (npm/npx installs)
+    join(__dirname, "ui.html"),
+    // Monorepo development
     join(__dirname, "../../bridge-plugin/dist/ui.html"),
     join(process.cwd(), "packages/bridge-plugin/dist/ui.html"),
   ];

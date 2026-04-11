@@ -10,15 +10,15 @@ Traditional Figma MCP integrations register dozens of tools — each with a full
 
 PluginOS takes a fundamentally different approach:
 
-- **5 MCP tools, unlimited operations.** The server is a thin router. Operations are discovered dynamically, not hardcoded as tool schemas. Your agent's context stays clean.
-- **15x cheaper per workflow.** A complex multi-step task (audit, fix, rename, export) costs ~6,600 tokens with PluginOS vs ~105,000 with traditional approaches. That's 94% savings that compound across users and sessions.
-- **Pre-summarized results.** Operations return structured summaries ("Checked 12 text nodes. 10 pass WCAG AA, 2 fail."), not raw node dumps. Agents reason better with less noise.
-- **Extensible by design.** Add custom operations as simple manifest + execute pairs. Drop them in, register, done — no server changes needed.
-- **Embeddable.** 5 tools integrate cleanly into any agent. No namespace pollution, no config bloat.
+- **5 MCP tools, unlimited operations.** The server is a thin router. Operations are discovered dynamically, not hardcoded as tool schemas.
+- **15x cheaper per workflow.** A complex multi-step task costs ~6,600 tokens vs ~105,000 with traditional approaches — 94% savings.
+- **Pre-summarized results.** Operations return structured summaries, not raw node dumps. Agents reason better with less noise.
+- **Extensible by design.** Add custom operations as simple manifest + execute pairs. No server changes needed.
+- **Multi-file support.** Connect multiple Figma files simultaneously. The server tracks active files and routes operations to the right one.
 
 ## Quick Start
 
-### 1. Add PluginOS to your MCP config
+### 1. Add to your MCP config
 
 **Claude Code (`~/.claude.json`):**
 
@@ -49,7 +49,7 @@ PluginOS takes a fundamentally different approach:
 ### 2. Install the Bridge Plugin in Figma
 
 1. Open Figma Desktop
-2. Right-click canvas → Plugins → Development → Import plugin from manifest
+2. Right-click canvas > Plugins > Development > Import plugin from manifest
 3. Select `packages/bridge-plugin/manifest.json`
 4. Run the plugin — it auto-connects to the MCP server
 
@@ -59,19 +59,19 @@ Tell your agent:
 
 > "Check the contrast ratios in my design"
 
-The agent calls `run_operation("check_contrast", {scope: "page"})` → the bridge plugin executes locally → returns structured results → agent sees a clean summary. ~230 tokens, done.
+The agent calls `run_operation("check_contrast", {scope: "page"})` and gets back a clean summary. ~230 tokens, done.
 
-> "Rename all instances by removing version numbers from their names"
+> "Create a 300x200 frame with auto-layout and add some text"
 
-The agent calls `execute_figma` with a short script → plugin runs it with full `figma.*` access → returns a summary. ~700 tokens for arbitrary custom logic.
+The agent calls write operations to create frames, set text, and modify fills — all through the same 5-tool interface.
 
 ## How It Works
 
 ```
-Agent ─── MCP (stdio) ──→ PluginOS Server ─── WebSocket ──→ Bridge Plugin ──→ Figma
-          5 tools            thin router         localhost       28 operations     full API
-          ~600 tokens        sends names +       ports 9500-     executes locally  figma.*
-          per turn           params only         9510            returns summaries
+Agent ── MCP (stdio) ──> PluginOS Server ── WebSocket ──> Bridge Plugin ──> Figma
+         5 tools           thin router        localhost      26 operations    full API
+         ~600 tokens       routes by name     ports 9500-    executes locally figma.*
+         per turn          + params only      9510           returns summaries
 ```
 
 **Two execution paths:**
@@ -81,9 +81,7 @@ Agent ─── MCP (stdio) ──→ PluginOS Server ─── WebSocket ──
 | **Fast**     | Built-in operation exists   | ~230 tokens | `run_operation("check_contrast", {scope: "page"})`           |
 | **Fallback** | Custom/one-off logic needed | ~700 tokens | `execute_figma("return figma.currentPage.findAll().length")` |
 
-Scripts travel over WebSocket (free) — they never enter the LLM context.
-
-## Available Operations
+## Available Operations (26)
 
 | Operation               | Category      | Description                         |
 | ----------------------- | ------------- | ----------------------------------- |
@@ -141,7 +139,6 @@ registerOperation({
     returns: "{ result, summary }",
   },
   async execute(params) {
-    // Full figma.* API access here
     const nodes = figma.currentPage.findAll();
     return { result: nodes.length, summary: `Found ${nodes.length} nodes.` };
   },
@@ -155,15 +152,16 @@ Register it in `operations/index.ts` and rebuild. The agent discovers it automat
 ```
 packages/
   shared/          Types, protocol messages, categories
-  mcp-server/      MCP server (stdio) + WebSocket server
-  bridge-plugin/   Figma plugin (webpack → code.js + ui.html)
+  mcp-server/      MCP server (stdio) + WebSocket + HTTP (bootloader)
+  bridge-plugin/   Figma plugin (webpack -> code.js + bootloader.html)
 ```
 
 - **Monorepo** with npm workspaces
-- **MCP protocol** over stdio (server ↔ agent)
-- **WebSocket** on localhost:9500-9510 (server ↔ plugin)
+- **MCP protocol** over stdio (server <> agent)
+- **WebSocket** on localhost:9500-9510 (server <> plugin)
+- **Bootloader pattern** — plugin fetches fresh UI from server on startup
 - **Port scanning** — plugin auto-discovers the server
-- **Request correlation** — unique IDs match responses to commands
+- **Multi-file** — multiple Figma files connect simultaneously
 
 ## Development
 
@@ -171,7 +169,7 @@ packages/
 npm install
 npm run dev:server    # MCP server with hot reload
 npm run dev:plugin    # Webpack watch for bridge plugin
-npm test              # 22 tests across all packages
+npm test              # Tests across all packages
 ```
 
 ## License

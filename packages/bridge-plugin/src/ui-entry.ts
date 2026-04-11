@@ -3,16 +3,57 @@ const PORT_MAX = 9510;
 const RECONNECT_DELAY = 3000;
 
 let ws: WebSocket | null = null;
+let opsCount = 0;
+let scanAttempts = 0;
+
+function $(id: string): HTMLElement {
+  return document.getElementById(id)!;
+}
+
+function showView(view: "setup" | "connected") {
+  const setup = $("view-setup");
+  const connected = $("view-connected");
+  const activity = $("activity");
+
+  if (view === "connected") {
+    setup.classList.add("hidden");
+    connected.classList.remove("hidden");
+    activity.classList.remove("hidden");
+  } else {
+    setup.classList.remove("hidden");
+    connected.classList.add("hidden");
+    activity.classList.add("hidden");
+  }
+}
 
 function updateStatus(connected: boolean, text: string) {
-  const dot = document.getElementById("dot")!;
-  const statusText = document.getElementById("status-text")!;
+  const dot = $("dot");
+  const statusText = $("status-text");
   dot.className = connected ? "dot connected" : "dot";
   statusText.textContent = text;
 }
 
-function updateInfo(text: string) {
-  document.getElementById("info")!.textContent = text;
+function showError(msg: string) {
+  const el = $("error-msg");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+
+function hideError() {
+  $("error-msg").classList.add("hidden");
+}
+
+function updateActivity(text: string) {
+  $("activity").textContent = text;
+}
+
+function updatePort(port: number | null) {
+  $("port-display").textContent = port ? String(port) : "\u2014";
+}
+
+function incrementOps() {
+  opsCount++;
+  $("ops-count").textContent = String(opsCount);
 }
 
 // Forward messages from code.js (plugin sandbox) to WebSocket
@@ -26,16 +67,34 @@ window.onmessage = (event: MessageEvent) => {
 };
 
 async function findAndConnect(): Promise<void> {
+  const dot = $("dot");
+  dot.className = "dot searching";
+  $("status-text").textContent = "Searching...";
+  hideError();
+
   for (let port = PORT_MIN; port <= PORT_MAX; port++) {
     try {
       await tryConnect(port);
+      scanAttempts = 0;
       return;
     } catch {
       continue;
     }
   }
-  updateStatus(false, "No MCP server found");
-  updateInfo(`Scanned ports ${PORT_MIN}-${PORT_MAX}. Run 'npx pluginos' to start.`);
+
+  // Failed to find server
+  scanAttempts++;
+  updateStatus(false, "Disconnected");
+  showView("setup");
+
+  if (scanAttempts === 1) {
+    showError("No server found. Start it with: npx pluginos");
+  } else if (scanAttempts < 5) {
+    showError(`No server found (attempt ${scanAttempts}). Is npx pluginos running?`);
+  } else {
+    showError("Still no server. Check your terminal for errors after running npx pluginos.");
+  }
+
   setTimeout(findAndConnect, RECONNECT_DELAY);
 }
 
@@ -50,19 +109,36 @@ function tryConnect(port: number): Promise<void> {
     socket.onopen = () => {
       clearTimeout(timeout);
       ws = socket;
-      updateStatus(true, `Connected (port ${port})`);
-      updateInfo("Ready for operations");
+      updateStatus(true, "Connected");
+      updatePort(port);
+      showView("connected");
+      updateActivity("Ready for operations");
 
-      // Tell code.js we're connected
       parent.postMessage({ pluginMessage: { type: "ws-connected" } }, "*");
       resolve();
     };
 
     socket.onmessage = (event: MessageEvent) => {
-      // Forward WebSocket messages to code.js
       try {
         const data = JSON.parse(event.data as string);
-        parent.postMessage({ pluginMessage: { type: "ws-message", payload: data } }, "*");
+
+        // Track incoming operations
+        if (data.type === "run_operation" || data.type === "execute") {
+          const label = data.type === "run_operation" ? data.operation : "execute_figma";
+          updateActivity("Running: " + label);
+        }
+
+        // Forward to code.js
+        parent.postMessage(
+          { pluginMessage: { type: "ws-message", payload: data } },
+          "*"
+        );
+
+        // Track results
+        if (data.type === "result") {
+          incrementOps();
+          updateActivity(data.success ? "Last operation succeeded" : "Last operation failed");
+        }
       } catch {
         /* ignore malformed */
       }
@@ -72,7 +148,13 @@ function tryConnect(port: number): Promise<void> {
       if (ws === socket) {
         ws = null;
         updateStatus(false, "Disconnected");
-        parent.postMessage({ pluginMessage: { type: "ws-disconnected" } }, "*");
+        updatePort(null);
+        showView("setup");
+        showError("Connection lost. Reconnecting...");
+        parent.postMessage(
+          { pluginMessage: { type: "ws-disconnected" } },
+          "*"
+        );
         setTimeout(findAndConnect, RECONNECT_DELAY);
       }
     };

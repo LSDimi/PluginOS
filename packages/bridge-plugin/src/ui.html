@@ -2,27 +2,206 @@
 <html>
 <head>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: Inter, system-ui, sans-serif;
-      font-size: 12px;
-      margin: 8px;
-      color: var(--figma-color-text, #333);
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      font-size: 11px;
       background: var(--figma-color-bg, #fff);
+      color: var(--figma-color-text, #333);
+      padding: 12px 14px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      user-select: none;
     }
-    .status { display: flex; align-items: center; gap: 6px; }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .logo {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: linear-gradient(135deg, #214AFF 0%, #6B7BFF 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 9px;
+      letter-spacing: -0.5px;
+      flex-shrink: 0;
+    }
+    .title {
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: -0.2px;
+    }
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--figma-color-bg-secondary, #f5f5f5);
+    }
     .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #e74c3c;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #f24822;
+      flex-shrink: 0;
     }
-    .dot.connected { background: #2ecc71; }
-    .info { margin-top: 8px; color: var(--figma-color-text-secondary, #888); font-size: 11px; }
+    .dot.connected { background: #1bc47d; }
+    .dot.searching {
+      background: #f5a623;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .badge-text {
+      color: var(--figma-color-text-secondary, #888);
+    }
+    .divider {
+      height: 1px;
+      background: var(--figma-color-border, #e5e5e5);
+    }
+
+    /* Connected state: stats */
+    .stats {
+      display: flex;
+      gap: 16px;
+    }
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .stat-value {
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: -0.3px;
+    }
+    .stat-label {
+      font-size: 10px;
+      color: var(--figma-color-text-secondary, #888);
+    }
+    .activity {
+      font-size: 10px;
+      color: var(--figma-color-text-tertiary, #aaa);
+      margin-top: auto;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Disconnected state: setup guide */
+    .setup {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+    .setup-heading {
+      font-weight: 600;
+      font-size: 11px;
+    }
+    .setup-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      font-size: 10.5px;
+      line-height: 14px;
+      color: var(--figma-color-text-secondary, #666);
+    }
+    .step-num {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--figma-color-bg-tertiary, #eee);
+      color: var(--figma-color-text-secondary, #888);
+      font-size: 9px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    code {
+      background: var(--figma-color-bg-tertiary, #eee);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-family: 'SF Mono', SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+    }
+    .error-msg {
+      font-size: 10px;
+      color: #f24822;
+      margin-top: auto;
+    }
+
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <div class="status">
-    <div class="dot" id="dot"></div>
-    <span id="status-text">Connecting...</span>
+  <div class="header">
+    <div class="brand">
+      <div class="logo">OS</div>
+      <span class="title">PluginOS</span>
+    </div>
+    <div class="badge">
+      <div class="dot searching" id="dot"></div>
+      <span class="badge-text" id="status-text">Searching...</span>
+    </div>
   </div>
-  <div class="info" id="info"></div>
+  <div class="divider"></div>
+
+  <!-- Disconnected: setup guide -->
+  <div class="setup" id="view-setup">
+    <div class="setup-heading">Getting started</div>
+    <div class="setup-steps">
+      <div class="step">
+        <span class="step-num">1</span>
+        <span>Run <code>npx pluginos</code> in your terminal</span>
+      </div>
+      <div class="step">
+        <span class="step-num">2</span>
+        <span>Add PluginOS to your AI tool's MCP config</span>
+      </div>
+      <div class="step">
+        <span class="step-num">3</span>
+        <span>Ask your agent to run Figma operations</span>
+      </div>
+    </div>
+    <div class="error-msg hidden" id="error-msg"></div>
+  </div>
+
+  <!-- Connected: stats -->
+  <div class="stats hidden" id="view-connected">
+    <div class="stat">
+      <span class="stat-value" id="ops-count">&mdash;</span>
+      <span class="stat-label">Operations run</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="port-display">&mdash;</span>
+      <span class="stat-label">Port</span>
+    </div>
+  </div>
+  <div class="activity hidden" id="activity">Ready for operations</div>
 </body>
 </html>
