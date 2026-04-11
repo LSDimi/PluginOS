@@ -1,27 +1,54 @@
 {
   "name": "pluginos",
   "version": "0.1.0",
-  "description": "Agent-native Figma operations platform — MCP server",
+  "description": "Agent-native Figma operations platform — run 28 Figma operations from any LLM agent at ~230 tokens per call",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "bin": {
-    "pluginos": "./bin/pluginos.js"
-  },
+  "bin": "./bin/pluginos.js",
+  "files": [
+    "dist",
+    "bin"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsup",
     "dev": "tsx watch src/index.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "figma",
+    "mcp",
+    "model-context-protocol",
+    "design",
+    "agent",
+    "llm",
+    "plugin",
+    "design-system",
+    "figma-plugin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LSDimi/PluginOS.git",
+    "directory": "packages/mcp-server"
+  },
+  "homepage": "https://github.com/LSDimi/PluginOS#readme",
+  "bugs": "https://github.com/LSDimi/PluginOS/issues",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
     "ws": "^8.18.0",
-    "@pluginos/shared": "*"
+    "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@pluginos/shared": "*",
+    "@types/ws": "^8.5.0",
+    "tsup": "^8.5.1",
     "tsx": "^4.19.0",
     "typescript": "^5.5.0",
-    "vitest": "^2.1.0",
-    "@types/ws": "^8.5.0"
+    "vitest": "^2.1.0"
   }
 }

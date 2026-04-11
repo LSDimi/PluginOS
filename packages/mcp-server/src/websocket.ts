@@ -69,12 +69,19 @@ export class PluginOSWebSocketServer {
       };
 
       if (this.httpServer) {
-        // Attach WebSocket to existing HTTP server
-        const wss = new WebSocketServer({ server: this.httpServer, verifyClient });
-        this.wss = wss;
-        this.setupServer();
-        this.httpServer.listen(port, () => resolve());
-        this.httpServer.on("error", reject);
+        // Listen first, then attach WebSocket after port is confirmed
+        const onError = (err: Error) => {
+          this.httpServer!.removeListener("error", onError);
+          reject(err);
+        };
+        this.httpServer.on("error", onError);
+        this.httpServer.listen(port, () => {
+          this.httpServer!.removeListener("error", onError);
+          const wss = new WebSocketServer({ server: this.httpServer!, verifyClient });
+          this.wss = wss;
+          this.setupServer();
+          resolve();
+        });
       } else {
         // Standalone WebSocket server (tests)
         const wss = new WebSocketServer({ port, verifyClient });
