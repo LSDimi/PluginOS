@@ -14,7 +14,9 @@
     "build": "tsup",
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "release:patch": "npm version patch && npm publish --access public",
+    "release:minor": "npm version minor && npm publish --access public"
   },
   "keywords": [
     "figma",
