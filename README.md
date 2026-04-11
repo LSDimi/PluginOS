@@ -1,5 +1,7 @@
 # PluginOS
 
+[![npm version](https://img.shields.io/npm/v/pluginos.svg)](https://www.npmjs.com/package/pluginos)
+
 Agent-native Figma operations platform. Run any Figma plugin operation from any LLM agent at **~230 tokens per call** instead of ~28,000.
 
 ## Why PluginOS
