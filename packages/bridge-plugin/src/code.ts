@@ -95,5 +95,12 @@ function sendResult(
   });
 }
 
+// Catch unhandled promise rejections (safety net)
+if (typeof self !== "undefined" && "addEventListener" in self) {
+  (self as any).addEventListener("unhandledrejection", function(event: any) {
+    console.error("[PluginOS] Unhandled rejection:", event.reason);
+  });
+}
+
 // Update status when page changes
 figma.on("currentpagechange", sendFileStatus);
