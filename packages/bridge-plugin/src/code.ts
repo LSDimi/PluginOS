@@ -1,4 +1,5 @@
 import { getOperation, listOperations } from "./operations/index";
+import { createOperationContext } from "./operations/context";
 import { safeSerialize } from "./utils/serializer";
 
 // Show the UI (which handles WebSocket)
@@ -59,18 +60,16 @@ async function handleServerMessage(msg: any): Promise<void> {
       }
 
       const startTime = Date.now();
-      const result = await handler.execute(params || {});
+      const ctx = createOperationContext(params || {}, figma);
+      const result = await handler.execute(ctx);
       const duration = Date.now() - startTime;
-      sendResult(id, true, { ...safeSerialize(result) as object, _duration_ms: duration });
+      sendResult(id, true, { ...(safeSerialize(result) as object), _duration_ms: duration });
     } else if (type === "execute") {
       const { code, timeout } = msg;
       const wrappedCode = `(async function() {\n${code}\n})()`;
 
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error(`Execution timed out after ${timeout}ms`)),
-          timeout
-        )
+        setTimeout(() => reject(new Error(`Execution timed out after ${timeout}ms`)), timeout)
       );
 
       const codePromise = eval(wrappedCode);
@@ -83,12 +82,7 @@ async function handleServerMessage(msg: any): Promise<void> {
   }
 }
 
-function sendResult(
-  id: string,
-  success: boolean,
-  result?: unknown,
-  error?: string
-): void {
+function sendResult(id: string, success: boolean, result?: unknown, error?: string): void {
   figma.ui.postMessage({
     type: "ws-send",
     payload: { id, type: "result", success, result, error },
@@ -97,7 +91,7 @@ function sendResult(
 
 // Catch unhandled promise rejections (safety net)
 if (typeof self !== "undefined" && "addEventListener" in self) {
-  (self as any).addEventListener("unhandledrejection", function(event: any) {
+  (self as any).addEventListener("unhandledrejection", function (event: any) {
     console.error("[PluginOS] Unhandled rejection:", event.reason);
   });
 }

@@ -21,6 +21,7 @@ PluginOS takes a fundamentally different approach:
 ### 1. Add PluginOS to your MCP config
 
 **Claude Code (`~/.claude.json`):**
+
 ```json
 {
   "mcpServers": {
@@ -33,6 +34,7 @@ PluginOS takes a fundamentally different approach:
 ```
 
 **Cursor (`.cursor/mcp.json`):**
+
 ```json
 {
   "mcpServers": {
@@ -74,52 +76,52 @@ Agent ─── MCP (stdio) ──→ PluginOS Server ─── WebSocket ──
 
 **Two execution paths:**
 
-| Path | When | Token cost | How |
-|------|------|-----------|-----|
-| **Fast** | Built-in operation exists | ~230 tokens | `run_operation("check_contrast", {scope: "page"})` |
+| Path         | When                        | Token cost  | How                                                          |
+| ------------ | --------------------------- | ----------- | ------------------------------------------------------------ |
+| **Fast**     | Built-in operation exists   | ~230 tokens | `run_operation("check_contrast", {scope: "page"})`           |
 | **Fallback** | Custom/one-off logic needed | ~700 tokens | `execute_figma("return figma.currentPage.findAll().length")` |
 
 Scripts travel over WebSocket (free) — they never enter the LLM context.
 
 ## Available Operations
 
-| Operation | Category | Description |
-|-----------|----------|-------------|
-| `lint_styles` | lint | Find layers without styles |
-| `lint_detached` | lint | Find detached instances |
-| `lint_naming` | lint | Find default-named layers |
-| `check_contrast` | accessibility | WCAG contrast audit |
-| `check_touch_targets` | accessibility | Touch target size check |
-| `find_instances` | components | Find component instances |
-| `analyze_overrides` | components | Report instance overrides |
-| `create_frame` | components | Create frames with auto-layout |
-| `clone_node` | components | Clone and reposition nodes |
-| `rename_layers` | cleanup | Batch rename layers |
-| `remove_hidden` | cleanup | Remove hidden layers |
-| `round_values` | cleanup | Round fractional values |
-| `delete_node` | cleanup | Delete nodes by ID |
-| `list_variables` | tokens | List all variables |
-| `export_tokens` | tokens | Export tokens as JSON |
-| `audit_spacing` | layout | Audit spacing values |
-| `move_node` | layout | Move nodes to new positions |
-| `resize_node` | layout | Resize nodes |
-| `set_fills` | colors | Set fill colors on nodes |
-| `extract_palette` | colors | Extract unique colors with counts |
-| `find_non_style_colors` | colors | Find hardcoded (unstyled) colors |
-| `audit_text_styles` | typography | Audit font/size/weight consistency |
-| `list_fonts` | typography | List all fonts with usage counts |
-| `set_text` | content | Set text content on nodes |
-| `populate_text` | content | Fill text with lorem or custom text |
-| `extract_css` | export | Extract CSS properties from nodes |
+| Operation               | Category      | Description                         |
+| ----------------------- | ------------- | ----------------------------------- |
+| `lint_styles`           | lint          | Find layers without styles          |
+| `lint_detached`         | lint          | Find detached instances             |
+| `lint_naming`           | lint          | Find default-named layers           |
+| `check_contrast`        | accessibility | WCAG contrast audit                 |
+| `check_touch_targets`   | accessibility | Touch target size check             |
+| `find_instances`        | components    | Find component instances            |
+| `analyze_overrides`     | components    | Report instance overrides           |
+| `create_frame`          | components    | Create frames with auto-layout      |
+| `clone_node`            | components    | Clone and reposition nodes          |
+| `rename_layers`         | cleanup       | Batch rename layers                 |
+| `remove_hidden`         | cleanup       | Remove hidden layers                |
+| `round_values`          | cleanup       | Round fractional values             |
+| `delete_node`           | cleanup       | Delete nodes by ID                  |
+| `list_variables`        | tokens        | List all variables                  |
+| `export_tokens`         | tokens        | Export tokens as JSON               |
+| `audit_spacing`         | layout        | Audit spacing values                |
+| `move_node`             | layout        | Move nodes to new positions         |
+| `resize_node`           | layout        | Resize nodes                        |
+| `set_fills`             | colors        | Set fill colors on nodes            |
+| `extract_palette`       | colors        | Extract unique colors with counts   |
+| `find_non_style_colors` | colors        | Find hardcoded (unstyled) colors    |
+| `audit_text_styles`     | typography    | Audit font/size/weight consistency  |
+| `list_fonts`            | typography    | List all fonts with usage counts    |
+| `set_text`              | content       | Set text content on nodes           |
+| `populate_text`         | content       | Fill text with lorem or custom text |
+| `extract_css`           | export        | Extract CSS properties from nodes   |
 
 ## Token Economics
 
-| Scenario | Traditional MCP | PluginOS | Savings |
-|----------|----------------|----------|---------|
-| Tool schema overhead (per turn) | ~12,000 tokens | ~650 tokens | 95% |
-| Single operation call | ~1,500 tokens | ~230 tokens | 85% |
-| Complex workflow (8 steps) | ~105,000 tokens | ~6,600 tokens | 94% |
-| 10 users × 5 runs/day × 30 days | ~157M tokens | ~10M tokens | 94% |
+| Scenario                        | Traditional MCP | PluginOS      | Savings |
+| ------------------------------- | --------------- | ------------- | ------- |
+| Tool schema overhead (per turn) | ~12,000 tokens  | ~650 tokens   | 95%     |
+| Single operation call           | ~1,500 tokens   | ~230 tokens   | 85%     |
+| Complex workflow (8 steps)      | ~105,000 tokens | ~6,600 tokens | 94%     |
+| 10 users × 5 runs/day × 30 days | ~157M tokens    | ~10M tokens   | 94%     |
 
 ## Adding Custom Operations
 

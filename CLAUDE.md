@@ -8,13 +8,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Install all workspaces
 npm install
 
+# Full pipeline (lint → format → build:shared → typecheck → build → test)
+npm run check
+
 # Build all packages
 npm run build
 
-# Build individual packages
-npm run build -w packages/mcp-server    # tsup → dist/
-npm run build -w packages/bridge-plugin  # webpack → dist/ (code.js, ui.html, bootloader.html)
-npm run build -w packages/shared         # tsc → dist/
+# Build individual packages (shared must be built first — mcp-server depends on it)
+npm run build:shared                          # shared → dist/ (run this first)
+npm run build -w packages/mcp-server          # tsup → dist/
+npm run build -w packages/bridge-plugin       # webpack → dist/ (code.js, ui.html, bootloader.html)
+npm run build -w packages/shared              # tsc → dist/
+
+# Quality gates (all enforced in CI)
+npm run lint           # ESLint (TypeScript rules)
+npm run format:check   # Prettier check
+npm run format         # Prettier auto-fix
+npm run typecheck      # tsc --noEmit (shared + mcp-server)
+npm audit --audit-level=high  # Security — fails CI on high/critical CVEs
 
 # Development (hot reload)
 npm run dev:server    # MCP server with tsx watch
@@ -29,8 +40,6 @@ npm test -w packages/shared          # Shared package tests only
 npm run release:patch
 npm run release:minor
 ```
-
-No linter or formatter is configured. TypeScript strict mode is the primary quality gate.
 
 ## Architecture
 
@@ -71,7 +80,11 @@ Agent ──[MCP stdio]──→ MCP Server ──[WebSocket localhost:9500-9510
 ### Adding a New Operation
 
 1. Create file in `packages/bridge-plugin/src/operations/`
-2. Call `registerOperation({ manifest: {...}, execute: async (params) => {...} })`
+2. Call `registerOperation({ manifest: {...}, execute: async (ctx: OperationContext) => {...} })`
+   - `ctx.nodes` — pre-resolved SceneNodes (respects `scope` param: `"selection"` or `"page"`)
+   - `ctx.figma` — Figma API reference
+   - `ctx.params` — raw operation params
+   - `ctx.MAX_RESULTS` — standard result cap (200)
 3. Import the file in `operations/index.ts`
 4. Rebuild bridge-plugin — agent discovers it via `list_operations`
 

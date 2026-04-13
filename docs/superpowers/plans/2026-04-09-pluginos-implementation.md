@@ -17,6 +17,7 @@
 ### Task 1: Initialize monorepo structure
 
 **Files:**
+
 - Create: `package.json` (workspace root)
 - Create: `packages/mcp-server/package.json`
 - Create: `packages/mcp-server/tsconfig.json`
@@ -209,6 +210,7 @@
 npm install
 npm run build -w packages/shared
 ```
+
 Expected: Clean build, no errors.
 
 - [ ] **Step 6: Commit**
@@ -225,6 +227,7 @@ git commit -m "chore: scaffold PluginOS monorepo with shared, mcp-server, and br
 ### Task 2: Define shared types and protocol
 
 **Files:**
+
 - Create: `packages/shared/src/index.ts`
 - Create: `packages/shared/src/types.ts`
 - Create: `packages/shared/src/protocol.ts`
@@ -297,6 +300,7 @@ describe("protocol", () => {
 ```bash
 cd packages/shared && npx vitest run
 ```
+
 Expected: FAIL — modules don't exist yet.
 
 - [ ] **Step 3: Implement types**
@@ -401,10 +405,7 @@ export function createRunOperationMessage(
   };
 }
 
-export function createExecuteMessage(
-  code: string,
-  timeout: number = 5000
-): ExecuteMessage {
+export function createExecuteMessage(code: string, timeout: number = 5000): ExecuteMessage {
   return {
     id: `req_${++counter}_${Date.now()}`,
     type: "execute",
@@ -477,6 +478,7 @@ export * from "./categories";
 ```bash
 cd packages/shared && npx vitest run
 ```
+
 Expected: All 7 tests PASS.
 
 - [ ] **Step 8: Commit**
@@ -493,6 +495,7 @@ git commit -m "feat: add shared types, protocol messages, and operation categori
 ### Task 3: WebSocket server with connection management
 
 **Files:**
+
 - Create: `packages/mcp-server/src/websocket.ts`
 - Create: `packages/mcp-server/src/connection-manager.ts`
 - Test: `packages/mcp-server/src/__tests__/websocket.test.ts`
@@ -538,12 +541,14 @@ describe("PluginOSWebSocketServer", () => {
     // Echo server simulation: client echoes back with result
     client.on("message", (data) => {
       const msg = JSON.parse(data.toString());
-      client.send(JSON.stringify({
-        id: msg.id,
-        type: "result",
-        success: true,
-        result: { echoed: true },
-      }));
+      client.send(
+        JSON.stringify({
+          id: msg.id,
+          type: "result",
+          success: true,
+          result: { echoed: true },
+        })
+      );
     });
 
     const result = await server.sendAndWait({
@@ -567,10 +572,7 @@ describe("PluginOSWebSocketServer", () => {
     // Client does NOT respond
 
     await expect(
-      server.sendAndWait(
-        { id: "test_2", type: "execute", code: "return 1", timeout: 500 },
-        500
-      )
+      server.sendAndWait({ id: "test_2", type: "execute", code: "return 1", timeout: 500 }, 500)
     ).rejects.toThrow(/timeout/i);
     client.close();
   });
@@ -582,6 +584,7 @@ describe("PluginOSWebSocketServer", () => {
 ```bash
 cd packages/mcp-server && npx vitest run
 ```
+
 Expected: FAIL — module doesn't exist.
 
 - [ ] **Step 3: Implement WebSocket server**
@@ -604,11 +607,14 @@ export class PluginOSWebSocketServer {
   private wss: WebSocketServer | null = null;
   private client: WebSocket | null = null;
   private port: number | null = null;
-  private pending = new Map<string, {
-    resolve: (result: ResultMessage) => void;
-    reject: (error: Error) => void;
-    timer: ReturnType<typeof setTimeout>;
-  }>();
+  private pending = new Map<
+    string,
+    {
+      resolve: (result: ResultMessage) => void;
+      reject: (error: Error) => void;
+      timer: ReturnType<typeof setTimeout>;
+    }
+  >();
   private fileKey: string | null = null;
   private fileName: string | null = null;
   private currentPage: string | null = null;
@@ -708,10 +714,7 @@ export class PluginOSWebSocketServer {
     };
   }
 
-  sendAndWait(
-    message: ServerToPluginMessage,
-    timeout: number = 30000
-  ): Promise<ResultMessage> {
+  sendAndWait(message: ServerToPluginMessage, timeout: number = 30000): Promise<ResultMessage> {
     return new Promise((resolve, reject) => {
       if (!this.isConnected()) {
         reject(new Error("Plugin not connected. Open PluginOS Bridge in Figma."));
@@ -752,6 +755,7 @@ export class PluginOSWebSocketServer {
 ```bash
 cd packages/mcp-server && npx vitest run
 ```
+
 Expected: All 4 tests PASS.
 
 - [ ] **Step 5: Commit**
@@ -766,6 +770,7 @@ git commit -m "feat: add WebSocket server with connection management and request
 ### Task 4: MCP server with tool definitions
 
 **Files:**
+
 - Create: `packages/mcp-server/src/server.ts`
 - Create: `packages/mcp-server/src/index.ts`
 - Create: `packages/mcp-server/bin/pluginos.js`
@@ -795,11 +800,13 @@ export function createPluginOSServer(wsServer: PluginOSWebSocketServer) {
   server.tool(
     "list_operations",
     "List all available Figma operations, optionally filtered by category. " +
-    "Categories: " + Object.keys(CATEGORY_DESCRIPTIONS).join(", "),
+      "Categories: " +
+      Object.keys(CATEGORY_DESCRIPTIONS).join(", "),
     {
-      category: z.string().optional().describe(
-        "Filter by category. Options: " + Object.keys(CATEGORY_DESCRIPTIONS).join(", ")
-      ),
+      category: z
+        .string()
+        .optional()
+        .describe("Filter by category. Options: " + Object.keys(CATEGORY_DESCRIPTIONS).join(", ")),
     },
     async ({ category }) => {
       // Ask the plugin for its operation manifests
@@ -831,8 +838,8 @@ export function createPluginOSServer(wsServer: PluginOSWebSocketServer) {
   server.tool(
     "run_operation",
     "Execute a pre-built Figma operation by name. Use list_operations to discover available operations. " +
-    "Operations run inside the Figma plugin with full Plugin API access. " +
-    "Results are structured and summarized — no raw node data.",
+      "Operations run inside the Figma plugin with full Plugin API access. " +
+      "Results are structured and summarized — no raw node data.",
     {
       name: z.string().describe("Operation name (e.g., 'lint_styles', 'check_contrast')"),
       params: z.record(z.unknown()).optional().default({}).describe("Operation parameters"),
@@ -864,9 +871,9 @@ export function createPluginOSServer(wsServer: PluginOSWebSocketServer) {
   server.tool(
     "execute_figma",
     "Execute arbitrary Figma Plugin API JavaScript code in the plugin sandbox. " +
-    "Use this as a fallback when no pre-built operation covers your need. " +
-    "The code runs in an async context with full access to the `figma` global. " +
-    "Return data via `return` statement. Max timeout 30 seconds.",
+      "Use this as a fallback when no pre-built operation covers your need. " +
+      "The code runs in an async context with full access to the `figma` global. " +
+      "Return data via `return` statement. Max timeout 30 seconds.",
     {
       code: z.string().describe("JavaScript code to execute in Figma's Plugin API context"),
       timeout: z.number().optional().default(5000).describe("Timeout in ms (max 30000)"),
@@ -903,10 +910,12 @@ export function createPluginOSServer(wsServer: PluginOSWebSocketServer) {
     async () => {
       const status = wsServer.getStatus();
       return {
-        content: [{
-          type: "text" as const,
-          text: JSON.stringify(status, null, 2),
-        }],
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(status, null, 2),
+          },
+        ],
       };
     }
   );
@@ -957,6 +966,7 @@ import "../dist/index.js";
 cd packages/shared && npm run build
 cd ../mcp-server && npm run build
 ```
+
 Expected: Clean build, no errors.
 
 - [ ] **Step 5: Commit**
@@ -973,6 +983,7 @@ git commit -m "feat: add MCP server with list_operations, run_operation, execute
 ### Task 5: Plugin UI with WebSocket client
 
 **Files:**
+
 - Create: `packages/bridge-plugin/src/ui.html`
 - Create: `packages/bridge-plugin/webpack.config.js`
 
@@ -1027,31 +1038,42 @@ module.exports = (env, argv) => [
 <!-- packages/bridge-plugin/src/ui.html -->
 <!DOCTYPE html>
 <html>
-<head>
-  <style>
-    body {
-      font-family: Inter, system-ui, sans-serif;
-      font-size: 12px;
-      margin: 8px;
-      color: var(--figma-color-text, #333);
-      background: var(--figma-color-bg, #fff);
-    }
-    .status { display: flex; align-items: center; gap: 6px; }
-    .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #e74c3c;
-    }
-    .dot.connected { background: #2ecc71; }
-    .info { margin-top: 8px; color: var(--figma-color-text-secondary, #888); }
-  </style>
-</head>
-<body>
-  <div class="status">
-    <div class="dot" id="dot"></div>
-    <span id="status-text">Connecting...</span>
-  </div>
-  <div class="info" id="info"></div>
-</body>
+  <head>
+    <style>
+      body {
+        font-family: Inter, system-ui, sans-serif;
+        font-size: 12px;
+        margin: 8px;
+        color: var(--figma-color-text, #333);
+        background: var(--figma-color-bg, #fff);
+      }
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #e74c3c;
+      }
+      .dot.connected {
+        background: #2ecc71;
+      }
+      .info {
+        margin-top: 8px;
+        color: var(--figma-color-text-secondary, #888);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="status">
+      <div class="dot" id="dot"></div>
+      <span id="status-text">Connecting...</span>
+    </div>
+    <div class="info" id="info"></div>
+  </body>
 </html>
 ```
 
@@ -1128,7 +1150,9 @@ function tryConnect(port: number): Promise<void> {
       try {
         const data = JSON.parse(event.data);
         parent.postMessage({ pluginMessage: { type: "ws-message", payload: data } }, "*");
-      } catch { /* ignore malformed */ }
+      } catch {
+        /* ignore malformed */
+      }
     };
 
     socket.onclose = () => {
@@ -1164,6 +1188,7 @@ git commit -m "feat: add bridge plugin UI with WebSocket client and port scannin
 ### Task 6: Plugin sandbox code with operation router
 
 **Files:**
+
 - Create: `packages/bridge-plugin/src/code.ts`
 - Create: `packages/bridge-plugin/src/operations/index.ts`
 - Create: `packages/bridge-plugin/src/utils/serializer.ts`
@@ -1350,6 +1375,7 @@ figma.on("currentpagechange", sendFileStatus);
 ```bash
 cd packages/bridge-plugin && npm run build
 ```
+
 Expected: `dist/code.js` and `dist/ui.html` produced. No errors.
 
 - [ ] **Step 5: Commit**
@@ -1366,6 +1392,7 @@ git commit -m "feat: add bridge plugin sandbox with operation router and execute
 ### Task 7: Lint operations
 
 **Files:**
+
 - Create: `packages/bridge-plugin/src/operations/lint.ts`
 - Modify: `packages/bridge-plugin/src/operations/index.ts` — import and register lint ops
 
@@ -1379,19 +1406,18 @@ import { registerOperation } from "./index";
 registerOperation({
   manifest: {
     name: "lint_styles",
-    description: "Find layers using local styles instead of library styles, or no style at all. Reports fills, strokes, text styles, and effects that don't reference a shared style.",
+    description:
+      "Find layers using local styles instead of library styles, or no style at all. Reports fills, strokes, text styles, and effects that don't reference a shared style.",
     category: "lint",
     params: {
       scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
     },
-    returns: "{ total_nodes: number, issues: Array<{nodeId, nodeName, nodeType, issue}>, summary: string }",
+    returns:
+      "{ total_nodes: number, issues: Array<{nodeId, nodeName, nodeType, issue}>, summary: string }",
   },
   async execute(params) {
     const scope = params.scope || "page";
-    const nodes =
-      scope === "selection"
-        ? figma.currentPage.selection
-        : figma.currentPage.findAll();
+    const nodes = scope === "selection" ? figma.currentPage.selection : figma.currentPage.findAll();
 
     const issues: Array<{ nodeId: string; nodeName: string; nodeType: string; issue: string }> = [];
 
@@ -1471,7 +1497,8 @@ registerOperation({
 registerOperation({
   manifest: {
     name: "lint_detached",
-    description: "Find all detached component instances — frames that were once instances but have been detached.",
+    description:
+      "Find all detached component instances — frames that were once instances but have been detached.",
     category: "lint",
     params: {
       scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
@@ -1480,10 +1507,7 @@ registerOperation({
   },
   async execute(params) {
     const scope = params.scope || "page";
-    const nodes =
-      scope === "selection"
-        ? figma.currentPage.selection
-        : figma.currentPage.findAll();
+    const nodes = scope === "selection" ? figma.currentPage.selection : figma.currentPage.findAll();
 
     const detached: Array<{ nodeId: string; nodeName: string; parentName: string }> = [];
 
@@ -1516,7 +1540,8 @@ registerOperation({
 registerOperation({
   manifest: {
     name: "lint_naming",
-    description: "Find layers with default names like 'Frame 1', 'Rectangle 2', 'Group 3' that should be renamed for clarity.",
+    description:
+      "Find layers with default names like 'Frame 1', 'Rectangle 2', 'Group 3' that should be renamed for clarity.",
     category: "lint",
     params: {
       scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
@@ -1525,12 +1550,10 @@ registerOperation({
   },
   async execute(params) {
     const scope = params.scope || "page";
-    const nodes =
-      scope === "selection"
-        ? figma.currentPage.selection
-        : figma.currentPage.findAll();
+    const nodes = scope === "selection" ? figma.currentPage.selection : figma.currentPage.findAll();
 
-    const defaultNamePattern = /^(Frame|Rectangle|Ellipse|Group|Line|Vector|Text|Polygon|Star|Section|Slice|Image|Component|Instance) \d+$/;
+    const defaultNamePattern =
+      /^(Frame|Rectangle|Ellipse|Group|Line|Vector|Text|Polygon|Star|Section|Slice|Image|Component|Instance) \d+$/;
     const unnamed: Array<{ nodeId: string; nodeName: string; nodeType: string }> = [];
 
     for (const node of nodes) {
@@ -1555,6 +1578,7 @@ registerOperation({
 - [ ] **Step 2: Register lint operations in index**
 
 Add to `packages/bridge-plugin/src/operations/index.ts`:
+
 ```typescript
 // At the bottom of the file:
 import "./lint";
@@ -1565,6 +1589,7 @@ import "./lint";
 ```bash
 cd packages/bridge-plugin && npm run build
 ```
+
 Expected: Clean build.
 
 - [ ] **Step 4: Commit**
@@ -1579,6 +1604,7 @@ git commit -m "feat: add lint operations — lint_styles, lint_detached, lint_na
 ### Task 8: Accessibility operations
 
 **Files:**
+
 - Create: `packages/bridge-plugin/src/operations/accessibility.ts`
 - Modify: `packages/bridge-plugin/src/operations/index.ts` — add import
 
@@ -1589,7 +1615,10 @@ git commit -m "feat: add lint operations — lint_styles, lint_detached, lint_na
 import { registerOperation } from "./index";
 
 // Helper: extract computed RGBA from a paint array against a background
-function computeColor(fills: readonly Paint[], opacity: number = 1): [number, number, number, number] | null {
+function computeColor(
+  fills: readonly Paint[],
+  opacity: number = 1
+): [number, number, number, number] | null {
   for (let i = fills.length - 1; i >= 0; i--) {
     const fill = fills[i];
     if (fill.type === "SOLID" && fill.visible !== false) {
@@ -1619,12 +1648,14 @@ function contrastRatio(l1: number, l2: number): number {
 registerOperation({
   manifest: {
     name: "check_contrast",
-    description: "Check color contrast ratios for all text nodes against their parent backgrounds. Reports WCAG AA and AAA compliance.",
+    description:
+      "Check color contrast ratios for all text nodes against their parent backgrounds. Reports WCAG AA and AAA compliance.",
     category: "accessibility",
     params: {
       scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
     },
-    returns: "{ results: Array<{nodeId, text_preview, ratio, aa_pass, aaa_pass, font_size}>, passing: number, failing: number, summary: string }",
+    returns:
+      "{ results: Array<{nodeId, text_preview, ratio, aa_pass, aaa_pass, font_size}>, passing: number, failing: number, summary: string }",
   },
   async execute(params) {
     const scope = params.scope || "page";
@@ -1643,10 +1674,7 @@ registerOperation({
     }> = [];
 
     for (const textNode of textNodes) {
-      const textColor = computeColor(
-        textNode.fills as readonly Paint[],
-        textNode.opacity
-      );
+      const textColor = computeColor(textNode.fills as readonly Paint[], textNode.opacity);
       if (!textColor) continue;
 
       // Walk up to find background
@@ -1666,7 +1694,8 @@ registerOperation({
 
       const fontSize = textNode.fontSize;
       const isLargeText =
-        typeof fontSize === "number" && (fontSize >= 18 || (fontSize >= 14 && textNode.fontWeight >= 700));
+        typeof fontSize === "number" &&
+        (fontSize >= 18 || (fontSize >= 14 && textNode.fontWeight >= 700));
 
       const aaThreshold = isLargeText ? 3 : 4.5;
       const aaaThreshold = isLargeText ? 4.5 : 7;
@@ -1698,25 +1727,30 @@ registerOperation({
 registerOperation({
   manifest: {
     name: "check_touch_targets",
-    description: "Find interactive elements (buttons, links, inputs) smaller than 44x44px minimum touch target size (WCAG 2.5.8).",
+    description:
+      "Find interactive elements (buttons, links, inputs) smaller than 44x44px minimum touch target size (WCAG 2.5.8).",
     category: "accessibility",
     params: {
       scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
-      min_size: { type: "number", required: false, description: "Minimum touch target size in px (default: 44)" },
+      min_size: {
+        type: "number",
+        required: false,
+        description: "Minimum touch target size in px (default: 44)",
+      },
     },
-    returns: "{ violations: Array<{nodeId, nodeName, width, height}>, count: number, summary: string }",
+    returns:
+      "{ violations: Array<{nodeId, nodeName, width, height}>, count: number, summary: string }",
   },
   async execute(params) {
     const scope = params.scope || "page";
     const minSize = params.min_size || 44;
 
-    const nodes =
-      scope === "selection"
-        ? figma.currentPage.selection
-        : figma.currentPage.findAll();
+    const nodes = scope === "selection" ? figma.currentPage.selection : figma.currentPage.findAll();
 
-    const interactivePatterns = /button|btn|link|input|toggle|switch|checkbox|radio|tab|chip|tag|cta/i;
-    const violations: Array<{ nodeId: string; nodeName: string; width: number; height: number }> = [];
+    const interactivePatterns =
+      /button|btn|link|input|toggle|switch|checkbox|radio|tab|chip|tag|cta/i;
+    const violations: Array<{ nodeId: string; nodeName: string; width: number; height: number }> =
+      [];
 
     for (const node of nodes) {
       if (!interactivePatterns.test(node.name)) continue;
@@ -1747,6 +1781,7 @@ registerOperation({
 - [ ] **Step 2: Register in index**
 
 Add to `packages/bridge-plugin/src/operations/index.ts`:
+
 ```typescript
 import "./accessibility";
 ```
@@ -1769,6 +1804,7 @@ git commit -m "feat: add accessibility operations — check_contrast, check_touc
 ### Task 9: Component management operations
 
 **Files:**
+
 - Create: `packages/bridge-plugin/src/operations/components.ts`
 - Modify: `packages/bridge-plugin/src/operations/index.ts`
 
@@ -1782,20 +1818,24 @@ import { registerOperation } from "./index";
 registerOperation({
   manifest: {
     name: "find_instances",
-    description: "Find all instances of a component by name or component key across the current page.",
+    description:
+      "Find all instances of a component by name or component key across the current page.",
     category: "components",
     params: {
-      name: { type: "string", required: false, description: "Component name to search for (partial match)" },
+      name: {
+        type: "string",
+        required: false,
+        description: "Component name to search for (partial match)",
+      },
       component_key: { type: "string", required: false, description: "Exact component key" },
     },
-    returns: "{ instances: Array<{nodeId, nodeName, componentName, page}>, count: number, summary: string }",
+    returns:
+      "{ instances: Array<{nodeId, nodeName, componentName, page}>, count: number, summary: string }",
   },
   async execute(params) {
     const instances: Array<{ nodeId: string; nodeName: string; componentName: string }> = [];
 
-    const allInstances = figma.currentPage.findAll(
-      (n) => n.type === "INSTANCE"
-    ) as InstanceNode[];
+    const allInstances = figma.currentPage.findAll((n) => n.type === "INSTANCE") as InstanceNode[];
 
     for (const inst of allInstances) {
       const mainComp = await inst.getMainComponentAsync();
@@ -1822,12 +1862,14 @@ registerOperation({
 registerOperation({
   manifest: {
     name: "analyze_overrides",
-    description: "Analyze all component instances and report which have overrides applied, what fields are overridden, and how many.",
+    description:
+      "Analyze all component instances and report which have overrides applied, what fields are overridden, and how many.",
     category: "components",
     params: {
       scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
     },
-    returns: "{ instances: Array<{nodeId, nodeName, overrideCount, overriddenFields}>, total_instances: number, with_overrides: number, summary: string }",
+    returns:
+      "{ instances: Array<{nodeId, nodeName, overrideCount, overriddenFields}>, total_instances: number, with_overrides: number, summary: string }",
   },
   async execute(params) {
     const scope = params.scope || "page";
@@ -1891,6 +1933,7 @@ git commit -m "feat: add component operations — find_instances, analyze_overri
 ### Task 10: Cleanup operations
 
 **Files:**
+
 - Create: `packages/bridge-plugin/src/operations/cleanup.ts`
 - Modify: `packages/bridge-plugin/src/operations/index.ts`
 
@@ -1918,9 +1961,7 @@ registerOperation({
   async execute(params) {
     const scope = params.scope || "page";
     const nodes =
-      scope === "selection"
-        ? [...figma.currentPage.selection]
-        : figma.currentPage.findAll();
+      scope === "selection" ? [...figma.currentPage.selection] : figma.currentPage.findAll();
 
     let renamed = 0;
 
@@ -1959,18 +2000,21 @@ registerOperation({
     description: "Find and optionally remove all hidden (invisible) layers on the current page.",
     category: "cleanup",
     params: {
-      dry_run: { type: "boolean", required: false, description: "If true, only report without removing (default: true)" },
+      dry_run: {
+        type: "boolean",
+        required: false,
+        description: "If true, only report without removing (default: true)",
+      },
       scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
     },
-    returns: "{ hidden: Array<{nodeId, nodeName}>, count: number, removed: boolean, summary: string }",
+    returns:
+      "{ hidden: Array<{nodeId, nodeName}>, count: number, removed: boolean, summary: string }",
   },
   async execute(params) {
     const dryRun = params.dry_run !== false;
     const scope = params.scope || "page";
     const nodes =
-      scope === "selection"
-        ? [...figma.currentPage.selection]
-        : figma.currentPage.findAll();
+      scope === "selection" ? [...figma.currentPage.selection] : figma.currentPage.findAll();
 
     const hidden: Array<{ nodeId: string; nodeName: string }> = [];
 
@@ -2004,21 +2048,25 @@ registerOperation({
 registerOperation({
   manifest: {
     name: "round_values",
-    description: "Round all fractional x, y, width, height values to whole pixels for pixel-perfect designs.",
+    description:
+      "Round all fractional x, y, width, height values to whole pixels for pixel-perfect designs.",
     category: "cleanup",
     params: {
       scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
-      dry_run: { type: "boolean", required: false, description: "If true, only report (default: true)" },
+      dry_run: {
+        type: "boolean",
+        required: false,
+        description: "If true, only report (default: true)",
+      },
     },
-    returns: "{ fractional: Array<{nodeId, nodeName, property, before, after}>, count: number, summary: string }",
+    returns:
+      "{ fractional: Array<{nodeId, nodeName, property, before, after}>, count: number, summary: string }",
   },
   async execute(params) {
     const dryRun = params.dry_run !== false;
     const scope = params.scope || "page";
     const nodes =
-      scope === "selection"
-        ? [...figma.currentPage.selection]
-        : figma.currentPage.findAll();
+      scope === "selection" ? [...figma.currentPage.selection] : figma.currentPage.findAll();
 
     const fractional: Array<{
       nodeId: string;
@@ -2105,6 +2153,7 @@ git commit -m "feat: add cleanup operations — rename_layers, remove_hidden, ro
 ### Task 11: Token & layout operations
 
 **Files:**
+
 - Create: `packages/bridge-plugin/src/operations/tokens.ts`
 - Create: `packages/bridge-plugin/src/operations/layout.ts`
 - Modify: `packages/bridge-plugin/src/operations/index.ts`
@@ -2119,12 +2168,18 @@ import { registerOperation } from "./index";
 registerOperation({
   manifest: {
     name: "list_variables",
-    description: "List all local variables and variable collections in the file, grouped by collection.",
+    description:
+      "List all local variables and variable collections in the file, grouped by collection.",
     category: "tokens",
     params: {
-      type: { type: "string", required: false, description: "Filter by type: 'COLOR', 'FLOAT', 'STRING', 'BOOLEAN'" },
+      type: {
+        type: "string",
+        required: false,
+        description: "Filter by type: 'COLOR', 'FLOAT', 'STRING', 'BOOLEAN'",
+      },
     },
-    returns: "{ collections: Array<{name, id, modes, variables: Array<{name, type, values}>}>, total_variables: number }",
+    returns:
+      "{ collections: Array<{name, id, modes, variables: Array<{name, type, values}>}>, total_variables: number }",
   },
   async execute(params) {
     const collections = await figma.variables.getLocalVariableCollectionsAsync();
@@ -2170,7 +2225,8 @@ registerOperation({
 registerOperation({
   manifest: {
     name: "export_tokens",
-    description: "Export all local variables as a structured JSON token map, compatible with Tokens Studio format.",
+    description:
+      "Export all local variables as a structured JSON token map, compatible with Tokens Studio format.",
     category: "tokens",
     params: {},
     returns: "{ tokens: Record<collectionName, Record<modeName, Record<variableName, value>>> }",
@@ -2193,9 +2249,17 @@ registerOperation({
           let exportedValue: unknown = value;
 
           // Convert Figma color objects to hex
-          if (variable.resolvedType === "COLOR" && typeof value === "object" && value !== null && "r" in value) {
+          if (
+            variable.resolvedType === "COLOR" &&
+            typeof value === "object" &&
+            value !== null &&
+            "r" in value
+          ) {
             const c = value as RGBA;
-            const toHex = (n: number) => Math.round(n * 255).toString(16).padStart(2, "0");
+            const toHex = (n: number) =>
+              Math.round(n * 255)
+                .toString(16)
+                .padStart(2, "0");
             exportedValue = `#${toHex(c.r)}${toHex(c.g)}${toHex(c.b)}`;
             if (c.a !== undefined && c.a < 1) {
               exportedValue += toHex(c.a);
@@ -2222,24 +2286,25 @@ import { registerOperation } from "./index";
 registerOperation({
   manifest: {
     name: "audit_spacing",
-    description: "Audit spacing values (padding, gap, item spacing) across auto-layout frames. Reports non-standard values.",
+    description:
+      "Audit spacing values (padding, gap, item spacing) across auto-layout frames. Reports non-standard values.",
     category: "layout",
     params: {
-      allowed_values: { type: "string[]", required: false, description: "Allowed spacing values (e.g., ['0','4','8','12','16','24','32','48'])" },
+      allowed_values: {
+        type: "string[]",
+        required: false,
+        description: "Allowed spacing values (e.g., ['0','4','8','12','16','24','32','48'])",
+      },
       scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
     },
-    returns: "{ frames: Array<{nodeId, nodeName, property, value}>, unique_values: number[], violations: number, summary: string }",
+    returns:
+      "{ frames: Array<{nodeId, nodeName, property, value}>, unique_values: number[], violations: number, summary: string }",
   },
   async execute(params) {
     const scope = params.scope || "page";
-    const allowed = params.allowed_values
-      ? params.allowed_values.map(Number)
-      : null;
+    const allowed = params.allowed_values ? params.allowed_values.map(Number) : null;
 
-    const nodes =
-      scope === "selection"
-        ? figma.currentPage.selection
-        : figma.currentPage.findAll();
+    const nodes = scope === "selection" ? figma.currentPage.selection : figma.currentPage.findAll();
 
     const allValues = new Set<number>();
     const violations: Array<{
@@ -2284,8 +2349,14 @@ registerOperation({
       total_violations: violations.length,
       unique_values: Array.from(allValues).sort((a, b) => a - b),
       summary: allowed
-        ? `Found ${violations.length} non-standard spacing values. Unique values: ${Array.from(allValues).sort((a, b) => a - b).join(", ")}`
-        : `Found ${allValues.size} unique spacing values: ${Array.from(allValues).sort((a, b) => a - b).join(", ")}`,
+        ? `Found ${violations.length} non-standard spacing values. Unique values: ${Array.from(
+            allValues
+          )
+            .sort((a, b) => a - b)
+            .join(", ")}`
+        : `Found ${allValues.size} unique spacing values: ${Array.from(allValues)
+            .sort((a, b) => a - b)
+            .join(", ")}`,
     };
   },
 });
@@ -2294,6 +2365,7 @@ registerOperation({
 - [ ] **Step 3: Register and build**
 
 Add to `operations/index.ts`:
+
 ```typescript
 import "./tokens";
 import "./layout";
@@ -2317,6 +2389,7 @@ git commit -m "feat: add token operations (list_variables, export_tokens) and la
 ### Task 12: End-to-end integration test
 
 **Files:**
+
 - Create: `packages/mcp-server/src/__tests__/integration.test.ts`
 
 - [ ] **Step 1: Write integration test**
@@ -2432,6 +2505,7 @@ describe("MCP Server ↔ Plugin integration", () => {
 ```bash
 cd packages/mcp-server && npx vitest run
 ```
+
 Expected: All tests PASS.
 
 - [ ] **Step 3: Commit**
@@ -2446,11 +2520,12 @@ git commit -m "test: add MCP server integration tests with mock plugin"
 ### Task 13: README and MCP config example
 
 **Files:**
+
 - Create: `README.md`
 
 - [ ] **Step 1: Write README**
 
-```markdown
+````markdown
 # PluginOS
 
 Agent-native Figma operations platform. Run any Figma plugin operation from any LLM agent at ~230 tokens per call instead of ~28,000.
@@ -2460,6 +2535,7 @@ Agent-native Figma operations platform. Run any Figma plugin operation from any 
 ### 1. Add PluginOS to your MCP config
 
 **Claude Code (`~/.claude.json`):**
+
 ```json
 {
   "mcpServers": {
@@ -2470,8 +2546,10 @@ Agent-native Figma operations platform. Run any Figma plugin operation from any 
   }
 }
 ```
+````
 
 **Cursor (`.cursor/mcp.json`):**
+
 ```json
 {
   "mcpServers": {
@@ -2498,28 +2576,28 @@ The agent calls `run_operation("check_contrast", {scope: "page"})` → the bridg
 
 ## Available Operations
 
-| Operation | Category | Description |
-|-----------|----------|-------------|
-| `lint_styles` | lint | Find layers without styles |
-| `lint_detached` | lint | Find detached instances |
-| `lint_naming` | lint | Find default-named layers |
-| `check_contrast` | accessibility | WCAG contrast audit |
-| `check_touch_targets` | accessibility | Touch target size check |
-| `find_instances` | components | Find component instances |
-| `analyze_overrides` | components | Report instance overrides |
-| `rename_layers` | cleanup | Batch rename layers |
-| `remove_hidden` | cleanup | Remove hidden layers |
-| `round_values` | cleanup | Round fractional values |
-| `list_variables` | tokens | List all variables |
-| `export_tokens` | tokens | Export tokens as JSON |
-| `audit_spacing` | layout | Audit spacing values |
+| Operation             | Category      | Description                |
+| --------------------- | ------------- | -------------------------- |
+| `lint_styles`         | lint          | Find layers without styles |
+| `lint_detached`       | lint          | Find detached instances    |
+| `lint_naming`         | lint          | Find default-named layers  |
+| `check_contrast`      | accessibility | WCAG contrast audit        |
+| `check_touch_targets` | accessibility | Touch target size check    |
+| `find_instances`      | components    | Find component instances   |
+| `analyze_overrides`   | components    | Report instance overrides  |
+| `rename_layers`       | cleanup       | Batch rename layers        |
+| `remove_hidden`       | cleanup       | Remove hidden layers       |
+| `round_values`        | cleanup       | Round fractional values    |
+| `list_variables`      | tokens        | List all variables         |
+| `export_tokens`       | tokens        | Export tokens as JSON      |
+| `audit_spacing`       | layout        | Audit spacing values       |
 
 ## Token Economics
 
-| Action | Tokens |
-|--------|--------|
-| Any built-in operation | ~230 |
-| Custom `execute_figma` | ~700 |
+| Action                       | Tokens        |
+| ---------------------------- | ------------- |
+| Any built-in operation       | ~230          |
+| Custom `execute_figma`       | ~700          |
 | Raw `use_figma` (status quo) | ~8,000-28,000 |
 
 ## Architecture
@@ -2538,25 +2616,26 @@ See `packages/bridge-plugin/src/operations/` for examples. Each operation export
 ## License
 
 MIT
-```
+
+````
 
 - [ ] **Step 2: Commit**
 
 ```bash
 git add README.md
 git commit -m "docs: add README with quick start, operations list, and architecture overview"
-```
+````
 
 ---
 
 ## Summary
 
-| Chunk | Tasks | What It Delivers |
-|-------|-------|-----------------|
-| **Chunk 1** | Tasks 1-2 | Monorepo scaffold, shared types, protocol |
-| **Chunk 2** | Tasks 3-4 | Working MCP server with WebSocket + 4 tools |
-| **Chunk 3** | Tasks 5-6 | Working bridge plugin with operation router + execute_figma |
-| **Chunk 4** | Tasks 7-11 | 13 operations across 6 categories (Phase 1 MVP) |
-| **Chunk 5** | Tasks 12-13 | Integration tests + README |
+| Chunk       | Tasks       | What It Delivers                                            |
+| ----------- | ----------- | ----------------------------------------------------------- |
+| **Chunk 1** | Tasks 1-2   | Monorepo scaffold, shared types, protocol                   |
+| **Chunk 2** | Tasks 3-4   | Working MCP server with WebSocket + 4 tools                 |
+| **Chunk 3** | Tasks 5-6   | Working bridge plugin with operation router + execute_figma |
+| **Chunk 4** | Tasks 7-11  | 13 operations across 6 categories (Phase 1 MVP)             |
+| **Chunk 5** | Tasks 12-13 | Integration tests + README                                  |
 
 After Chunk 3, you have a working end-to-end system (MCP server ↔ bridge plugin) with `execute_figma` support. Chunks 4-5 add the pre-built operations that make it fast.

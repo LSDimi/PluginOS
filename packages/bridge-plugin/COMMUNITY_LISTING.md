@@ -30,18 +30,18 @@ No iframes. No manual copy-paste. No round-trips through a screenshot pipeline.
 
 ### 28 built-in operations across 10 categories
 
-| Category | What agents can do |
-|---|---|
-| **Lint** | Detect detached styles, missing components, inconsistent spacing |
-| **Accessibility** | Check contrast ratios, flag missing labels, audit touch targets |
-| **Components** | List, swap, detach, and sync component instances |
-| **Cleanup** | Remove hidden layers, flatten groups, delete empty frames |
-| **Tokens** | Read and write color, spacing, and typography tokens |
-| **Layout** | Inspect and apply auto-layout, padding, gap, and alignment |
-| **Colors** | Extract palettes, replace fills, audit color usage |
-| **Typography** | Audit text styles, normalize fonts, extract type scales |
-| **Content** | Read and write text content on any layer |
-| **Export** | Export frames and components as PNG, SVG, or PDF |
+| Category          | What agents can do                                               |
+| ----------------- | ---------------------------------------------------------------- |
+| **Lint**          | Detect detached styles, missing components, inconsistent spacing |
+| **Accessibility** | Check contrast ratios, flag missing labels, audit touch targets  |
+| **Components**    | List, swap, detach, and sync component instances                 |
+| **Cleanup**       | Remove hidden layers, flatten groups, delete empty frames        |
+| **Tokens**        | Read and write color, spacing, and typography tokens             |
+| **Layout**        | Inspect and apply auto-layout, padding, gap, and alignment       |
+| **Colors**        | Extract palettes, replace fills, audit color usage               |
+| **Typography**    | Audit text styles, normalize fonts, extract type scales          |
+| **Content**       | Read and write text content on any layer                         |
+| **Export**        | Export frames and components as PNG, SVG, or PDF                 |
 
 ---
 

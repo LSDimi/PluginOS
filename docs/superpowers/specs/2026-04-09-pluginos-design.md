@@ -76,12 +76,12 @@ pluginos/
 
 ### MCP Tools
 
-| Tool | Description | Input | Output |
-|------|-------------|-------|--------|
-| `list_operations` | List available operations, optionally by category | `{category?: string}` | Array of `{name, description, category, params_schema}` |
-| `run_operation` | Execute a pre-built operation | `{name: string, params: object, file_key?: string}` | Structured results from the operation |
-| `execute_figma` | Run arbitrary Plugin API code (fallback) | `{code: string, timeout?: number}` | Execution result |
-| `get_status` | Check bridge plugin connection status | `{}` | `{connected: boolean, file_key?: string, file_name?: string}` |
+| Tool              | Description                                       | Input                                               | Output                                                        |
+| ----------------- | ------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------- |
+| `list_operations` | List available operations, optionally by category | `{category?: string}`                               | Array of `{name, description, category, params_schema}`       |
+| `run_operation`   | Execute a pre-built operation                     | `{name: string, params: object, file_key?: string}` | Structured results from the operation                         |
+| `execute_figma`   | Run arbitrary Plugin API code (fallback)          | `{code: string, timeout?: number}`                  | Execution result                                              |
+| `get_status`      | Check bridge plugin connection status             | `{}`                                                | `{connected: boolean, file_key?: string, file_name?: string}` |
 
 ### WebSocket Protocol
 
@@ -256,70 +256,70 @@ ui.html (iframe)                          code.js (sandbox)
 
 ### Phase 1 (MVP) — 6 categories, ~20 operations
 
-| Category | Operations | Covers Plugins Like |
-|----------|-----------|-------------------|
-| **lint** | `lint_styles`, `lint_naming`, `lint_detached`, `lint_spacing`, `lint_all` | Design Lint, Roller, Tone Lint |
-| **accessibility** | `check_contrast`, `check_touch_targets`, `simulate_colorblind`, `wcag_audit` | Stark, Contrast, A11y, Polychrom |
-| **components** | `find_instances`, `find_detached`, `swap_component`, `analyze_overrides` | Instance Finder, Master |
-| **cleanup** | `remove_hidden`, `rename_layers`, `round_values`, `find_duplicates` | Clean Document, Rename It, Round All |
-| **tokens** | `export_tokens`, `list_variables`, `audit_token_usage` | Tokens Studio, Design Tokens |
-| **layout** | `audit_spacing`, `check_auto_layout`, `find_fixed_values` | Spacing Manager, Similayer |
+| Category          | Operations                                                                   | Covers Plugins Like                  |
+| ----------------- | ---------------------------------------------------------------------------- | ------------------------------------ |
+| **lint**          | `lint_styles`, `lint_naming`, `lint_detached`, `lint_spacing`, `lint_all`    | Design Lint, Roller, Tone Lint       |
+| **accessibility** | `check_contrast`, `check_touch_targets`, `simulate_colorblind`, `wcag_audit` | Stark, Contrast, A11y, Polychrom     |
+| **components**    | `find_instances`, `find_detached`, `swap_component`, `analyze_overrides`     | Instance Finder, Master              |
+| **cleanup**       | `remove_hidden`, `rename_layers`, `round_values`, `find_duplicates`          | Clean Document, Rename It, Round All |
+| **tokens**        | `export_tokens`, `list_variables`, `audit_token_usage`                       | Tokens Studio, Design Tokens         |
+| **layout**        | `audit_spacing`, `check_auto_layout`, `find_fixed_values`                    | Spacing Manager, Similayer           |
 
 ### Phase 2 — 4 more categories, ~15 operations
 
-| Category | Operations | Covers Plugins Like |
-|----------|-----------|-------------------|
-| **colors** | `extract_palette`, `generate_palette`, `find_non_style_colors` | Coolors, Image Palette |
-| **typography** | `audit_text_styles`, `find_missing_fonts`, `generate_type_scale` | Typescales, Google Fonts |
-| **annotations** | `add_measurements`, `generate_redlines`, `annotate_spacing` | EightShapes Specs, Redlines |
-| **content** | `populate_lorem`, `populate_from_data`, `list_all_copy` | Content Reel, Lorem Ipsum |
+| Category        | Operations                                                       | Covers Plugins Like         |
+| --------------- | ---------------------------------------------------------------- | --------------------------- |
+| **colors**      | `extract_palette`, `generate_palette`, `find_non_style_colors`   | Coolors, Image Palette      |
+| **typography**  | `audit_text_styles`, `find_missing_fonts`, `generate_type_scale` | Typescales, Google Fonts    |
+| **annotations** | `add_measurements`, `generate_redlines`, `annotate_spacing`      | EightShapes Specs, Redlines |
+| **content**     | `populate_lorem`, `populate_from_data`, `list_all_copy`          | Content Reel, Lorem Ipsum   |
 
 ### Phase 3 — Remaining categories, ~15 operations
 
-| Category | Operations | Covers Plugins Like |
-|----------|-----------|-------------------|
+| Category   | Operations                                                    | Covers Plugins Like       |
+| ---------- | ------------------------------------------------------------- | ------------------------- |
 | **export** | `export_css`, `export_svg_optimized`, `export_html_structure` | Figma to Code, SVG Export |
-| **assets** | `insert_icon`, `insert_placeholder_image` | Iconify, Unsplash |
-| **data** | `create_chart`, `create_table`, `populate_from_json` | Charts, Table Creator |
-| **custom** | (user-defined via `execute_figma` fallback) | Any plugin |
+| **assets** | `insert_icon`, `insert_placeholder_image`                     | Iconify, Unsplash         |
+| **data**   | `create_chart`, `create_table`, `populate_from_json`          | Charts, Table Creator     |
+| **custom** | (user-defined via `execute_figma` fallback)                   | Any plugin                |
 
 ## Top Figma Plugins Mapped to Operations
 
-| Plugin | Free/Paid | Category | PluginOS Operation(s) | Open Source |
-|--------|-----------|----------|----------------------|-------------|
-| **Design Lint** | Free | lint | `lint_styles`, `lint_naming`, `lint_all` | Yes — github.com/destefanis/design-lint |
-| **Roller** | Free | lint | `lint_styles`, `lint_detached` | No |
-| **SPELLL** | Freemium | content | `check_spelling` (Phase 3) | No |
-| **Stark** | Freemium | accessibility | `check_contrast`, `wcag_audit`, `simulate_colorblind` | No |
-| **A11y Contrast Checker** | Free | accessibility | `check_contrast` | No |
-| **Contrast** | Free | accessibility | `check_contrast` | Yes — github.com/romannurik/Figma-Contrast |
-| **Include (eBay)** | Free | annotations | `annotate_landmarks`, `annotate_focus_order` | Yes — github.com/eBay/figma-include-accessibility-annotations |
-| **Polychrom** | Free | accessibility | `check_contrast_apca` | Yes — github.com/evilmartians/figma-polychrom |
-| **Content Reel** | Free | content | `populate_lorem`, `populate_from_data` | No |
-| **Iconify** | Free | assets | `insert_icon` | Yes — github.com/iconify/iconify-figma |
-| **Unsplash** | Free | assets | `insert_placeholder_image` | No |
-| **Tokens Studio** | Freemium | tokens | `export_tokens`, `list_variables`, `audit_token_usage` | Yes — github.com/tokens-studio/figma-plugin |
-| **Batch Styler** | Paid | tokens | `batch_edit_styles` (Phase 2) | No |
-| **Instance Finder** | Free | components | `find_instances` | No |
-| **Master** | Paid | components | `swap_component`, `analyze_overrides` | No |
-| **EightShapes Specs** | Freemium | annotations | `add_measurements`, `generate_redlines` | No |
-| **Redlines** | Free | annotations | `add_measurements` | No |
-| **Similayer** | Free | layout | `find_similar_layers` | No |
-| **Round All** | Free | cleanup | `round_values` | No |
-| **Clean Document** | Free | cleanup | `remove_hidden`, `find_duplicates` | No |
-| **Rename It** | Free | cleanup | `rename_layers` | No |
-| **Automator** | Freemium | cleanup | (multiple cleanup ops) | Partial |
-| **Figma to Code** | Free | export | `export_css`, `export_html_structure` | Yes — github.com/bernaferrari/FigmaToCode |
-| **Anima** | Paid ($39/mo) | export | `export_css`, `export_html_structure` | No (SDK only) |
-| **Coolors** | Freemium | colors | `generate_palette` | No |
-| **Image Palette** | Free | colors | `extract_palette` | No |
-| **Typescales** | Free | typography | `generate_type_scale` | No |
-| **Charts** | Freemium | data | `create_chart` | No |
-| **Table Creator** | Free | data | `create_table` | No |
-| **Spacing Manager** | Free | layout | `audit_spacing` | No |
-| **LottieFiles** | Freemium | export | (animation export — Phase 3+) | No |
-| **html.to.design** | Freemium | assets | (HTML import — Phase 3+) | No |
-| **Autoflow** | Paid ($49) | annotations | `draw_flow_arrows` (Phase 3) | No |
+| Plugin                    | Free/Paid     | Category      | PluginOS Operation(s)                                  | Open Source                                                   |
+| ------------------------- | ------------- | ------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
+| **Design Lint**           | Free          | lint          | `lint_styles`, `lint_naming`, `lint_all`               | Yes — github.com/destefanis/design-lint                       |
+| **Roller**                | Free          | lint          | `lint_styles`, `lint_detached`                         | No                                                            |
+| **SPELLL**                | Freemium      | content       | `check_spelling` (Phase 3)                             | No                                                            |
+| **Stark**                 | Freemium      | accessibility | `check_contrast`, `wcag_audit`, `simulate_colorblind`  | No                                                            |
+| **A11y Contrast Checker** | Free          | accessibility | `check_contrast`                                       | No                                                            |
+| **Contrast**              | Free          | accessibility | `check_contrast`                                       | Yes — github.com/romannurik/Figma-Contrast                    |
+| **Include (eBay)**        | Free          | annotations   | `annotate_landmarks`, `annotate_focus_order`           | Yes — github.com/eBay/figma-include-accessibility-annotations |
+| **Polychrom**             | Free          | accessibility | `check_contrast_apca`                                  | Yes — github.com/evilmartians/figma-polychrom                 |
+| **Content Reel**          | Free          | content       | `populate_lorem`, `populate_from_data`                 | No                                                            |
+| **Iconify**               | Free          | assets        | `insert_icon`                                          | Yes — github.com/iconify/iconify-figma                        |
+| **Unsplash**              | Free          | assets        | `insert_placeholder_image`                             | No                                                            |
+| **Tokens Studio**         | Freemium      | tokens        | `export_tokens`, `list_variables`, `audit_token_usage` | Yes — github.com/tokens-studio/figma-plugin                   |
+| **Batch Styler**          | Paid          | tokens        | `batch_edit_styles` (Phase 2)                          | No                                                            |
+| **Instance Finder**       | Free          | components    | `find_instances`                                       | No                                                            |
+| **Master**                | Paid          | components    | `swap_component`, `analyze_overrides`                  | No                                                            |
+| **EightShapes Specs**     | Freemium      | annotations   | `add_measurements`, `generate_redlines`                | No                                                            |
+| **Redlines**              | Free          | annotations   | `add_measurements`                                     | No                                                            |
+| **Similayer**             | Free          | layout        | `find_similar_layers`                                  | No                                                            |
+| **Round All**             | Free          | cleanup       | `round_values`                                         | No                                                            |
+| **Clean Document**        | Free          | cleanup       | `remove_hidden`, `find_duplicates`                     | No                                                            |
+| **Rename It**             | Free          | cleanup       | `rename_layers`                                        | No                                                            |
+| **Automator**             | Freemium      | cleanup       | (multiple cleanup ops)                                 | Partial                                                       |
+| **Figma to Code**         | Free          | export        | `export_css`, `export_html_structure`                  | Yes — github.com/bernaferrari/FigmaToCode                     |
+| **Anima**                 | Paid ($39/mo) | export        | `export_css`, `export_html_structure`                  | No (SDK only)                                                 |
+| **Coolors**               | Freemium      | colors        | `generate_palette`                                     | No                                                            |
+| **Image Palette**         | Free          | colors        | `extract_palette`                                      | No                                                            |
+| **Typescales**            | Free          | typography    | `generate_type_scale`                                  | No                                                            |
+| **Charts**                | Freemium      | data          | `create_chart`                                         | No                                                            |
+| **Table Creator**         | Free          | data          | `create_table`                                         | No                                                            |
+| **Spacing Manager**       | Free          | layout        | `audit_spacing`                                        | No                                                            |
+| **LottieFiles**           | Freemium      | export        | (animation export — Phase 3+)                          | No                                                            |
+| **html.to.design**        | Freemium      | assets        | (HTML import — Phase 3+)                               | No                                                            |
+| **Autoflow**              | Paid ($49)    | annotations   | `draw_flow_arrows` (Phase 3)                           | No                                                            |
 
 ## Authentication & Security
 
@@ -331,9 +331,9 @@ ui.html (iframe)                          code.js (sandbox)
 
 ## Token Economics Summary
 
-| Scenario | LLM Tokens | Notes |
-|----------|-----------|-------|
-| Built-in operation (fast path) | ~230 | Command name + params + structured result |
-| Custom operation (fallback) | ~700 | Full script + structured result |
-| Raw `use_figma` (status quo) | ~8,000-28,000 | Full script through LLM context + raw results |
-| **Savings vs status quo** | **35-120x** | |
+| Scenario                       | LLM Tokens    | Notes                                         |
+| ------------------------------ | ------------- | --------------------------------------------- |
+| Built-in operation (fast path) | ~230          | Command name + params + structured result     |
+| Custom operation (fallback)    | ~700          | Full script + structured result               |
+| Raw `use_figma` (status quo)   | ~8,000-28,000 | Full script through LLM context + raw results |
+| **Savings vs status quo**      | **35-120x**   |                                               |

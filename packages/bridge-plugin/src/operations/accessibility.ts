@@ -1,4 +1,5 @@
 import { registerOperation } from "./registry";
+import type { OperationContext } from "./context";
 
 function computeColor(
   fills: readonly Paint[],
@@ -8,12 +9,7 @@ function computeColor(
     const fill = fills[i];
     if (fill.type === "SOLID" && fill.visible !== false) {
       const a = (fill.opacity ?? 1) * opacity;
-      return [
-        fill.color.r * 255,
-        fill.color.g * 255,
-        fill.color.b * 255,
-        a,
-      ];
+      return [fill.color.r * 255, fill.color.g * 255, fill.color.b * 255, a];
     }
   }
   return null;
@@ -39,7 +35,7 @@ registerOperation({
     name: "check_contrast",
     description:
       "Check color contrast ratios for all text nodes against their parent backgrounds. Reports WCAG AA and AAA compliance.",
-    category: "accessibility",
+    category: "accessibility" as const,
     params: {
       scope: {
         type: "string",
@@ -50,16 +46,12 @@ registerOperation({
     returns:
       "{ results: Array<{nodeId, text_preview, ratio, aa_pass, aaa_pass, font_size}>, passing, failing, summary }",
   },
-  async execute(params) {
-    const scope = params.scope || "page";
-    const textNodes: TextNode[] =
-      scope === "selection"
-        ? (figma.currentPage.selection.filter(
-            (n) => n.type === "TEXT"
-          ) as TextNode[])
-        : (figma.currentPage.findAll(
-            (n) => n.type === "TEXT"
-          ) as TextNode[]);
+  async execute(ctx: OperationContext) {
+    var { nodes, MAX_RESULTS } = ctx;
+
+    var textNodes = nodes.filter(function (n) {
+      return n.type === "TEXT";
+    }) as TextNode[];
 
     const results: Array<{
       nodeId: string;
@@ -71,10 +63,7 @@ registerOperation({
     }> = [];
 
     for (const textNode of textNodes) {
-      const textColor = computeColor(
-        textNode.fills as readonly Paint[],
-        textNode.opacity
-      );
+      const textColor = computeColor(textNode.fills as readonly Paint[], textNode.opacity);
       if (!textColor) continue;
 
       // Walk up to find background
@@ -82,9 +71,7 @@ registerOperation({
       let parent: BaseNode | null = textNode.parent;
       while (parent && !bgColor) {
         if ("fills" in parent) {
-          bgColor = computeColor(
-            (parent as GeometryMixin).fills as readonly Paint[]
-          );
+          bgColor = computeColor((parent as GeometryMixin).fills as readonly Paint[]);
         }
         parent = parent.parent;
       }
@@ -92,15 +79,12 @@ registerOperation({
 
       const fgLum = luminance(textColor[0], textColor[1], textColor[2]);
       const bgLum = luminance(bgColor[0], bgColor[1], bgColor[2]);
-      const ratio =
-        Math.round(contrastRatio(fgLum, bgLum) * 100) / 100;
+      const ratio = Math.round(contrastRatio(fgLum, bgLum) * 100) / 100;
 
       const fontSize = textNode.fontSize;
-      const fontWeight =
-        typeof textNode.fontWeight === "number" ? textNode.fontWeight : 400;
+      const fontWeight = typeof textNode.fontWeight === "number" ? textNode.fontWeight : 400;
       const isLargeText =
-        typeof fontSize === "number" &&
-        (fontSize >= 18 || (fontSize >= 14 && fontWeight >= 700));
+        typeof fontSize === "number" && (fontSize >= 18 || (fontSize >= 14 && fontWeight >= 700));
 
       const aaThreshold = isLargeText ? 3 : 4.5;
       const aaaThreshold = isLargeText ? 4.5 : 7;
@@ -119,7 +103,7 @@ registerOperation({
     const failing = results.length - passing;
 
     return {
-      results: results.slice(0, 200),
+      results: results.slice(0, MAX_RESULTS),
       total_checked: results.length,
       passing,
       failing,
@@ -134,7 +118,7 @@ registerOperation({
     name: "check_touch_targets",
     description:
       "Find interactive elements (buttons, links, inputs) smaller than 44x44px minimum touch target size (WCAG 2.5.8).",
-    category: "accessibility",
+    category: "accessibility" as const,
     params: {
       scope: {
         type: "string",
@@ -149,14 +133,10 @@ registerOperation({
     },
     returns: "{ violations: Array<{nodeId, nodeName, width, height}>, count, summary }",
   },
-  async execute(params) {
-    const scope = params.scope || "page";
-    const minSize = params.min_size || 44;
+  async execute(ctx: OperationContext) {
+    var { nodes, params, MAX_RESULTS } = ctx;
 
-    const nodes: readonly SceneNode[] =
-      scope === "selection"
-        ? figma.currentPage.selection
-        : figma.currentPage.findAll();
+    const minSize = (params.min_size as number) || 44;
 
     const interactivePatterns =
       /button|btn|link|input|toggle|switch|checkbox|radio|tab|chip|tag|cta/i;
@@ -185,7 +165,7 @@ registerOperation({
     }
 
     return {
-      violations: violations.slice(0, 200),
+      violations: violations.slice(0, MAX_RESULTS),
       count: violations.length,
       summary: `Found ${violations.length} interactive elements below ${minSize}x${minSize}px.`,
     };

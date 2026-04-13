@@ -4,6 +4,9 @@ import type {
   ServerToPluginMessage,
   ResultMessage,
   StatusMessage,
+  IPluginBridge,
+  BridgeStatus,
+  FileInfo,
 } from "@pluginos/shared";
 import { parseMessage } from "@pluginos/shared";
 
@@ -19,6 +22,7 @@ interface PendingRequest {
   resolve: (value: ResultMessage) => void;
   reject: (reason: Error) => void;
   timer: ReturnType<typeof setTimeout>;
+  fileKey: string;
 }
 
 interface WebSocketServerOptions {
@@ -26,7 +30,7 @@ interface WebSocketServerOptions {
   httpServer?: Server;
 }
 
-export class PluginOSWebSocketServer {
+export class WebSocketPluginBridge implements IPluginBridge {
   private wss: WebSocketServer | null = null;
   private httpServer: Server | null = null;
   private files = new Map<string, ConnectedFile>();
@@ -75,7 +79,7 @@ export class PluginOSWebSocketServer {
           reject(err);
         };
         this.httpServer.on("error", onError);
-        this.httpServer.listen(port, () => {
+        this.httpServer.listen(port, "127.0.0.1", () => {
           this.httpServer!.removeListener("error", onError);
           const wss = new WebSocketServer({ server: this.httpServer!, verifyClient });
           this.wss = wss;
@@ -84,7 +88,7 @@ export class PluginOSWebSocketServer {
         });
       } else {
         // Standalone WebSocket server (tests)
-        const wss = new WebSocketServer({ port, verifyClient });
+        const wss = new WebSocketServer({ port, host: "127.0.0.1", verifyClient });
         wss.on("listening", () => {
           this.wss = wss;
           this.setupServer();
@@ -134,11 +138,13 @@ export class PluginOSWebSocketServer {
             this.activeFileKey = remaining.length > 0 ? remaining[0].fileKey : null;
           }
         }
-        // Reject pending requests for this client
+        // Only reject pending requests for THIS file
         for (const [id, p] of this.pending) {
-          clearTimeout(p.timer);
-          this.pending.delete(id);
-          p.reject(new Error("Plugin disconnected"));
+          if (p.fileKey === fileKey) {
+            clearTimeout(p.timer);
+            this.pending.delete(id);
+            p.reject(new Error("Plugin disconnected"));
+          }
         }
       });
     });
@@ -159,7 +165,7 @@ export class PluginOSWebSocketServer {
     return true;
   }
 
-  listFiles(): Array<{ fileKey: string; fileName: string; currentPage: string }> {
+  listFiles(): FileInfo[] {
     return Array.from(this.files.values()).map((f) => ({
       fileKey: f.fileKey,
       fileName: f.fileName,
@@ -167,7 +173,7 @@ export class PluginOSWebSocketServer {
     }));
   }
 
-  getStatus() {
+  getStatus(): BridgeStatus {
     const active = this.activeFileKey ? this.files.get(this.activeFileKey) : null;
     return {
       connected: this.files.size > 0,
@@ -210,7 +216,7 @@ export class PluginOSWebSocketServer {
         reject(new Error(`Operation timed out after ${timeout}ms`));
       }, timeout);
 
-      this.pending.set(message.id, { resolve, reject, timer });
+      this.pending.set(message.id, { resolve, reject, timer, fileKey: targetKey });
       file.ws.send(JSON.stringify(message));
     });
   }

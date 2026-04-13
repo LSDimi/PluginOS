@@ -1,4 +1,5 @@
 import { registerOperation } from "./registry";
+import type { OperationContext } from "./context";
 
 // --- audit_text_styles ---
 registerOperation({
@@ -6,20 +7,29 @@ registerOperation({
     name: "audit_text_styles",
     description:
       "Audit all text nodes for style consistency. Reports font family, size, weight, and line height usage with counts.",
-    category: "typography",
+    category: "typography" as const,
     params: {
       scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
     },
-    returns: "{ styles: Array<{font, size, weight, lineHeight, count}>, total_text_nodes, unique_styles, summary }",
+    returns:
+      "{ styles: Array<{font, size, weight, lineHeight, count}>, total_text_nodes, unique_styles, summary }",
   },
-  async execute(params) {
-    var scope = params.scope || "page";
-    var textNodes =
-      scope === "selection"
-        ? figma.currentPage.selection.filter(function(n) { return n.type === "TEXT"; }) as TextNode[]
-        : (figma.currentPage.findAll(function(n) { return n.type === "TEXT"; }) as TextNode[]);
+  async execute(ctx: OperationContext) {
+    var { nodes, MAX_RESULTS, figma } = ctx;
+    var textNodes = nodes.filter(function (n) {
+      return n.type === "TEXT";
+    }) as TextNode[];
 
-    var styleMap = new Map<string, { font: string; size: number | string; weight: number | string; lineHeight: string; count: number }>();
+    var styleMap = new Map<
+      string,
+      {
+        font: string;
+        size: number | string;
+        weight: number | string;
+        lineHeight: string;
+        count: number;
+      }
+    >();
 
     for (var i = 0; i < textNodes.length; i++) {
       var node = textNodes[i];
@@ -38,17 +48,26 @@ registerOperation({
       }
 
       var key = font + "|" + size + "|" + weight + "|" + lineHeight;
-      var entry = styleMap.get(key) || { font: font, size: size, weight: weight, lineHeight: lineHeight, count: 0 };
+      var entry = styleMap.get(key) || {
+        font: font,
+        size: size,
+        weight: weight,
+        lineHeight: lineHeight,
+        count: 0,
+      };
       entry.count++;
       styleMap.set(key, entry);
     }
 
-    var styles = Array.from(styleMap.values()).sort(function(a, b) { return b.count - a.count; });
+    var styles = Array.from(styleMap.values()).sort(function (a, b) {
+      return b.count - a.count;
+    });
     return {
-      styles: styles.slice(0, 100),
+      styles: styles.slice(0, MAX_RESULTS),
       total_text_nodes: textNodes.length,
       unique_styles: styles.length,
-      summary: textNodes.length + " text nodes using " + styles.length + " unique style combinations.",
+      summary:
+        textNodes.length + " text nodes using " + styles.length + " unique style combinations.",
     };
   },
 });
@@ -58,18 +77,17 @@ registerOperation({
   manifest: {
     name: "list_fonts",
     description: "List all fonts used in the file with usage counts.",
-    category: "typography",
+    category: "typography" as const,
     params: {
       scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
     },
     returns: "{ fonts: Array<{family, styles, count}>, total_fonts, summary }",
   },
-  async execute(params) {
-    var scope = params.scope || "page";
-    var textNodes =
-      scope === "selection"
-        ? figma.currentPage.selection.filter(function(n) { return n.type === "TEXT"; }) as TextNode[]
-        : (figma.currentPage.findAll(function(n) { return n.type === "TEXT"; }) as TextNode[]);
+  async execute(ctx: OperationContext) {
+    var { nodes, figma } = ctx;
+    var textNodes = nodes.filter(function (n) {
+      return n.type === "TEXT";
+    }) as TextNode[];
 
     var fontMap = new Map<string, { family: string; styles: Set<string>; count: number }>();
 
@@ -77,7 +95,11 @@ registerOperation({
       var node = textNodes[i];
       var fontName = node.fontName;
       if (fontName === figma.mixed) {
-        var mixedEntry = fontMap.get("mixed") || { family: "mixed", styles: new Set<string>(), count: 0 };
+        var mixedEntry = fontMap.get("mixed") || {
+          family: "mixed",
+          styles: new Set<string>(),
+          count: 0,
+        };
         mixedEntry.count++;
         fontMap.set("mixed", mixedEntry);
         continue;
@@ -93,8 +115,12 @@ registerOperation({
     }
 
     var fonts = Array.from(fontMap.values())
-      .map(function(f) { return { family: f.family, styles: Array.from(f.styles), count: f.count }; })
-      .sort(function(a, b) { return b.count - a.count; });
+      .map(function (f) {
+        return { family: f.family, styles: Array.from(f.styles), count: f.count };
+      })
+      .sort(function (a, b) {
+        return b.count - a.count;
+      });
 
     return {
       fonts: fonts,

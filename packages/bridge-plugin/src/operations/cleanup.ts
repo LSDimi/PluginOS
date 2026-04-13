@@ -1,12 +1,12 @@
 import { registerOperation } from "./registry";
+import type { OperationContext } from "./context";
 
 // --- rename_layers ---
 registerOperation({
   manifest: {
     name: "rename_layers",
-    description:
-      "Batch rename layers using find/replace, prefix, suffix, or sequential numbering.",
-    category: "cleanup",
+    description: "Batch rename layers using find/replace, prefix, suffix, or sequential numbering.",
+    category: "cleanup" as const,
     params: {
       find: {
         type: "string",
@@ -36,12 +36,8 @@ registerOperation({
     },
     returns: "{ renamed, summary }",
   },
-  async execute(params) {
-    const scope = params.scope || "page";
-    const nodes: SceneNode[] =
-      scope === "selection"
-        ? [...figma.currentPage.selection]
-        : figma.currentPage.findAll();
+  async execute(ctx: OperationContext) {
+    const { nodes, params } = ctx;
 
     let renamed = 0;
 
@@ -49,14 +45,14 @@ registerOperation({
       let newName = node.name;
 
       if (params.find && params.replace !== undefined) {
-        const regex = new RegExp(params.find, "g");
-        newName = newName.replace(regex, params.replace);
+        const regex = new RegExp(params.find as string, "g");
+        newName = newName.replace(regex, params.replace as string);
       }
       if (params.prefix) {
-        newName = params.prefix + newName;
+        newName = (params.prefix as string) + newName;
       }
       if (params.suffix) {
-        newName = newName + params.suffix;
+        newName = newName + (params.suffix as string);
       }
 
       if (newName !== node.name) {
@@ -65,7 +61,7 @@ registerOperation({
       }
     }
 
-    figma.commitUndo();
+    ctx.figma.commitUndo();
     return {
       renamed,
       summary: `Renamed ${renamed} layers.`,
@@ -77,15 +73,13 @@ registerOperation({
 registerOperation({
   manifest: {
     name: "remove_hidden",
-    description:
-      "Find and optionally remove all hidden (invisible) layers on the current page.",
-    category: "cleanup",
+    description: "Find and optionally remove all hidden (invisible) layers on the current page.",
+    category: "cleanup" as const,
     params: {
       dry_run: {
         type: "boolean",
         required: false,
-        description:
-          "If true, only report without removing (default: true)",
+        description: "If true, only report without removing (default: true)",
       },
       scope: {
         type: "string",
@@ -95,13 +89,9 @@ registerOperation({
     },
     returns: "{ hidden: Array<{nodeId, nodeName}>, count, removed, summary }",
   },
-  async execute(params) {
+  async execute(ctx: OperationContext) {
+    const { nodes, params, MAX_RESULTS, figma } = ctx;
     const dryRun = params.dry_run !== false;
-    const scope = params.scope || "page";
-    const nodes: SceneNode[] =
-      scope === "selection"
-        ? [...figma.currentPage.selection]
-        : figma.currentPage.findAll();
 
     const hidden: Array<{ nodeId: string; nodeName: string }> = [];
 
@@ -120,7 +110,7 @@ registerOperation({
     }
 
     return {
-      hidden: hidden.slice(0, 200),
+      hidden: hidden.slice(0, MAX_RESULTS),
       count: hidden.length,
       removed: !dryRun,
       summary: dryRun
@@ -136,7 +126,7 @@ registerOperation({
     name: "round_values",
     description:
       "Round all fractional x, y, width, height values to whole pixels for pixel-perfect designs.",
-    category: "cleanup",
+    category: "cleanup" as const,
     params: {
       scope: {
         type: "string",
@@ -149,16 +139,11 @@ registerOperation({
         description: "If true, only report (default: true)",
       },
     },
-    returns:
-      "{ fractional: Array<{nodeId, nodeName, property, before, after}>, count, summary }",
+    returns: "{ fractional: Array<{nodeId, nodeName, property, before, after}>, count, summary }",
   },
-  async execute(params) {
+  async execute(ctx: OperationContext) {
+    const { nodes, params, MAX_RESULTS, figma } = ctx;
     const dryRun = params.dry_run !== false;
-    const scope = params.scope || "page";
-    const nodes: SceneNode[] =
-      scope === "selection"
-        ? [...figma.currentPage.selection]
-        : figma.currentPage.findAll();
 
     const fractional: Array<{
       nodeId: string;
@@ -206,10 +191,7 @@ registerOperation({
             after: Math.round(h),
           });
         }
-        if (
-          !dryRun &&
-          (w !== Math.round(w) || h !== Math.round(h))
-        ) {
+        if (!dryRun && (w !== Math.round(w) || h !== Math.round(h))) {
           (node as any).resize(Math.round(w), Math.round(h));
         }
       }
@@ -218,7 +200,7 @@ registerOperation({
     if (!dryRun) figma.commitUndo();
 
     return {
-      fractional: fractional.slice(0, 200),
+      fractional: fractional.slice(0, MAX_RESULTS),
       count: fractional.length,
       summary: dryRun
         ? `Found ${fractional.length} fractional values (dry run).`

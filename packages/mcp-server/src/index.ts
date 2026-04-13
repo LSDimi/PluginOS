@@ -1,5 +1,5 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { PluginOSWebSocketServer } from "./websocket.js";
+import { WebSocketPluginBridge } from "./WebSocketPluginBridge.js";
 import { createPluginOSServer } from "./server.js";
 import { createHttpServer } from "./http-server.js";
 import { readFileSync, existsSync } from "fs";
@@ -7,7 +7,8 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 export { createPluginOSServer } from "./server.js";
-export { PluginOSWebSocketServer } from "./websocket.js";
+export { WebSocketPluginBridge } from "./WebSocketPluginBridge.js";
+export type { IPluginBridge, BridgeStatus, FileInfo } from "@pluginos/shared";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -32,7 +33,7 @@ async function main() {
     return cachedUi;
   });
 
-  const wsServer = new PluginOSWebSocketServer({ httpServer });
+  const wsServer = new WebSocketPluginBridge({ httpServer });
   const port = await wsServer.start();
   console.error(`PluginOS WebSocket + HTTP server on port ${port}`);
 

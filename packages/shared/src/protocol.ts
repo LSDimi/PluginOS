@@ -53,10 +53,7 @@ export function createRunOperationMessage(
   };
 }
 
-export function createExecuteMessage(
-  code: string,
-  timeout: number = 5000
-): ExecuteMessage {
+export function createExecuteMessage(code: string, timeout: number = 5000): ExecuteMessage {
   return {
     id: `req_${++counter}_${Date.now()}`,
     type: "execute",

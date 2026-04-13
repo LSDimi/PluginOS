@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import WebSocket from "ws";
-import { PluginOSWebSocketServer } from "../websocket";
+import { WebSocketPluginBridge } from "../WebSocketPluginBridge";
 
 describe("MCP Server ↔ Plugin integration", () => {
-  let server: PluginOSWebSocketServer;
+  let server: WebSocketPluginBridge;
   let mockPlugin: WebSocket;
 
   beforeAll(async () => {
-    server = new PluginOSWebSocketServer({ portRange: [9560, 9560] });
+    server = new WebSocketPluginBridge({ portRange: [9560, 9560] });
     await server.start();
 
     mockPlugin = new WebSocket("ws://localhost:9560");

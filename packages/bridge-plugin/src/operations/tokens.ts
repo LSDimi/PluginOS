@@ -1,4 +1,5 @@
 import { registerOperation } from "./registry";
+import type { OperationContext } from "./context";
 
 // --- list_variables ---
 registerOperation({
@@ -6,21 +7,19 @@ registerOperation({
     name: "list_variables",
     description:
       "List all local variables and variable collections in the file, grouped by collection.",
-    category: "tokens",
+    category: "tokens" as const,
     params: {
       type: {
         type: "string",
         required: false,
-        description:
-          "Filter by type: 'COLOR', 'FLOAT', 'STRING', 'BOOLEAN'",
+        description: "Filter by type: 'COLOR', 'FLOAT', 'STRING', 'BOOLEAN'",
       },
     },
-    returns:
-      "{ collections: Array<{name, id, modes, variableCount}>, total_variables, summary }",
+    returns: "{ collections: Array<{name, id, modes, variableCount}>, total_variables, summary }",
   },
-  async execute(params) {
-    const collections =
-      await figma.variables.getLocalVariableCollectionsAsync();
+  async execute(ctx: OperationContext) {
+    const { params, figma } = ctx;
+    const collections = await figma.variables.getLocalVariableCollectionsAsync();
     const result: Array<{
       name: string;
       id: string;
@@ -33,8 +32,7 @@ registerOperation({
     for (const collection of collections) {
       let count = 0;
       for (const varId of collection.variableIds) {
-        const variable =
-          await figma.variables.getVariableByIdAsync(varId);
+        const variable = await figma.variables.getVariableByIdAsync(varId);
         if (!variable) continue;
         if (params.type && variable.resolvedType !== params.type) continue;
         count++;
@@ -62,18 +60,14 @@ registerOperation({
     name: "export_tokens",
     description:
       "Export all local variables as a structured JSON token map, compatible with Tokens Studio format.",
-    category: "tokens",
+    category: "tokens" as const,
     params: {},
-    returns:
-      "{ tokens: Record<collectionName, Record<modeName, Record<variableName, value>>> }",
+    returns: "{ tokens: Record<collectionName, Record<modeName, Record<variableName, value>>> }",
   },
-  async execute() {
-    const collections =
-      await figma.variables.getLocalVariableCollectionsAsync();
-    const tokens: Record<
-      string,
-      Record<string, Record<string, unknown>>
-    > = {};
+  async execute(ctx: OperationContext) {
+    const { figma } = ctx;
+    const collections = await figma.variables.getLocalVariableCollectionsAsync();
+    const tokens: Record<string, Record<string, Record<string, unknown>>> = {};
 
     for (const collection of collections) {
       tokens[collection.name] = {};
@@ -82,8 +76,7 @@ registerOperation({
         tokens[collection.name][mode.name] = {};
 
         for (const varId of collection.variableIds) {
-          const variable =
-            await figma.variables.getVariableByIdAsync(varId);
+          const variable = await figma.variables.getVariableByIdAsync(varId);
           if (!variable) continue;
 
           const value = variable.valuesByMode[mode.modeId];
@@ -106,8 +99,7 @@ registerOperation({
             }
           }
 
-          tokens[collection.name][mode.name][variable.name] =
-            exportedValue;
+          tokens[collection.name][mode.name][variable.name] = exportedValue;
         }
       }
     }

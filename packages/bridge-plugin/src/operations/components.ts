@@ -1,4 +1,5 @@
 import { registerOperation } from "./registry";
+import type { OperationContext } from "./context";
 
 // --- find_instances ---
 registerOperation({
@@ -6,7 +7,7 @@ registerOperation({
     name: "find_instances",
     description:
       "Find all instances of a component by name or component key across the current page.",
-    category: "components",
+    category: "components" as const,
     params: {
       name: {
         type: "string",
@@ -19,19 +20,17 @@ registerOperation({
         description: "Exact component key",
       },
     },
-    returns:
-      "{ instances: Array<{nodeId, nodeName, componentName}>, count, summary }",
+    returns: "{ instances: Array<{nodeId, nodeName, componentName}>, count, summary }",
   },
-  async execute(params) {
+  async execute(ctx: OperationContext) {
+    const { params, MAX_RESULTS, figma } = ctx;
     const instances: Array<{
       nodeId: string;
       nodeName: string;
       componentName: string;
     }> = [];
 
-    const allInstances = figma.currentPage.findAll(
-      (n) => n.type === "INSTANCE"
-    ) as InstanceNode[];
+    const allInstances = figma.currentPage.findAll((n) => n.type === "INSTANCE") as InstanceNode[];
 
     for (const inst of allInstances) {
       const mainComp = await inst.getMainComponentAsync();
@@ -45,7 +44,7 @@ registerOperation({
         });
       } else if (
         params.name &&
-        mainComp.name.toLowerCase().includes(params.name.toLowerCase())
+        mainComp.name.toLowerCase().includes((params.name as string).toLowerCase())
       ) {
         instances.push({
           nodeId: inst.id,
@@ -62,7 +61,7 @@ registerOperation({
     }
 
     return {
-      instances: instances.slice(0, 200),
+      instances: instances.slice(0, MAX_RESULTS),
       count: instances.length,
       summary: `Found ${instances.length} instances${params.name ? ` matching "${params.name}"` : ""}.`,
     };
@@ -75,7 +74,7 @@ registerOperation({
     name: "analyze_overrides",
     description:
       "Analyze all component instances and report which have overrides applied, what fields are overridden, and how many.",
-    category: "components",
+    category: "components" as const,
     params: {
       scope: {
         type: "string",
@@ -86,16 +85,9 @@ registerOperation({
     returns:
       "{ instances: Array<{nodeId, nodeName, overrideCount, overriddenFields}>, total_instances, with_overrides, summary }",
   },
-  async execute(params) {
-    const scope = params.scope || "page";
-    const nodes: InstanceNode[] =
-      scope === "selection"
-        ? (figma.currentPage.selection.filter(
-            (n) => n.type === "INSTANCE"
-          ) as InstanceNode[])
-        : (figma.currentPage.findAll(
-            (n) => n.type === "INSTANCE"
-          ) as InstanceNode[]);
+  async execute(ctx: OperationContext) {
+    const { nodes, MAX_RESULTS } = ctx;
+    const instanceNodes = nodes.filter((n) => n.type === "INSTANCE") as InstanceNode[];
 
     const results: Array<{
       nodeId: string;
@@ -104,7 +96,7 @@ registerOperation({
       overriddenFields: string[];
     }> = [];
 
-    for (const inst of nodes) {
+    for (const inst of instanceNodes) {
       const overrides = inst.overrides;
       if (overrides && overrides.length > 0) {
         const fields = new Set<string>();
@@ -123,10 +115,10 @@ registerOperation({
     }
 
     return {
-      instances: results.slice(0, 200),
-      total_instances: nodes.length,
+      instances: results.slice(0, MAX_RESULTS),
+      total_instances: instanceNodes.length,
       with_overrides: results.length,
-      summary: `${results.length} of ${nodes.length} instances have overrides.`,
+      summary: `${results.length} of ${instanceNodes.length} instances have overrides.`,
     };
   },
 });

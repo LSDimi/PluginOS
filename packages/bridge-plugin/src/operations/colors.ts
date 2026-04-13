@@ -1,7 +1,8 @@
 import { registerOperation } from "./registry";
+import type { OperationContext } from "./context";
 
 function rgbToHex(r: number, g: number, b: number): string {
-  var toHex = function(c: number) {
+  var toHex = function (c: number) {
     return Math.round(c * 255)
       .toString(16)
       .padStart(2, "0");
@@ -15,18 +16,14 @@ registerOperation({
     name: "extract_palette",
     description:
       "Extract all unique solid fill colors used on the current page, with usage counts and which nodes use them.",
-    category: "colors",
+    category: "colors" as const,
     params: {
       scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
     },
     returns: "{ colors: Array<{hex, count, nodeIds}>, total_unique, summary }",
   },
-  async execute(params) {
-    var scope = params.scope || "page";
-    var nodes =
-      scope === "selection"
-        ? figma.currentPage.selection
-        : figma.currentPage.findAll();
+  async execute(ctx: OperationContext) {
+    var { nodes, MAX_RESULTS } = ctx;
 
     var colorMap = new Map<string, { hex: string; count: number; nodeIds: string[] }>();
 
@@ -47,9 +44,11 @@ registerOperation({
       }
     }
 
-    var colors = Array.from(colorMap.values()).sort(function(a, b) { return b.count - a.count; });
+    var colors = Array.from(colorMap.values()).sort(function (a, b) {
+      return b.count - a.count;
+    });
     return {
-      colors: colors.slice(0, 200),
+      colors: colors.slice(0, MAX_RESULTS),
       total_unique: colors.length,
       summary: "Found " + colors.length + " unique colors across " + nodes.length + " nodes.",
     };
@@ -62,18 +61,14 @@ registerOperation({
     name: "find_non_style_colors",
     description:
       "Find all nodes using hardcoded fill colors that are not linked to a local or library style.",
-    category: "colors",
+    category: "colors" as const,
     params: {
       scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
     },
     returns: "{ violations: Array<{nodeId, nodeName, hex}>, count, summary }",
   },
-  async execute(params) {
-    var scope = params.scope || "page";
-    var nodes =
-      scope === "selection"
-        ? figma.currentPage.selection
-        : figma.currentPage.findAll();
+  async execute(ctx: OperationContext) {
+    var { nodes, MAX_RESULTS } = ctx;
 
     var violations: { nodeId: string; nodeName: string; hex: string }[] = [];
 
@@ -99,7 +94,7 @@ registerOperation({
     }
 
     return {
-      violations: violations.slice(0, 200),
+      violations: violations.slice(0, MAX_RESULTS),
       count: violations.length,
       summary: "Found " + violations.length + " nodes with hardcoded colors (no style linked).",
     };

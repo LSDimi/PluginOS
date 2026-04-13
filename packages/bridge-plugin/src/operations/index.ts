@@ -1,5 +1,7 @@
 export { registerOperation, getOperation, listOperations } from "./registry";
-export type { OperationHandler } from "./registry";
+export type { OperationHandler, PluginOperationHandler } from "./registry";
+export type { OperationContext } from "./context";
+export { createOperationContext, MAX_RESULTS } from "./context";
 
 // Import and register all operation modules
 import "./lint";

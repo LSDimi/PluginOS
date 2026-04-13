@@ -1,7 +1,8 @@
 import { registerOperation } from "./registry";
+import type { OperationContext } from "./context";
 
 function rgbToHex(r: number, g: number, b: number): string {
-  var toHex = function(c: number) {
+  var toHex = function (c: number) {
     return Math.round(c * 255)
       .toString(16)
       .padStart(2, "0");
@@ -15,7 +16,7 @@ registerOperation({
     name: "extract_css",
     description:
       "Extract CSS-like properties from selected nodes or the current page. Returns layout, typography, colors, and sizing as CSS key-value pairs.",
-    category: "export",
+    category: "export" as const,
     params: {
       scope: { type: "string", required: false, description: "'selection' (default) or 'page'" },
       max_nodes: {
@@ -26,14 +27,9 @@ registerOperation({
     },
     returns: "{ nodes: Array<{nodeId, nodeName, css}>, count, summary }",
   },
-  async execute(params) {
-    var scope = params.scope || "selection";
-    var maxNodes = params.max_nodes || 20;
-
-    var nodes =
-      scope === "selection"
-        ? figma.currentPage.selection
-        : figma.currentPage.findAll();
+  async execute(ctx: OperationContext) {
+    var { nodes, params, figma } = ctx;
+    var maxNodes = (params.max_nodes as number) || 20;
 
     var results: { nodeId: string; nodeName: string; css: Record<string, string> }[] = [];
 
@@ -67,7 +63,13 @@ registerOperation({
           if (fill.type === "SOLID" && fill.visible !== false) {
             var hex = rgbToHex(fill.color.r, fill.color.g, fill.color.b);
             var opacity = fill.opacity !== undefined ? fill.opacity : 1;
-            css["background-color"] = opacity < 1 ? hex + Math.round(opacity * 255).toString(16).padStart(2, "0") : hex;
+            css["background-color"] =
+              opacity < 1
+                ? hex +
+                  Math.round(opacity * 255)
+                    .toString(16)
+                    .padStart(2, "0")
+                : hex;
           }
         }
       }
@@ -90,14 +92,18 @@ registerOperation({
         var textNode = node as TextNode;
         var fontName = textNode.fontName;
         if (fontName !== figma.mixed) {
-          css["font-family"] = fontName.family;
-          css["font-weight"] = fontName.style.toLowerCase().indexOf("bold") >= 0 ? "700" : "400";
+          var fn = fontName as FontName;
+          css["font-family"] = fn.family;
+          css["font-weight"] = fn.style.toLowerCase().indexOf("bold") >= 0 ? "700" : "400";
         }
         var fontSize = textNode.fontSize;
-        if (fontSize !== figma.mixed) css["font-size"] = fontSize + "px";
+        if (fontSize !== figma.mixed) css["font-size"] = (fontSize as number) + "px";
         var lh = textNode.lineHeight;
-        if (lh !== figma.mixed && lh.unit === "PIXELS") css["line-height"] = lh.value + "px";
-        else if (lh !== figma.mixed && lh.unit === "PERCENT") css["line-height"] = lh.value + "%";
+        if (lh !== figma.mixed) {
+          var lineHeight = lh as LineHeight;
+          if (lineHeight.unit === "PIXELS") css["line-height"] = lineHeight.value + "px";
+          else if (lineHeight.unit === "PERCENT") css["line-height"] = lineHeight.value + "%";
+        }
 
         // Text color from fills
         var textFills = textNode.fills;
@@ -114,7 +120,15 @@ registerOperation({
           css["flex-direction"] = n.layoutMode === "HORIZONTAL" ? "row" : "column";
           css["gap"] = n.itemSpacing + "px";
           if (n.paddingTop > 0 || n.paddingBottom > 0 || n.paddingLeft > 0 || n.paddingRight > 0) {
-            css["padding"] = n.paddingTop + "px " + n.paddingRight + "px " + n.paddingBottom + "px " + n.paddingLeft + "px";
+            css["padding"] =
+              n.paddingTop +
+              "px " +
+              n.paddingRight +
+              "px " +
+              n.paddingBottom +
+              "px " +
+              n.paddingLeft +
+              "px";
           }
         }
       }
