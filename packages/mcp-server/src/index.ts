@@ -7,7 +7,10 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 export { createPluginOSServer } from "./server.js";
-export { WebSocketPluginBridge } from "./WebSocketPluginBridge.js";
+export {
+  WebSocketPluginBridge,
+  WebSocketPluginBridge as PluginOSWebSocketServer,
+} from "./WebSocketPluginBridge.js";
 export type { IPluginBridge, BridgeStatus, FileInfo } from "@pluginos/shared";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

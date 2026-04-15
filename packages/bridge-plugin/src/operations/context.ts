@@ -20,12 +20,21 @@ export function createOperationContext(
   params: Record<string, unknown>,
   figmaApi: PluginAPI
 ): OperationContext {
-  const scope = (params.scope as string) || "page";
-  const nodes: readonly SceneNode[] =
-    scope === "selection" ? figmaApi.currentPage.selection : figmaApi.currentPage.findAll();
+  const scope = (params.scope as string) || "selection";
+
+  // Lazy getter: nodes are only resolved when an operation actually reads ctx.nodes.
+  // Operations that need filtered subsets (e.g. TEXT-only) should call
+  // figma.currentPage.findAll(predicate) directly for better performance.
+  let _nodes: readonly SceneNode[] | null = null;
 
   return {
-    nodes,
+    get nodes(): readonly SceneNode[] {
+      if (_nodes === null) {
+        _nodes =
+          scope === "selection" ? figmaApi.currentPage.selection : figmaApi.currentPage.findAll();
+      }
+      return _nodes;
+    },
     params,
     hexToRgb,
     MAX_RESULTS,

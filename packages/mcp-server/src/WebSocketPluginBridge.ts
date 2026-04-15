@@ -79,7 +79,7 @@ export class WebSocketPluginBridge implements IPluginBridge {
           reject(err);
         };
         this.httpServer.on("error", onError);
-        this.httpServer.listen(port, "127.0.0.1", () => {
+        this.httpServer.listen(port, process.env.PLUGINOS_HOST || "127.0.0.1", () => {
           this.httpServer!.removeListener("error", onError);
           const wss = new WebSocketServer({ server: this.httpServer!, verifyClient });
           this.wss = wss;
@@ -88,7 +88,11 @@ export class WebSocketPluginBridge implements IPluginBridge {
         });
       } else {
         // Standalone WebSocket server (tests)
-        const wss = new WebSocketServer({ port, host: "127.0.0.1", verifyClient });
+        const wss = new WebSocketServer({
+          port,
+          host: process.env.PLUGINOS_HOST || "127.0.0.1",
+          verifyClient,
+        });
         wss.on("listening", () => {
           this.wss = wss;
           this.setupServer();
