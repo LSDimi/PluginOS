@@ -1,4 +1,5 @@
 import { registerOperation } from "./registry";
+import type { OperationContext } from "./context";
 
 var LOREM =
   "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.";
@@ -9,7 +10,7 @@ registerOperation({
     name: "populate_text",
     description:
       "Fill text nodes with placeholder content (lorem ipsum) or custom text. Can target selection or all text nodes matching a name pattern.",
-    category: "content",
+    category: "content" as const,
     params: {
       text: {
         type: "string",
@@ -30,15 +31,14 @@ registerOperation({
     },
     returns: "{ populated, summary }",
   },
-  async execute(params) {
-    var scope = params.scope || "page";
-    var content = params.text || LOREM;
-    var pattern = params.name_pattern ? new RegExp(params.name_pattern, "i") : null;
+  async execute(ctx: OperationContext) {
+    var { nodes, params, figma } = ctx;
+    var content = (params.text as string) || LOREM;
+    var pattern = params.name_pattern ? new RegExp(params.name_pattern as string, "i") : null;
 
-    var textNodes =
-      scope === "selection"
-        ? figma.currentPage.selection.filter(function(n) { return n.type === "TEXT"; }) as TextNode[]
-        : (figma.currentPage.findAll(function(n) { return n.type === "TEXT"; }) as TextNode[]);
+    var textNodes = nodes.filter(function (n) {
+      return n.type === "TEXT";
+    }) as TextNode[];
 
     var populated = 0;
     for (var i = 0; i < textNodes.length; i++) {
@@ -53,7 +53,7 @@ registerOperation({
       } else {
         await figma.loadFontAsync(fontName);
       }
-      var text = params.max_chars ? content.slice(0, params.max_chars) : content;
+      var text = params.max_chars ? content.slice(0, params.max_chars as number) : content;
       node.characters = text;
       populated++;
     }

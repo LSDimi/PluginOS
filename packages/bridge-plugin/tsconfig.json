@@ -6,10 +6,7 @@
     "outDir": "dist",
     "module": "ESNext",
     "lib": ["ES2017", "DOM"],
-    "typeRoots": [
-      "../../node_modules/@types",
-      "../../node_modules/@figma"
-    ],
+    "typeRoots": ["../../node_modules/@types", "../../node_modules/@figma"],
     "types": ["plugin-typings"]
   },
   "include": ["src"]

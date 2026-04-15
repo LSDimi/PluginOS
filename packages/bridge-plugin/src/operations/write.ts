@@ -1,4 +1,5 @@
 import { registerOperation } from "./registry";
+import type { OperationContext } from "./context";
 
 // --- create_frame ---
 registerOperation({
@@ -6,7 +7,7 @@ registerOperation({
     name: "create_frame",
     description:
       "Create a new frame on the current page with specified dimensions, position, and optional auto-layout.",
-    category: "components",
+    category: "components" as const,
     params: {
       name: { type: "string", required: true, description: "Frame name" },
       width: { type: "number", required: false, description: "Width in px (default: 100)" },
@@ -32,14 +33,15 @@ registerOperation({
     },
     returns: "{ nodeId, name, summary }",
   },
-  async execute(params) {
+  async execute(ctx: OperationContext) {
+    var { params, figma, hexToRgb } = ctx;
     var frame = figma.createFrame();
-    frame.name = params.name;
-    frame.resize(params.width || 100, params.height || 100);
-    frame.x = params.x || 0;
-    frame.y = params.y || 0;
+    frame.name = params.name as string;
+    frame.resize((params.width as number) || 100, (params.height as number) || 100);
+    frame.x = (params.x as number) || 0;
+    frame.y = (params.y as number) || 0;
 
-    var layout = params.auto_layout || "NONE";
+    var layout = (params.auto_layout as string) || "NONE";
     if (layout !== "NONE") {
       frame.layoutMode = layout as "HORIZONTAL" | "VERTICAL";
       frame.primaryAxisSizingMode = "AUTO";
@@ -47,7 +49,7 @@ registerOperation({
     }
 
     if (params.padding) {
-      var p = params.padding;
+      var p = params.padding as number;
       frame.paddingTop = p;
       frame.paddingBottom = p;
       frame.paddingLeft = p;
@@ -55,14 +57,11 @@ registerOperation({
     }
 
     if (params.item_spacing) {
-      frame.itemSpacing = params.item_spacing;
+      frame.itemSpacing = params.item_spacing as number;
     }
 
     if (params.fills) {
-      var hex = params.fills.replace("#", "");
-      var r = parseInt(hex.substring(0, 2), 16) / 255;
-      var g = parseInt(hex.substring(2, 4), 16) / 255;
-      var b = parseInt(hex.substring(4, 6), 16) / 255;
+      var { r, g, b } = hexToRgb(params.fills as string);
       frame.fills = [{ type: "SOLID", color: { r: r, g: g, b: b } }];
     }
 
@@ -70,7 +69,18 @@ registerOperation({
     return {
       nodeId: frame.id,
       name: frame.name,
-      summary: "Created frame \"" + frame.name + "\" (" + frame.width + "x" + frame.height + ") at (" + frame.x + ", " + frame.y + ").",
+      summary:
+        'Created frame "' +
+        frame.name +
+        '" (' +
+        frame.width +
+        "x" +
+        frame.height +
+        ") at (" +
+        frame.x +
+        ", " +
+        frame.y +
+        ").",
     };
   },
 });
@@ -80,7 +90,7 @@ registerOperation({
   manifest: {
     name: "set_fills",
     description: "Set the fill color of one or more nodes by ID.",
-    category: "colors",
+    category: "colors" as const,
     params: {
       node_ids: {
         type: "string[]",
@@ -100,17 +110,15 @@ registerOperation({
     },
     returns: "{ updated, failed, summary }",
   },
-  async execute(params) {
-    var hex = params.color.replace("#", "");
-    var r = parseInt(hex.substring(0, 2), 16) / 255;
-    var g = parseInt(hex.substring(2, 4), 16) / 255;
-    var b = parseInt(hex.substring(4, 6), 16) / 255;
-    var opacity = params.opacity !== undefined ? params.opacity : 1;
+  async execute(ctx: OperationContext) {
+    var { params, figma, hexToRgb } = ctx;
+    var { r, g, b } = hexToRgb(params.color as string);
+    var opacity = params.opacity !== undefined ? (params.opacity as number) : 1;
 
     var updated = 0;
     var failed = 0;
-    for (var i = 0; i < params.node_ids.length; i++) {
-      var id = params.node_ids[i];
+    for (var i = 0; i < (params.node_ids as string[]).length; i++) {
+      var id = (params.node_ids as string[])[i];
       var node = figma.getNodeById(id);
       if (node && "fills" in node) {
         (node as GeometryMixin).fills = [
@@ -125,7 +133,13 @@ registerOperation({
     return {
       updated: updated,
       failed: failed,
-      summary: "Set fill to " + params.color + " on " + updated + " nodes." + (failed ? " " + failed + " nodes not found or not fillable." : ""),
+      summary:
+        "Set fill to " +
+        params.color +
+        " on " +
+        updated +
+        " nodes." +
+        (failed ? " " + failed + " nodes not found or not fillable." : ""),
     };
   },
 });
@@ -135,7 +149,7 @@ registerOperation({
   manifest: {
     name: "set_text",
     description: "Set the text content of one or more text nodes by ID.",
-    category: "content",
+    category: "content" as const,
     params: {
       node_ids: {
         type: "string[]",
@@ -150,11 +164,12 @@ registerOperation({
     },
     returns: "{ updated, failed, summary }",
   },
-  async execute(params) {
+  async execute(ctx: OperationContext) {
+    var { params, figma } = ctx;
     var updated = 0;
     var failed = 0;
-    for (var i = 0; i < params.node_ids.length; i++) {
-      var id = params.node_ids[i];
+    for (var i = 0; i < (params.node_ids as string[]).length; i++) {
+      var id = (params.node_ids as string[])[i];
       var node = figma.getNodeById(id);
       if (node && node.type === "TEXT") {
         var textNode = node as TextNode;
@@ -167,7 +182,7 @@ registerOperation({
         } else {
           await figma.loadFontAsync(fontName);
         }
-        textNode.characters = params.text;
+        textNode.characters = params.text as string;
         updated++;
       } else {
         failed++;
@@ -177,7 +192,11 @@ registerOperation({
     return {
       updated: updated,
       failed: failed,
-      summary: "Set text on " + updated + " nodes." + (failed ? " " + failed + " not found or not text." : ""),
+      summary:
+        "Set text on " +
+        updated +
+        " nodes." +
+        (failed ? " " + failed + " not found or not text." : ""),
     };
   },
 });
@@ -187,7 +206,7 @@ registerOperation({
   manifest: {
     name: "move_node",
     description: "Move one or more nodes to a new position.",
-    category: "layout",
+    category: "layout" as const,
     params: {
       node_ids: { type: "string[]", required: true, description: "Array of node IDs" },
       x: { type: "number", required: false, description: "New X position" },
@@ -197,17 +216,18 @@ registerOperation({
     },
     returns: "{ moved, summary }",
   },
-  async execute(params) {
+  async execute(ctx: OperationContext) {
+    var { params, figma } = ctx;
     var moved = 0;
-    for (var i = 0; i < params.node_ids.length; i++) {
-      var id = params.node_ids[i];
+    for (var i = 0; i < (params.node_ids as string[]).length; i++) {
+      var id = (params.node_ids as string[])[i];
       var node = figma.getNodeById(id);
       if (node && "x" in node) {
         var n = node as SceneNode;
-        if (params.x !== undefined) n.x = params.x;
-        if (params.y !== undefined) n.y = params.y;
-        if (params.dx !== undefined) n.x += params.dx;
-        if (params.dy !== undefined) n.y += params.dy;
+        if (params.x !== undefined) n.x = params.x as number;
+        if (params.y !== undefined) n.y = params.y as number;
+        if (params.dx !== undefined) n.x += params.dx as number;
+        if (params.dy !== undefined) n.y += params.dy as number;
         moved++;
       }
     }
@@ -221,7 +241,7 @@ registerOperation({
   manifest: {
     name: "resize_node",
     description: "Resize one or more nodes to new dimensions.",
-    category: "layout",
+    category: "layout" as const,
     params: {
       node_ids: { type: "string[]", required: true, description: "Array of node IDs" },
       width: { type: "number", required: false, description: "New width" },
@@ -229,15 +249,16 @@ registerOperation({
     },
     returns: "{ resized, summary }",
   },
-  async execute(params) {
+  async execute(ctx: OperationContext) {
+    var { params, figma } = ctx;
     var resized = 0;
-    for (var i = 0; i < params.node_ids.length; i++) {
-      var id = params.node_ids[i];
+    for (var i = 0; i < (params.node_ids as string[]).length; i++) {
+      var id = (params.node_ids as string[])[i];
       var node = figma.getNodeById(id);
       if (node && "resize" in node) {
         var n = node as SceneNode & { resize(w: number, h: number): void };
-        var w = params.width !== undefined ? params.width : n.width;
-        var h = params.height !== undefined ? params.height : n.height;
+        var w = params.width !== undefined ? (params.width as number) : n.width;
+        var h = params.height !== undefined ? (params.height as number) : n.height;
         n.resize(w, h);
         resized++;
       }
@@ -252,17 +273,18 @@ registerOperation({
   manifest: {
     name: "delete_node",
     description: "Delete one or more nodes by ID.",
-    category: "cleanup",
+    category: "cleanup" as const,
     params: {
       node_ids: { type: "string[]", required: true, description: "Array of node IDs to delete" },
     },
     returns: "{ deleted, not_found, summary }",
   },
-  async execute(params) {
+  async execute(ctx: OperationContext) {
+    var { params, figma } = ctx;
     var deleted = 0;
     var not_found = 0;
-    for (var i = 0; i < params.node_ids.length; i++) {
-      var id = params.node_ids[i];
+    for (var i = 0; i < (params.node_ids as string[]).length; i++) {
+      var id = (params.node_ids as string[])[i];
       var node = figma.getNodeById(id);
       if (node && node.id !== figma.currentPage.id) {
         node.remove();
@@ -275,7 +297,8 @@ registerOperation({
     return {
       deleted: deleted,
       not_found: not_found,
-      summary: "Deleted " + deleted + " nodes." + (not_found ? " " + not_found + " not found." : ""),
+      summary:
+        "Deleted " + deleted + " nodes." + (not_found ? " " + not_found + " not found." : ""),
     };
   },
 });
@@ -285,7 +308,7 @@ registerOperation({
   manifest: {
     name: "clone_node",
     description: "Clone a node and optionally reposition the copy.",
-    category: "components",
+    category: "components" as const,
     params: {
       node_id: { type: "string", required: true, description: "Node ID to clone" },
       x: { type: "number", required: false, description: "X position of clone" },
@@ -294,19 +317,20 @@ registerOperation({
     },
     returns: "{ cloneId, cloneName, summary }",
   },
-  async execute(params) {
-    var node = figma.getNodeById(params.node_id);
+  async execute(ctx: OperationContext) {
+    var { params, figma } = ctx;
+    var node = figma.getNodeById(params.node_id as string);
     if (!node || node.type === "DOCUMENT" || node.type === "PAGE") {
       return { cloneId: null, cloneName: null, summary: "Node not found or not cloneable." };
     }
     var clone = (node as FrameNode).clone();
-    if (params.x !== undefined) clone.x = params.x;
-    if (params.y !== undefined) clone.y = params.y;
-    if (params.new_name) clone.name = params.new_name;
+    if (params.x !== undefined) clone.x = params.x as number;
+    if (params.y !== undefined) clone.y = params.y as number;
+    if (params.new_name) clone.name = params.new_name as string;
     return {
       cloneId: clone.id,
       cloneName: clone.name,
-      summary: "Cloned \"" + node.name + "\" → \"" + clone.name + "\" (" + clone.id + ").",
+      summary: 'Cloned "' + node.name + '" → "' + clone.name + '" (' + clone.id + ").",
     };
   },
 });

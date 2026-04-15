@@ -1,4 +1,5 @@
 import { registerOperation } from "./registry";
+import type { OperationContext } from "./context";
 
 // --- audit_spacing ---
 registerOperation({
@@ -6,13 +7,12 @@ registerOperation({
     name: "audit_spacing",
     description:
       "Audit spacing values (padding, gap, item spacing) across auto-layout frames. Reports non-standard values.",
-    category: "layout",
+    category: "layout" as const,
     params: {
       allowed_values: {
         type: "string[]",
         required: false,
-        description:
-          "Allowed spacing values (e.g., ['0','4','8','12','16','24','32','48'])",
+        description: "Allowed spacing values (e.g., ['0','4','8','12','16','24','32','48'])",
       },
       scope: {
         type: "string",
@@ -23,16 +23,9 @@ registerOperation({
     returns:
       "{ violations: Array<{nodeId, nodeName, property, value}>, unique_values, total_violations, summary }",
   },
-  async execute(params) {
-    const scope = params.scope || "page";
-    const allowed = params.allowed_values
-      ? params.allowed_values.map(Number)
-      : null;
-
-    const nodes: readonly SceneNode[] =
-      scope === "selection"
-        ? figma.currentPage.selection
-        : figma.currentPage.findAll();
+  async execute(ctx: OperationContext) {
+    const { nodes, params, MAX_RESULTS } = ctx;
+    const allowed = params.allowed_values ? (params.allowed_values as string[]).map(Number) : null;
 
     const allValues = new Set<number>();
     const violations: Array<{
@@ -56,10 +49,7 @@ registerOperation({
       ];
 
       if (frame.counterAxisSpacing !== null) {
-        spacingProps.push([
-          "counterAxisSpacing",
-          frame.counterAxisSpacing,
-        ]);
+        spacingProps.push(["counterAxisSpacing", frame.counterAxisSpacing]);
       }
 
       for (const [prop, val] of spacingProps) {
@@ -78,7 +68,7 @@ registerOperation({
     const sortedValues = Array.from(allValues).sort((a, b) => a - b);
 
     return {
-      violations: violations.slice(0, 200),
+      violations: violations.slice(0, MAX_RESULTS),
       total_violations: violations.length,
       unique_values: sortedValues,
       summary: allowed

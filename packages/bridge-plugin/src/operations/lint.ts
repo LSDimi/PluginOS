@@ -1,4 +1,5 @@
 import { registerOperation } from "./registry";
+import type { OperationContext } from "./context";
 
 // --- lint_styles ---
 registerOperation({
@@ -6,7 +7,7 @@ registerOperation({
     name: "lint_styles",
     description:
       "Find layers using local styles instead of library styles, or no style at all. Reports fills, strokes, text styles, and effects that don't reference a shared style.",
-    category: "lint",
+    category: "lint" as const,
     params: {
       scope: {
         type: "string",
@@ -14,15 +15,10 @@ registerOperation({
         description: "'page' (default) or 'selection'",
       },
     },
-    returns:
-      "{ total_nodes, issues: Array<{nodeId, nodeName, nodeType, issue}>, summary }",
+    returns: "{ total_nodes, issues: Array<{nodeId, nodeName, nodeType, issue}>, summary }",
   },
-  async execute(params) {
-    const scope = params.scope || "page";
-    const nodes: readonly SceneNode[] =
-      scope === "selection"
-        ? figma.currentPage.selection
-        : figma.currentPage.findAll();
+  async execute(ctx: OperationContext) {
+    var { nodes, MAX_RESULTS } = ctx;
 
     const issues: Array<{
       nodeId: string;
@@ -64,10 +60,7 @@ registerOperation({
 
       if (node.type === "TEXT") {
         const textNode = node as TextNode;
-        if (
-          textNode.textStyleId === "" ||
-          textNode.textStyleId === figma.mixed
-        ) {
+        if (textNode.textStyleId === "" || textNode.textStyleId === figma.mixed) {
           issues.push({
             nodeId: node.id,
             nodeName: node.name,
@@ -95,7 +88,7 @@ registerOperation({
 
     return {
       total_nodes: nodes.length,
-      issues: issues.slice(0, 200),
+      issues: issues.slice(0, MAX_RESULTS),
       total_issues: issues.length,
       summary: `Scanned ${nodes.length} nodes. Found ${issues.length} style issues.`,
     };
@@ -108,7 +101,7 @@ registerOperation({
     name: "lint_detached",
     description:
       "Find all frames that were once component instances but have been detached. Uses naming heuristics to detect likely detached instances.",
-    category: "lint",
+    category: "lint" as const,
     params: {
       scope: {
         type: "string",
@@ -118,12 +111,8 @@ registerOperation({
     },
     returns: "{ detached: Array<{nodeId, nodeName, parentName}>, count, summary }",
   },
-  async execute(params) {
-    const scope = params.scope || "page";
-    const nodes: readonly SceneNode[] =
-      scope === "selection"
-        ? figma.currentPage.selection
-        : figma.currentPage.findAll();
+  async execute(ctx: OperationContext) {
+    var { nodes, params, MAX_RESULTS } = ctx;
 
     const detached: Array<{
       nodeId: string;
@@ -154,9 +143,9 @@ registerOperation({
     }
 
     return {
-      detached: detached.slice(0, 200),
+      detached: detached.slice(0, MAX_RESULTS),
       count: detached.length,
-      summary: `Found ${detached.length} likely detached instances on ${scope}.`,
+      summary: `Found ${detached.length} likely detached instances on ${(params.scope as string) || "page"}.`,
     };
   },
 });
@@ -167,7 +156,7 @@ registerOperation({
     name: "lint_naming",
     description:
       "Find layers with default names like 'Frame 1', 'Rectangle 2', 'Group 3' that should be renamed for clarity.",
-    category: "lint",
+    category: "lint" as const,
     params: {
       scope: {
         type: "string",
@@ -177,12 +166,8 @@ registerOperation({
     },
     returns: "{ unnamed: Array<{nodeId, nodeName, nodeType}>, count, summary }",
   },
-  async execute(params) {
-    const scope = params.scope || "page";
-    const nodes: readonly SceneNode[] =
-      scope === "selection"
-        ? figma.currentPage.selection
-        : figma.currentPage.findAll();
+  async execute(ctx: OperationContext) {
+    var { nodes, MAX_RESULTS } = ctx;
 
     const defaultNamePattern =
       /^(Frame|Rectangle|Ellipse|Group|Line|Vector|Text|Polygon|Star|Section|Slice|Image|Component|Instance) \d+$/;
@@ -203,7 +188,7 @@ registerOperation({
     }
 
     return {
-      unnamed: unnamed.slice(0, 200),
+      unnamed: unnamed.slice(0, MAX_RESULTS),
       count: unnamed.length,
       summary: `Found ${unnamed.length} layers with default names.`,
     };

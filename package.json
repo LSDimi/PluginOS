@@ -1,11 +1,31 @@
 {
   "name": "pluginos",
   "private": true,
-  "workspaces": ["packages/*"],
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
+    "build:shared": "npm run build -w packages/shared",
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces --if-present",
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/mcp-server/tsconfig.json",
+    "check": "npm run lint && npm run format:check && npm run build:shared && npm run typecheck && npm run build && npm run test",
     "dev:server": "npm run dev -w packages/mcp-server",
-    "dev:plugin": "npm run dev -w packages/bridge-plugin"
+    "dev:plugin": "npm run dev -w packages/bridge-plugin",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.2.0",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "prettier": "^3.8.2",
+    "typescript-eslint": "^8.58.2"
   }
 }

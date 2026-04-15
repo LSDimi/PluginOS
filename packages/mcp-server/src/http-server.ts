@@ -1,8 +1,6 @@
 import { createServer, IncomingMessage, ServerResponse, Server } from "http";
 
-export function createHttpServer(
-  getUiContent: () => string
-): Server {
+export function createHttpServer(getUiContent: () => string): Server {
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     // CORS for Figma plugin iframe
     res.setHeader("Access-Control-Allow-Origin", "*");

@@ -62,10 +62,7 @@ function tryConnect(port: number): Promise<void> {
       // Forward WebSocket messages to code.js
       try {
         const data = JSON.parse(event.data as string);
-        parent.postMessage(
-          { pluginMessage: { type: "ws-message", payload: data } },
-          "*"
-        );
+        parent.postMessage({ pluginMessage: { type: "ws-message", payload: data } }, "*");
       } catch {
         /* ignore malformed */
       }
@@ -75,10 +72,7 @@ function tryConnect(port: number): Promise<void> {
       if (ws === socket) {
         ws = null;
         updateStatus(false, "Disconnected");
-        parent.postMessage(
-          { pluginMessage: { type: "ws-disconnected" } },
-          "*"
-        );
+        parent.postMessage({ pluginMessage: { type: "ws-disconnected" } }, "*");
         setTimeout(findAndConnect, RECONNECT_DELAY);
       }
     };

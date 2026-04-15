@@ -29,6 +29,11 @@ export interface OperationManifest {
   returns: string;
 }
 
+export interface OperationExecutor<TContext = unknown> {
+  manifest: OperationManifest;
+  execute: (ctx: TContext) => Promise<unknown>;
+}
+
 export interface OperationResult {
   success: boolean;
   result?: unknown;
