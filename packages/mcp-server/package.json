@@ -13,6 +13,7 @@
     "build": "tsup",
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "prepublishOnly": "npm run build",
     "release:patch": "npm version patch && npm publish --access public",
     "release:minor": "npm version minor && npm publish --access public"
@@ -47,6 +48,7 @@
   "devDependencies": {
     "@pluginos/shared": "*",
     "@types/ws": "^8.5.0",
+    "@vitest/coverage-v8": "^2.1.9",
     "tsup": "^8.5.1",
     "tsx": "^4.19.0",
     "typescript": "^5.5.0",

@@ -9,6 +9,7 @@
     "build:shared": "npm run build -w packages/shared",
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces --if-present",
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
