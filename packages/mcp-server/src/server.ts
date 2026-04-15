@@ -13,7 +13,9 @@ export function createPluginOSServer(bridge: IPluginBridge) {
     version: "0.1.0",
   });
 
-  // @ts-expect-error TS2589: MCP SDK's .tool() triggers infinite type depth
+  // @ts-expect-error TS2589: McpServer.tool() triggers infinite Zod type depth in declaration emit.
+  // Tracked upstream: https://github.com/modelcontextprotocol/typescript-sdk/issues/494
+  // Remove when SDK fixes deep type inference for complex Zod schemas (see SDK FAQ).
   server.tool(
     "list_operations",
     "List all available Figma operations, optionally filtered by category. " +
@@ -60,7 +62,9 @@ export function createPluginOSServer(bridge: IPluginBridge) {
     }
   );
 
-  // @ts-expect-error TS2589: MCP SDK's .tool() triggers infinite type depth
+  // @ts-expect-error TS2589: McpServer.tool() triggers infinite Zod type depth in declaration emit.
+  // Tracked upstream: https://github.com/modelcontextprotocol/typescript-sdk/issues/494
+  // Remove when SDK fixes deep type inference for complex Zod schemas (see SDK FAQ).
   server.tool(
     "run_operation",
     "Execute a pre-built Figma operation by name. Use list_operations to discover available operations. " +
@@ -116,7 +120,9 @@ export function createPluginOSServer(bridge: IPluginBridge) {
     }
   );
 
-  // @ts-expect-error TS2589: MCP SDK's .tool() triggers infinite type depth
+  // @ts-expect-error TS2589: McpServer.tool() triggers infinite Zod type depth in declaration emit.
+  // Tracked upstream: https://github.com/modelcontextprotocol/typescript-sdk/issues/494
+  // Remove when SDK fixes deep type inference for complex Zod schemas (see SDK FAQ).
   server.tool(
     "execute_figma",
     "Execute arbitrary Figma Plugin API JavaScript code in the plugin sandbox. " +
