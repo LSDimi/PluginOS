@@ -167,8 +167,25 @@ packages/
 
 ## Development
 
+> **All commands must be run from the repo root** (`PluginOS-main/` or wherever you cloned/unzipped it). Running them from inside a package subfolder will fail.
+
 ```bash
+# 1. Install all dependencies (run once from repo root)
 npm install
+
+# 2. Build shared types first — mcp-server depends on them
+npm run build -w packages/shared
+
+# 3. Build the Figma bridge plugin (outputs to packages/bridge-plugin/dist/)
+npm run build -w packages/bridge-plugin
+
+# 4. Load the plugin in Figma
+#    Figma → Plugins → Development → Import plugin from manifest
+#    Select: packages/bridge-plugin/manifest.json
+```
+
+```bash
+# Hot-reload development
 npm run dev:server    # MCP server with hot reload
 npm run dev:plugin    # Webpack watch for bridge plugin
 npm test              # Tests across all packages
