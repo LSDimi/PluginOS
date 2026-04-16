@@ -92,7 +92,7 @@ async function findAndConnect(): Promise<void> {
 
   showError(scanAttempts < 4
     ? "Searching for server\u2026"
-    : "Still searching \u2014 make sure Claude Desktop is open.");
+    : "Still searching \u2014 make sure your MCP config is set up.");
 
   setTimeout(findAndConnect, RECONNECT_DELAY);
 }
