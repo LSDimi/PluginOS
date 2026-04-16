@@ -207,20 +207,28 @@
   </div>
   <div class="activity hidden" id="activity">Ready for operations</div>
   <script>
-    function openDownload() {
-      parent.postMessage({ pluginMessage: { type: "open-url", url: "https://claude.ai/download" } }, "*");
-    }
     function copyConfig() {
       var config = JSON.stringify({
         mcpServers: { pluginos: { command: "npx", args: ["pluginos@latest"] } }
       }, null, 2);
       navigator.clipboard.writeText(config).then(function() {
         var desc = document.getElementById("copy-desc");
-        desc.textContent = "✓ Copied to clipboard!";
-        setTimeout(function() { desc.textContent = "Paste into Claude Desktop settings"; }, 2500);
+        desc.textContent = "\u2713 Copied to clipboard!";
+        setTimeout(function() { desc.textContent = "Paste into Claude Desktop, Claude Code, or Cursor settings"; }, 2500);
       }).catch(function() {
         var desc = document.getElementById("copy-desc");
         desc.textContent = '{"mcpServers":{"pluginos":{"command":"npx","args":["pluginos@latest"]}}}';
+      });
+    }
+    function copyPrompt() {
+      var prompt = "Start the PluginOS MCP server if it\u2019s not already running: \`npx pluginos\`\n\nThen find this project\u2019s agent instructions file (CLAUDE.md, AGENTS.md, .cursorrules, or equivalent \u2014 create one if none exists) and add the following rules:\n\n- For ALL Figma operations, use PluginOS tools exclusively (pluginos MCP)\n- Call list_operations first to discover what operations are available\n- Use run_operation to execute them\n- Use execute_figma only for one-off custom logic not covered by built-in operations\n- Never use mcp__Figma__* tools \u2014 they bypass the plugin and return raw, token-heavy data (~10x token cost)\n- If PluginOS returns \u201cNo plugin connected\u201d, ask the user to open the PluginOS Bridge plugin in Figma first\n\nConfirm once the server is running and the instruction file has been updated.";
+      navigator.clipboard.writeText(prompt).then(function() {
+        var desc = document.getElementById("prompt-desc");
+        desc.textContent = "\u2713 Copied to clipboard!";
+        setTimeout(function() { desc.textContent = "Paste into any AI chat to configure PluginOS"; }, 2500);
+      }).catch(function() {
+        var desc = document.getElementById("prompt-desc");
+        desc.textContent = "Could not copy \u2014 clipboard access denied";
       });
     }
   </script>
