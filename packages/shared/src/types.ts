@@ -27,6 +27,12 @@ export interface OperationManifest {
   category: OperationCategory;
   params: Record<string, ParamDef>;
   returns: string;
+  /**
+   * Default scope when the caller omits the `scope` param.
+   * Defaults to "page" if not specified.
+   * Set to "selection" for ops that should act on current selection by default (e.g. extract_css).
+   */
+  defaultScope?: "page" | "selection";
 }
 
 export interface OperationExecutor<TContext = unknown> {

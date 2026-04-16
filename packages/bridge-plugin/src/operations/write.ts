@@ -119,7 +119,8 @@ registerOperation({
     var failed = 0;
     for (var i = 0; i < (params.node_ids as string[]).length; i++) {
       var id = (params.node_ids as string[])[i];
-      var node = await figma.getNodeByIdAsync(id);      if (node && "fills" in node) {
+      var node = await figma.getNodeByIdAsync(id);
+      if (node && "fills" in node) {
         (node as GeometryMixin).fills = [
           { type: "SOLID", color: { r: r, g: g, b: b }, opacity: opacity },
         ];
@@ -169,7 +170,8 @@ registerOperation({
     var failed = 0;
     for (var i = 0; i < (params.node_ids as string[]).length; i++) {
       var id = (params.node_ids as string[])[i];
-      var node = await figma.getNodeByIdAsync(id);      if (node && node.type === "TEXT") {
+      var node = await figma.getNodeByIdAsync(id);
+      if (node && node.type === "TEXT") {
         var textNode = node as TextNode;
         var fontName = textNode.fontName;
         if (fontName === figma.mixed) {
@@ -219,7 +221,8 @@ registerOperation({
     var moved = 0;
     for (var i = 0; i < (params.node_ids as string[]).length; i++) {
       var id = (params.node_ids as string[])[i];
-      var node = await figma.getNodeByIdAsync(id);      if (node && "x" in node) {
+      var node = await figma.getNodeByIdAsync(id);
+      if (node && "x" in node) {
         var n = node as SceneNode;
         if (params.x !== undefined) n.x = params.x as number;
         if (params.y !== undefined) n.y = params.y as number;
@@ -251,7 +254,8 @@ registerOperation({
     var resized = 0;
     for (var i = 0; i < (params.node_ids as string[]).length; i++) {
       var id = (params.node_ids as string[])[i];
-      var node = await figma.getNodeByIdAsync(id);      if (node && "resize" in node) {
+      var node = await figma.getNodeByIdAsync(id);
+      if (node && "resize" in node) {
         var n = node as SceneNode & { resize(w: number, h: number): void };
         var w = params.width !== undefined ? (params.width as number) : n.width;
         var h = params.height !== undefined ? (params.height as number) : n.height;
@@ -281,7 +285,8 @@ registerOperation({
     var not_found = 0;
     for (var i = 0; i < (params.node_ids as string[]).length; i++) {
       var id = (params.node_ids as string[])[i];
-      var node = await figma.getNodeByIdAsync(id);      if (node && node.id !== figma.currentPage.id) {
+      var node = await figma.getNodeByIdAsync(id);
+      if (node && node.id !== figma.currentPage.id) {
         node.remove();
         deleted++;
       } else {
@@ -314,7 +319,8 @@ registerOperation({
   },
   async execute(ctx: OperationContext) {
     var { params, figma } = ctx;
-    var node = figma.getNodeById(params.node_id as string);    if (!node || node.type === "DOCUMENT" || node.type === "PAGE") {
+    var node = figma.getNodeById(params.node_id as string);
+    if (!node || node.type === "DOCUMENT" || node.type === "PAGE") {
       return { cloneId: null, cloneName: null, summary: "Node not found or not cloneable." };
     }
     var clone = (node as FrameNode).clone();

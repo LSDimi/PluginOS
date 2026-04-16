@@ -18,9 +18,10 @@ export interface OperationContext {
 
 export function createOperationContext(
   params: Record<string, unknown>,
-  figmaApi: PluginAPI
+  figmaApi: PluginAPI,
+  defaultScope: "page" | "selection" = "page"
 ): OperationContext {
-  const scope = (params.scope as string) || "selection";
+  const scope = (params.scope as string) || defaultScope;
 
   // Lazy getter: nodes are only resolved when an operation actually reads ctx.nodes.
   // Operations that need filtered subsets (e.g. TEXT-only) should call

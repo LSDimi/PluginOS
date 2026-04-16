@@ -3,7 +3,7 @@ import { createOperationContext } from "./operations/context";
 import { safeSerialize } from "./utils/serializer";
 
 // Show the UI (which handles WebSocket)
-figma.showUI(__html__, { width: 280, height: 180, visible: true });
+figma.showUI(__html__, { width: 280, height: 240, visible: true });
 
 // Send file status to MCP server on connection
 function sendFileStatus(): void {
@@ -60,7 +60,7 @@ async function handleServerMessage(msg: any): Promise<void> {
       }
 
       const startTime = Date.now();
-      const ctx = createOperationContext(params || {}, figma);
+      const ctx = createOperationContext(params || {}, figma, handler.manifest.defaultScope);
       const result = await handler.execute(ctx);
       const duration = Date.now() - startTime;
       sendResult(id, true, { ...(safeSerialize(result) as object), _duration_ms: duration });

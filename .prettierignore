@@ -3,3 +3,4 @@ node_modules/
 *.html
 package-lock.json
 CLAUDE.md
+.claude/

@@ -4,6 +4,8 @@
 
 Agent-native Figma operations platform. Run any Figma plugin operation from any LLM agent at **~230 tokens per call** instead of ~28,000.
 
+![PluginOS](PluginOS.png)
+
 ## Why PluginOS
 
 Traditional Figma MCP integrations register dozens of tools — each with a full JSON schema the LLM must read on every conversation turn. For a server with 80+ tools, that's **~12,000 tokens of overhead before the agent even does anything.**
