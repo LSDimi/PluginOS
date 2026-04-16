@@ -90,9 +90,11 @@ async function findAndConnect(): Promise<void> {
   updateStatus(false, "Disconnected");
   showView("setup");
 
-  showError(scanAttempts < 4
-    ? "Searching for server\u2026"
-    : "Still searching \u2014 make sure your MCP config is set up.");
+  showError(
+    scanAttempts < 4
+      ? "Searching for server\u2026"
+      : "Still searching \u2014 make sure your MCP config is set up."
+  );
 
   setTimeout(findAndConnect, RECONNECT_DELAY);
 }
@@ -128,10 +130,7 @@ function tryConnect(port: number): Promise<void> {
         }
 
         // Forward to code.js
-        parent.postMessage(
-          { pluginMessage: { type: "ws-message", payload: data } },
-          "*"
-        );
+        parent.postMessage({ pluginMessage: { type: "ws-message", payload: data } }, "*");
 
         // Track results
         if (data.type === "result") {
@@ -150,10 +149,7 @@ function tryConnect(port: number): Promise<void> {
         updatePort(null);
         showView("setup");
         showError("Connection lost. Reconnecting\u2026");
-        parent.postMessage(
-          { pluginMessage: { type: "ws-disconnected" } },
-          "*"
-        );
+        parent.postMessage({ pluginMessage: { type: "ws-disconnected" } }, "*");
         setTimeout(findAndConnect, RECONNECT_DELAY);
       }
     };
