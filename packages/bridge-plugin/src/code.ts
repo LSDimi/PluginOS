@@ -29,11 +29,6 @@ figma.ui.onmessage = async (msg: any) => {
     return;
   }
 
-  if (msg.type === "open-url") {
-    figma.openExternal(msg.url as string);
-    return;
-  }
-
   if (msg.type === "ws-disconnected") {
     return;
   }
