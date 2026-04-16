@@ -217,7 +217,7 @@
         setTimeout(function() { desc.textContent = "Paste into Claude Desktop, Claude Code, or Cursor settings"; }, 2500);
       }).catch(function() {
         var desc = document.getElementById("copy-desc");
-        desc.textContent = '{"mcpServers":{"pluginos":{"command":"npx","args":["pluginos@latest"]}}}';
+        desc.textContent = config;
       });
     }
     function copyPrompt() {
