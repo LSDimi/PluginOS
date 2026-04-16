@@ -60,7 +60,7 @@ async function handleServerMessage(msg: any): Promise<void> {
       }
 
       const startTime = Date.now();
-      const ctx = createOperationContext(params || {}, figma);
+      const ctx = createOperationContext(params || {}, figma, handler.manifest.defaultScope);
       const result = await handler.execute(ctx);
       const duration = Date.now() - startTime;
       sendResult(id, true, { ...(safeSerialize(result) as object), _duration_ms: duration });

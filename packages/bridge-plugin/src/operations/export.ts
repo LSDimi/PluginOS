@@ -26,6 +26,7 @@ registerOperation({
       },
     },
     returns: "{ nodes: Array<{nodeId, nodeName, css}>, count, summary }",
+    defaultScope: "selection",
   },
   async execute(ctx: OperationContext) {
     var { nodes, params, figma } = ctx;
