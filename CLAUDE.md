@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## MCP Tool Preference
+
+**When working with Figma, always use PluginOS tools exclusively.**
+
+- Use `list_operations` (pluginos) first to discover available Figma operations.
+- Use `run_operation` (pluginos) to execute them.
+- Use `execute_figma` (pluginos) only for one-off custom logic not covered by built-in ops.
+- **Do NOT use `mcp__Figma__*` tools** (`get_design_context`, `get_variable_defs`, `get_screenshot`, etc.) — these bypass the plugin and return raw, token-heavy data. PluginOS returns pre-summarized, structured results at ~230 tokens/call.
+- If PluginOS returns "No plugin connected", instruct the user to open the PluginOS Bridge plugin in Figma before retrying.
+
 ## Build & Development Commands
 
 ```bash

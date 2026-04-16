@@ -3,7 +3,7 @@ import { createOperationContext } from "./operations/context";
 import { safeSerialize } from "./utils/serializer";
 
 // Show the UI (which handles WebSocket)
-figma.showUI(__html__, { width: 280, height: 180, visible: true });
+figma.showUI(__html__, { width: 280, height: 240, visible: true });
 
 // Send file status to MCP server on connection
 function sendFileStatus(): void {
@@ -26,6 +26,11 @@ function sendFileStatus(): void {
 figma.ui.onmessage = async (msg: any) => {
   if (msg.type === "ws-connected") {
     sendFileStatus();
+    return;
+  }
+
+  if (msg.type === "open-url") {
+    figma.openExternal(msg.url as string);
     return;
   }
 

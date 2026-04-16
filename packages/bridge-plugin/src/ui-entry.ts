@@ -35,12 +35,15 @@ function updateStatus(connected: boolean, text: string) {
 
 function showError(msg: string) {
   const el = $("error-msg");
-  el.textContent = msg;
-  el.classList.remove("hidden");
+  if (el) {
+    el.textContent = msg;
+    el.classList.remove("hidden");
+  }
 }
 
 function hideError() {
-  $("error-msg").classList.add("hidden");
+  const el = $("error-msg");
+  if (el) el.classList.add("hidden");
 }
 
 function updateActivity(text: string) {
@@ -87,13 +90,9 @@ async function findAndConnect(): Promise<void> {
   updateStatus(false, "Disconnected");
   showView("setup");
 
-  if (scanAttempts === 1) {
-    showError("No server found. Start it with: npx pluginos");
-  } else if (scanAttempts < 5) {
-    showError(`No server found (attempt ${scanAttempts}). Is npx pluginos running?`);
-  } else {
-    showError("Still no server. Check your terminal for errors after running npx pluginos.");
-  }
+  showError(scanAttempts < 4
+    ? "Searching for server\u2026"
+    : "Still searching \u2014 make sure Claude Desktop is open.");
 
   setTimeout(findAndConnect, RECONNECT_DELAY);
 }
@@ -150,7 +149,7 @@ function tryConnect(port: number): Promise<void> {
         updateStatus(false, "Disconnected");
         updatePort(null);
         showView("setup");
-        showError("Connection lost. Reconnecting...");
+        showError("Connection lost. Reconnecting\u2026");
         parent.postMessage(
           { pluginMessage: { type: "ws-disconnected" } },
           "*"
