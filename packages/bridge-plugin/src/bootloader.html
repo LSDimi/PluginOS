@@ -59,18 +59,18 @@
   <div class="divider"></div>
 
   <div class="setup-section" id="setup-section">
+    <button class="action-card" onclick="copyPrompt()">
+      <span class="action-icon">›</span>
+      <div>
+        <div class="action-title">Easy setup (beginner)</div>
+        <div class="action-desc" id="prompt-desc">Click here to copy the prompt and paste in your project’s AI chat to configure PluginOS</div>
+      </div>
+    </button>
     <button class="action-card" onclick="copyConfig()">
       <span class="action-icon">⎘</span>
       <div>
         <div class="action-title">Copy MCP config</div>
-        <div class="action-desc" id="copy-desc">Paste into Claude Desktop, Claude Code, or Cursor settings</div>
-      </div>
-    </button>
-    <button class="action-card" onclick="copyPrompt()">
-      <span class="action-icon">›</span>
-      <div>
-        <div class="action-title">Copy setup prompt</div>
-        <div class="action-desc" id="prompt-desc">Paste into any AI chat to configure PluginOS</div>
+        <div class="action-desc" id="copy-desc">Paste in your IDE’s MCP server list or Claude Connectors</div>
       </div>
     </button>
   </div>
@@ -118,28 +118,39 @@
       }, 1000);
     }
 
+    var PROMPT_TEXT = "Start the PluginOS MCP server if it’s not already running: `npx pluginos`\n\nThen find this project’s agent instructions file (CLAUDE.md, AGENTS.md, .cursorrules, or equivalent — create one if none exists) and add the following rules:\n\n- For ALL Figma operations, use PluginOS tools exclusively (pluginos MCP)\n- Call list_operations first to discover what operations are available\n- Use run_operation to execute them\n- Use execute_figma only for one-off custom logic not covered by built-in operations\n- Never use mcp__Figma__* tools — they bypass the plugin and return raw, token-heavy data (~10x token cost)\n- If PluginOS returns “No plugin connected”, ask the user to open the PluginOS Bridge plugin in Figma first\n\nConfirm once the server is running and the instruction file has been updated.";
+    var CONFIG_TEXT = JSON.stringify({ mcpServers: { pluginos: { command: "npx", args: ["pluginos@latest"] } } }, null, 2);
+
+    function doCopy(text, descId, revertText) {
+      var d = el(descId);
+      function onOk() {
+        d.textContent = "✓ Copied!";
+        setTimeout(function() { d.textContent = revertText; }, 2500);
+      }
+      function onFail() { d.textContent = "Copy failed — please try again"; }
+      function fallback() {
+        try {
+          var ta = document.createElement("textarea");
+          ta.value = text;
+          ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;";
+          document.body.appendChild(ta);
+          ta.focus(); ta.select();
+          document.execCommand("copy") ? onOk() : onFail();
+          document.body.removeChild(ta);
+        } catch(e) { onFail(); }
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(onOk).catch(fallback);
+      } else { fallback(); }
+    }
     function copyConfig() {
-      var config = JSON.stringify(
-        { mcpServers: { pluginos: { command: "npx", args: ["pluginos@latest"] } } },
-        null, 2
-      );
-      navigator.clipboard.writeText(config).then(function() {
-        var d = el("copy-desc");
-        d.textContent = "✓ Copied!";
-        setTimeout(function() { d.textContent = "Paste into Claude Desktop, Claude Code, or Cursor settings"; }, 2500);
-      }).catch(function() { el("copy-desc").textContent = config; });
+      doCopy(CONFIG_TEXT, "copy-desc", "Paste in your IDE’s MCP server list or Claude Connectors");
     }
-
     function copyPrompt() {
-      var p = "Start the PluginOS MCP server if it’s not already running: `npx pluginos`\n\nThen find this project’s agent instructions file (CLAUDE.md, AGENTS.md, .cursorrules, or equivalent — create one if none exists) and add the following rules:\n\n- For ALL Figma operations, use PluginOS tools exclusively (pluginos MCP)\n- Call list_operations first to discover what operations are available\n- Use run_operation to execute them\n- Use execute_figma only for one-off custom logic not covered by built-in operations\n- Never use mcp__Figma__* tools — they bypass the plugin and return raw, token-heavy data (~10x token cost)\n- If PluginOS returns “No plugin connected”, ask the user to open the PluginOS Bridge plugin in Figma first\n\nConfirm once the server is running and the instruction file has been updated.";
-      navigator.clipboard.writeText(p).then(function() {
-        var d = el("prompt-desc");
-        d.textContent = "✓ Copied!";
-        setTimeout(function() { d.textContent = "Paste into any AI chat to configure PluginOS"; }, 2500);
-      }).catch(function() { el("prompt-desc").textContent = "Could not copy — clipboard access denied"; });
+      doCopy(PROMPT_TEXT, "prompt-desc", "Click here to copy the prompt and paste in your project’s AI chat to configure PluginOS");
     }
 
-    function tryBootload() {
+        function tryBootload() {
       setDot("dot-yellow");
       setStatus("Connecting…", "Searching for PluginOS server");
       showSection("setup-section",    false);
