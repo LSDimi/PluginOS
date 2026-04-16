@@ -1,6 +1,6 @@
 {
   "name": "PluginOS Bridge",
-  "id": "pluginos-bridge",
+  "id": "1626608701431483287",
   "api": "1.0.0",
   "editorType": ["figma"],
   "main": "dist/code.js",
