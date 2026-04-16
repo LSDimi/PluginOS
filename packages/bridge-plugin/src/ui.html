@@ -177,32 +177,21 @@
   <!-- Disconnected: setup guide -->
   <div class="setup" id="view-setup">
     <div class="setup-heading">Connect to Claude</div>
-    <button class="action-card" id="btn-download" onclick="openDownload()">
-      <span class="action-icon">↓</span>
-      <div>
-        <div class="action-title">Get Claude Desktop</div>
-        <div class="action-desc">Free · opens claude.ai/download</div>
-      </div>
-    </button>
     <button class="action-card" id="btn-copy" onclick="copyConfig()">
       <span class="action-icon">⎘</span>
       <div>
         <div class="action-title">Copy MCP config</div>
-        <div class="action-desc" id="copy-desc">Paste into Claude Desktop settings</div>
+        <div class="action-desc" id="copy-desc">Paste into Claude Desktop, Claude Code, or Cursor settings</div>
+      </div>
+    </button>
+    <button class="action-card" id="btn-prompt" onclick="copyPrompt()">
+      <span class="action-icon">›</span>
+      <div>
+        <div class="action-title">Copy setup prompt</div>
+        <div class="action-desc" id="prompt-desc">Paste into any AI chat to configure PluginOS</div>
       </div>
     </button>
     <div class="status-line" id="error-msg">Searching for server…</div>
-  </div>
-      <div class="step">
-        <span class="step-num">2</span>
-        <span>Add PluginOS to your AI tool's MCP config</span>
-      </div>
-      <div class="step">
-        <span class="step-num">3</span>
-        <span>Ask your agent to run Figma operations</span>
-      </div>
-    </div>
-    <div class="error-msg hidden" id="error-msg"></div>
   </div>
 
   <!-- Connected: stats -->
