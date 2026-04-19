@@ -19,7 +19,7 @@ export interface OperationContext {
    * to "selection" and nothing is selected). Dispatcher short-circuits and
    * returns this error to the caller without running the operation.
    */
-  guard?: { error: string; _hint: string };
+  readonly guard?: { error: string; _hint: string };
 }
 
 export interface CreateOperationContextOptions {
@@ -32,16 +32,30 @@ export function createOperationContext(
   defaultScope: "page" | "selection" = "page",
   _options?: CreateOperationContextOptions
 ): OperationContext {
-  const figmaApi = (globalThis as any).figma as PluginAPI;
+  const figmaApi = (globalThis as any).figma as PluginAPI | undefined;
+  if (!figmaApi) {
+    throw new Error("[PluginOS] figma global is not available in this runtime");
+  }
   const explicitScope = typeof params.scope === "string";
   const scope = (params.scope as string) || defaultScope;
+
+  // Guard: no_selection fires when the resolved scope is "selection" (from the
+  // defaultScope, not an explicit caller param) and nothing is selected.
+  const guard: OperationContext["guard"] =
+    !explicitScope && scope === "selection" && figmaApi.currentPage.selection.length === 0
+      ? {
+          error: "no_selection",
+          _hint:
+            "Nothing is selected. Pass scope: 'page' with confirm: true to scan the full page, or select nodes in Figma first.",
+        }
+      : undefined;
 
   // Lazy getter: nodes are only resolved when an operation actually reads ctx.nodes.
   // Operations that need filtered subsets (e.g. TEXT-only) should call
   // figma.currentPage.findAll(predicate) directly for better performance.
   let _nodes: readonly SceneNode[] | null = null;
 
-  const ctx: OperationContext = {
+  return {
     get nodes(): readonly SceneNode[] {
       if (_nodes === null) {
         _nodes =
@@ -53,21 +67,6 @@ export function createOperationContext(
     hexToRgb,
     MAX_RESULTS,
     figma: figmaApi,
+    guard,
   };
-
-  // Guard: no_selection fires when the resolved scope is "selection" (from the
-  // defaultScope, not an explicit caller param) and nothing is selected.
-  if (
-    !explicitScope &&
-    defaultScope === "selection" &&
-    figmaApi.currentPage.selection.length === 0
-  ) {
-    ctx.guard = {
-      error: "no_selection",
-      _hint:
-        "Nothing is selected. Pass scope: 'page' with confirm: true to scan the full page, or select nodes in Figma first.",
-    };
-  }
-
-  return ctx;
 }
