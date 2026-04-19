@@ -14,13 +14,26 @@ export interface OperationContext {
   readonly MAX_RESULTS: number;
   /** Typed Figma plugin API */
   readonly figma: PluginAPI;
+  /**
+   * Set when a guard condition fires (e.g. no selection when scope defaults
+   * to "selection" and nothing is selected). Dispatcher short-circuits and
+   * returns this error to the caller without running the operation.
+   */
+  guard?: { error: string; _hint: string };
+}
+
+export interface CreateOperationContextOptions {
+  /** Optional operation name for diagnostic use (reserved for Task 5+). */
+  opName?: string;
 }
 
 export function createOperationContext(
   params: Record<string, unknown>,
-  figmaApi: PluginAPI,
-  defaultScope: "page" | "selection" = "page"
+  defaultScope: "page" | "selection" = "page",
+  _options?: CreateOperationContextOptions
 ): OperationContext {
+  const figmaApi = (globalThis as any).figma as PluginAPI;
+  const explicitScope = typeof params.scope === "string";
   const scope = (params.scope as string) || defaultScope;
 
   // Lazy getter: nodes are only resolved when an operation actually reads ctx.nodes.
@@ -28,7 +41,7 @@ export function createOperationContext(
   // figma.currentPage.findAll(predicate) directly for better performance.
   let _nodes: readonly SceneNode[] | null = null;
 
-  return {
+  const ctx: OperationContext = {
     get nodes(): readonly SceneNode[] {
       if (_nodes === null) {
         _nodes =
@@ -41,4 +54,20 @@ export function createOperationContext(
     MAX_RESULTS,
     figma: figmaApi,
   };
+
+  // Guard: no_selection fires when the resolved scope is "selection" (from the
+  // defaultScope, not an explicit caller param) and nothing is selected.
+  if (
+    !explicitScope &&
+    defaultScope === "selection" &&
+    figmaApi.currentPage.selection.length === 0
+  ) {
+    ctx.guard = {
+      error: "no_selection",
+      _hint:
+        "Nothing is selected. Pass scope: 'page' with confirm: true to scan the full page, or select nodes in Figma first.",
+    };
+  }
+
+  return ctx;
 }
