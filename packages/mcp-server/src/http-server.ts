@@ -14,7 +14,12 @@ export function createHttpServer(getUiContent: () => string): Server {
     }
 
     if (req.url === "/ui" || req.url === "/ui.html") {
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        // Prevent Figma's iframe from caching a stale UI across plugin reloads.
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        Pragma: "no-cache",
+      });
       res.end(getUiContent());
       return;
     }

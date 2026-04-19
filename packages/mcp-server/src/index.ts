@@ -31,13 +31,11 @@ function loadUiContent(): string {
   return "<html><body><p>PluginOS UI not found. Run: npm run build -w packages/bridge-plugin</p></body></html>";
 }
 
-let cachedUi: string | null = null;
-
 async function main() {
-  const httpServer = createHttpServer(() => {
-    if (!cachedUi) cachedUi = loadUiContent();
-    return cachedUi;
-  });
+  // Re-read on every request so rebuilds land without restarting the server.
+  // ui.html is ~70KB; the tradeoff is worth the smoother dev loop and avoids
+  // stale UIs when users swap between local and published builds.
+  const httpServer = createHttpServer(() => loadUiContent());
 
   const wsServer = new WebSocketPluginBridge({ httpServer });
   const port = await wsServer.start();
