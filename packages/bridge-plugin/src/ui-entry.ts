@@ -3,7 +3,7 @@ const PORT_MAX = 9510;
 const RECONNECT_DELAY = 3000;
 
 let ws: WebSocket | null = null;
-let opsCount = 0;
+let opsRunCount = 0;
 let scanAttempts = 0;
 
 function $(id: string): HTMLElement {
@@ -13,16 +13,13 @@ function $(id: string): HTMLElement {
 function showView(view: "setup" | "connected") {
   const setup = $("view-setup");
   const connected = $("view-connected");
-  const activity = $("activity");
 
   if (view === "connected") {
     setup.classList.add("hidden");
     connected.classList.remove("hidden");
-    activity.classList.remove("hidden");
   } else {
     setup.classList.remove("hidden");
     connected.classList.add("hidden");
-    activity.classList.add("hidden");
   }
 }
 
@@ -47,22 +44,108 @@ function hideError() {
 }
 
 function updateActivity(text: string) {
-  $("activity").textContent = text;
+  const el = $("activity-log");
+  if (el) el.textContent = text;
 }
 
 function updatePort(port: number | null) {
-  $("port-display").textContent = port ? String(port) : "\u2014";
+  $("conn-port").textContent = port ? String(port) : "\u2014";
+}
+
+function updateFilename(name: string) {
+  const el = $("conn-filename");
+  if (el) {
+    el.textContent = name || "\u2014";
+    el.title = name || "";
+  }
 }
 
 function incrementOps() {
-  opsCount++;
-  $("ops-count").textContent = String(opsCount);
+  opsRunCount++;
+  const el = $("ops-run-count");
+  if (el) el.textContent = opsRunCount + " ops run";
 }
+
+function renderOpsPanel(ops: any[]) {
+  const countEl = document.getElementById("ops-count")!;
+  const bodyEl = document.getElementById("ops-panel-body")!;
+  countEl.textContent = String(ops.length);
+
+  const grouped: Record<string, any[]> = {};
+  for (const op of ops) {
+    grouped[op.category] ||= [];
+    grouped[op.category].push(op);
+  }
+  const categoryOrder = [
+    "lint",
+    "accessibility",
+    "components",
+    "tokens",
+    "layout",
+    "content",
+    "export",
+    "assets",
+    "annotations",
+    "colors",
+    "typography",
+    "cleanup",
+    "data",
+    "custom",
+  ];
+
+  bodyEl.innerHTML = "";
+  for (const cat of categoryOrder) {
+    const list = grouped[cat];
+    if (!list?.length) continue;
+    const h = document.createElement("h3");
+    h.className = "ops-category";
+    h.textContent = `${cat} (${list.length})`;
+    bodyEl.appendChild(h);
+    list.sort((a, b) => a.name.localeCompare(b.name));
+    for (const op of list) {
+      const row = document.createElement("div");
+      row.className = "ops-item";
+      row.textContent = op.name;
+      bodyEl.appendChild(row);
+    }
+  }
+}
+
+// Wire ops panel toggle
+function wireOpsToggle() {
+  const toggle = document.getElementById("ops-panel-toggle")!;
+  const body = document.getElementById("ops-panel-body")!;
+  const chevron = document.getElementById("ops-panel-chevron")!;
+  toggle.addEventListener("click", () => {
+    const expanded = toggle.getAttribute("aria-expanded") === "true";
+    toggle.setAttribute("aria-expanded", String(!expanded));
+    body.classList.toggle("hidden");
+    chevron.textContent = expanded ? "▸" : "▾";
+  });
+  toggle.addEventListener("keydown", (e: any) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggle.click();
+    }
+  });
+}
+
+wireOpsToggle();
 
 // Forward messages from code.js (plugin sandbox) to WebSocket
 window.onmessage = (event: MessageEvent) => {
   const msg = event.data.pluginMessage;
   if (!msg) return;
+
+  if (msg.type === "__ui_list_operations_result") {
+    renderOpsPanel(msg.operations);
+    return;
+  }
+
+  // Update filename from status messages
+  if (msg.type === "ws-send" && msg.payload?.type === "status" && msg.payload?.fileName) {
+    updateFilename(msg.payload.fileName);
+  }
 
   if (msg.type === "ws-send" && ws?.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(msg.payload));
@@ -114,6 +197,9 @@ function tryConnect(port: number): Promise<void> {
       updatePort(port);
       showView("connected");
       updateActivity("Ready for operations");
+
+      // Request ops list for the panel
+      parent.postMessage({ pluginMessage: { type: "__ui_list_operations" } }, "*");
 
       parent.postMessage({ pluginMessage: { type: "ws-connected" } }, "*");
       resolve();
