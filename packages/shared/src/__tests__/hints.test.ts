@@ -12,7 +12,11 @@ describe("withHint", () => {
     });
   });
   it("adds both when both provided", () => {
-    expect(withHint({ value: 1 }, "X", ["a"])).toEqual({ value: 1, _hint: "X", _next_hints: ["a"] });
+    expect(withHint({ value: 1 }, "X", ["a"])).toEqual({
+      value: 1,
+      _hint: "X",
+      _next_hints: ["a"],
+    });
   });
   it("adds neither when both omitted", () => {
     expect(withHint({ value: 1 })).toEqual({ value: 1 });

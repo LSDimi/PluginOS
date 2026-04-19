@@ -65,11 +65,9 @@ async function handleServerMessage(msg: any): Promise<void> {
       }
 
       const startTime = Date.now();
-      const ctx = createOperationContext(
-        params || {},
-        handler.manifest.defaultScope ?? "page",
-        { opName: handler.manifest.name }
-      );
+      const ctx = createOperationContext(params || {}, handler.manifest.defaultScope ?? "page", {
+        opName: handler.manifest.name,
+      });
       if (ctx.guard) {
         sendResult(id, true, ctx.guard);
         return;

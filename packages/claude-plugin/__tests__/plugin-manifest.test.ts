@@ -5,9 +5,7 @@ import { resolve } from "node:path";
 const ROOT = resolve(__dirname, "..");
 
 describe("plugin.json", () => {
-  const manifest = JSON.parse(
-    readFileSync(resolve(ROOT, ".claude-plugin/plugin.json"), "utf-8")
-  );
+  const manifest = JSON.parse(readFileSync(resolve(ROOT, ".claude-plugin/plugin.json"), "utf-8"));
 
   it("has required fields", () => {
     expect(manifest.name).toBe("pluginos");

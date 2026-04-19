@@ -9,10 +9,22 @@ const path = require("path");
 const repoRoot = path.resolve(__dirname, "..");
 
 const targets = [
-  { label: "packages/mcp-server/package.json", path: "packages/mcp-server/package.json", field: "version" },
+  {
+    label: "packages/mcp-server/package.json",
+    path: "packages/mcp-server/package.json",
+    field: "version",
+  },
   { label: "packages/shared/package.json", path: "packages/shared/package.json", field: "version" },
-  { label: "packages/bridge-plugin/package.json", path: "packages/bridge-plugin/package.json", field: "version" },
-  { label: "packages/claude-plugin/package.json", path: "packages/claude-plugin/package.json", field: "version" },
+  {
+    label: "packages/bridge-plugin/package.json",
+    path: "packages/bridge-plugin/package.json",
+    field: "version",
+  },
+  {
+    label: "packages/claude-plugin/package.json",
+    path: "packages/claude-plugin/package.json",
+    field: "version",
+  },
   {
     label: "packages/claude-plugin/.claude-plugin/plugin.json",
     path: "packages/claude-plugin/.claude-plugin/plugin.json",

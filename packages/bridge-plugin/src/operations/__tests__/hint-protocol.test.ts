@@ -7,7 +7,18 @@ import "../colors";
 
 const mockFigma = {
   currentPage: {
-    selection: [{ id: "1", type: "FRAME", fills: [], fillStyleId: "", strokes: [], strokeStyleId: "", effects: [], effectStyleId: "" }],
+    selection: [
+      {
+        id: "1",
+        type: "FRAME",
+        fills: [],
+        fillStyleId: "",
+        strokes: [],
+        strokeStyleId: "",
+        effects: [],
+        effectStyleId: "",
+      },
+    ],
     findAll: vi.fn(() => [{ id: "1", type: "FRAME" }]),
     children: [],
     name: "P",
@@ -18,7 +29,9 @@ const mockFigma = {
     getVariableByIdAsync: vi.fn(async () => null),
   },
 };
-beforeEach(() => { (globalThis as any).figma = mockFigma; });
+beforeEach(() => {
+  (globalThis as any).figma = mockFigma;
+});
 
 const expectNextHints = async (op: string, expected: string[]) => {
   const handler = getOperation(op)!;
@@ -32,9 +45,14 @@ const expectNextHints = async (op: string, expected: string[]) => {
 };
 
 describe("_next_hints protocol", () => {
-  it("lint_styles → [lint_detached, check_contrast]", () => expectNextHints("lint_styles", ["lint_detached", "check_contrast"]));
-  it("lint_detached → [analyze_overrides]", () => expectNextHints("lint_detached", ["analyze_overrides"]));
-  it("check_contrast → [check_touch_targets]", () => expectNextHints("check_contrast", ["check_touch_targets"]));
-  it("list_variables → [export_tokens, find_non_style_colors]", () => expectNextHints("list_variables", ["export_tokens", "find_non_style_colors"]));
-  it("extract_palette → [find_non_style_colors]", () => expectNextHints("extract_palette", ["find_non_style_colors"]));
+  it("lint_styles → [lint_detached, check_contrast]", () =>
+    expectNextHints("lint_styles", ["lint_detached", "check_contrast"]));
+  it("lint_detached → [analyze_overrides]", () =>
+    expectNextHints("lint_detached", ["analyze_overrides"]));
+  it("check_contrast → [check_touch_targets]", () =>
+    expectNextHints("check_contrast", ["check_touch_targets"]));
+  it("list_variables → [export_tokens, find_non_style_colors]", () =>
+    expectNextHints("list_variables", ["export_tokens", "find_non_style_colors"]));
+  it("extract_palette → [find_non_style_colors]", () =>
+    expectNextHints("extract_palette", ["find_non_style_colors"]));
 });

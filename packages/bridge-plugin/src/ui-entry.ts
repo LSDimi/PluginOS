@@ -54,8 +54,11 @@ function flashCopied(btn: HTMLButtonElement, label = "✓ Copied") {
 }
 
 async function copyToClipboard(text: string, btn: HTMLButtonElement, confirmLabel?: string) {
-  try { await navigator.clipboard.writeText(text); }
-  catch { /* swallow; flashCopied still runs */ }
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    /* swallow; flashCopied still runs */
+  }
   flashCopied(btn, confirmLabel || "✓ Copied");
 }
 
@@ -77,8 +80,16 @@ function armToastTrigger() {
     pendingFirstConnectToast = false;
     cleanup();
   };
-  const onVis = () => { if (document.visibilityState === "visible") fire(); };
-  const hardFallback = setTimeout(() => { pendingFirstConnectToast = false; cleanup(); }, 5 * 60 * 1000);
+  const onVis = () => {
+    if (document.visibilityState === "visible") fire();
+  };
+  const hardFallback = setTimeout(
+    () => {
+      pendingFirstConnectToast = false;
+      cleanup();
+    },
+    5 * 60 * 1000
+  );
   const cleanup = () => {
     document.removeEventListener("visibilitychange", onVis);
     document.removeEventListener("mousemove", fire);
@@ -97,9 +108,15 @@ function updateHeaderToggle() {
   const headerToggle = document.getElementById("header-toggle") as HTMLButtonElement | null;
   if (!headerToggle) return;
   const view = document.body.dataset.view;
-  if (view === "connected") { headerToggle.hidden = false; headerToggle.textContent = "⚙ Setup"; }
-  else if (view === "setup" && ws !== null) { headerToggle.hidden = false; headerToggle.textContent = "◀ Done"; }
-  else { headerToggle.hidden = true; }
+  if (view === "connected") {
+    headerToggle.hidden = false;
+    headerToggle.textContent = "⚙ Setup";
+  } else if (view === "setup" && ws !== null) {
+    headerToggle.hidden = false;
+    headerToggle.textContent = "◀ Done";
+  } else {
+    headerToggle.hidden = true;
+  }
 }
 
 function updateStatus(connected: boolean, text: string) {
@@ -221,11 +238,35 @@ if (headerToggle) {
 }
 
 // --- Wire copy buttons ---
-document.getElementById("btn-copy-install")!.addEventListener("click", (e) => copyToClipboard(INSTALL_COMMAND, e.currentTarget as HTMLButtonElement, "✓ Copied — paste in Claude Code"));
-document.getElementById("btn-copy-mcp-cursor")!.addEventListener("click", (e) => copyToClipboard(MCP_CONFIG_JSON, e.currentTarget as HTMLButtonElement));
-document.getElementById("btn-copy-rules-cursor")!.addEventListener("click", (e) => copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement));
-document.getElementById("btn-copy-mcp-chat")!.addEventListener("click", (e) => copyToClipboard(MCP_CONFIG_JSON, e.currentTarget as HTMLButtonElement));
-document.getElementById("btn-copy-rules-chat")!.addEventListener("click", (e) => copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement));
+document
+  .getElementById("btn-copy-install")!
+  .addEventListener("click", (e) =>
+    copyToClipboard(
+      INSTALL_COMMAND,
+      e.currentTarget as HTMLButtonElement,
+      "✓ Copied — paste in Claude Code"
+    )
+  );
+document
+  .getElementById("btn-copy-mcp-cursor")!
+  .addEventListener("click", (e) =>
+    copyToClipboard(MCP_CONFIG_JSON, e.currentTarget as HTMLButtonElement)
+  );
+document
+  .getElementById("btn-copy-rules-cursor")!
+  .addEventListener("click", (e) =>
+    copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement)
+  );
+document
+  .getElementById("btn-copy-mcp-chat")!
+  .addEventListener("click", (e) =>
+    copyToClipboard(MCP_CONFIG_JSON, e.currentTarget as HTMLButtonElement)
+  );
+document
+  .getElementById("btn-copy-rules-chat")!
+  .addEventListener("click", (e) =>
+    copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement)
+  );
 
 // Forward messages from code.js (plugin sandbox) to WebSocket
 window.onmessage = (event: MessageEvent) => {
