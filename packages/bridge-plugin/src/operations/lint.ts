@@ -147,7 +147,7 @@ registerOperation({
     return {
       detached: detached.slice(0, MAX_RESULTS),
       count: detached.length,
-      summary: `Found ${detached.length} likely detached instances on ${(params.scope as string) || "page"}.`,
+      summary: `Found ${detached.length} likely detached instances on ${(params.scope as string) || "selection"}.`,
     };
   },
 });
