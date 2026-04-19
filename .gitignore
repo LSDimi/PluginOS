@@ -36,3 +36,10 @@ coverage/
 
 # Docs / plans (local session artifacts)
 docs/
+
+# Git worktrees
+.worktrees/
+
+# Stray local assets
+/PluginOS - Cover.png
+/packages/bridge-plugin/matteo.png
