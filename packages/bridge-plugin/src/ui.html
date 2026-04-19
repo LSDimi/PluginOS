@@ -159,6 +159,16 @@
     }
 
     .hidden { display: none !important; }
+
+    .connection-strip { font-size: 12px; color: var(--text-secondary, #5C5346); padding: 8px 12px; }
+    .ops-panel { margin: 8px 12px; }
+    .ops-panel-header { width: 100%; text-align: left; background: transparent; border: 1px solid #EDE6D6; border-radius: 8px; padding: 8px 10px; cursor: pointer; font: inherit; font-size: 12.5px; }
+    .ops-panel-body { padding: 6px 0 0 0; max-height: 180px; overflow-y: auto; }
+    .ops-panel-body.hidden { display: none; }
+    .ops-category { font-size: 11px; font-weight: 600; margin-top: 6px; color: #7A7164; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ops-item { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11.5px; padding: 2px 0; }
+    .activity-log { margin: 8px 12px; font-size: 11px; color: #7A7164; }
+    .footer { padding: 6px 12px; border-top: 1px solid #EDE6D6; font-size: 11px; color: #7A7164; }
   </style>
 </head>
 <body>
@@ -194,18 +204,26 @@
     <div class="status-line" id="error-msg">Searching for server…</div>
   </div>
 
-  <!-- Connected: stats -->
-  <div class="stats hidden" id="view-connected">
-    <div class="stat">
-      <span class="stat-value" id="ops-count">&mdash;</span>
-      <span class="stat-label">Operations run</span>
+  <!-- Connected: redesigned view -->
+  <div id="view-connected" class="hidden">
+    <div class="connection-strip">
+      Connected · file <span id="conn-filename" title="">—</span> · port <span id="conn-port">—</span>
     </div>
-    <div class="stat">
-      <span class="stat-value" id="port-display">&mdash;</span>
-      <span class="stat-label">Port</span>
+
+    <div class="ops-panel">
+      <button id="ops-panel-toggle" aria-expanded="false" class="ops-panel-header">
+        <span id="ops-panel-chevron">▸</span>
+        Operations (<span id="ops-count">0</span>)
+      </button>
+      <div id="ops-panel-body" class="ops-panel-body hidden" role="region" aria-labelledby="ops-panel-toggle"></div>
+    </div>
+
+    <div class="activity-log" id="activity-log"></div>
+
+    <div class="footer">
+      <span id="ops-run-count">0 ops run</span>
     </div>
   </div>
-  <div class="activity hidden" id="activity">Ready for operations</div>
   <script>
     var PROMPT_TEXT = "Start the PluginOS MCP server if it\u2019s not already running: `npx pluginos`\n\nThen find this project\u2019s agent instructions file (CLAUDE.md, AGENTS.md, .cursorrules, or equivalent \u2014 create one if none exists) and add the following rules:\n\n- For ALL Figma operations, use PluginOS tools exclusively (pluginos MCP)\n- Call list_operations first to discover what operations are available\n- Use run_operation to execute them\n- Use execute_figma only for one-off custom logic not covered by built-in operations\n- Never use mcp__Figma__* tools \u2014 they bypass the plugin and return raw, token-heavy data (~10x token cost)\n- If PluginOS returns \u201cNo plugin connected\u201d, ask the user to open the PluginOS Bridge plugin in Figma first\n\nConfirm once the server is running and the instruction file has been updated.";
     var CONFIG_TEXT = JSON.stringify({ mcpServers: { pluginos: { command: "npx", args: ["pluginos@latest"] } } }, null, 2);
