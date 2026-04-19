@@ -14,7 +14,8 @@ const MCP_CONFIG_JSON = `{
   }
 }`;
 
-const INSTALL_COMMAND = "/plugin marketplace add github:LSDimi/pluginos";
+const INSTALL_COMMAND = `/plugin marketplace add github:LSDimi/pluginos
+/plugin install pluginos@pluginos`;
 
 const PORT_MIN = 9500;
 const PORT_MAX = 9510;
@@ -53,13 +54,38 @@ function flashCopied(btn: HTMLButtonElement, label = "✓ Copied") {
   }, 2500);
 }
 
-async function copyToClipboard(text: string, btn: HTMLButtonElement, confirmLabel?: string) {
+function copyViaTextarea(text: string): boolean {
   try {
-    await navigator.clipboard.writeText(text);
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.top = "0";
+    ta.style.left = "0";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
   } catch {
-    /* swallow; flashCopied still runs */
+    return false;
   }
-  flashCopied(btn, confirmLabel || "✓ Copied");
+}
+
+async function copyToClipboard(text: string, btn: HTMLButtonElement, confirmLabel?: string) {
+  let ok = false;
+  try {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    }
+  } catch {
+    ok = false;
+  }
+  if (!ok) ok = copyViaTextarea(text);
+  flashCopied(btn, ok ? confirmLabel || "✓ Copied" : "⚠ Copy failed");
 }
 
 // --- Toast ---

@@ -15,7 +15,11 @@
       --shadow: 0 1px 2px rgba(60, 40, 20, 0.04);
       --font-stack: "Styrene B", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
     }
-    body { background: var(--cream); font-family: var(--font-stack); color: var(--text-primary); margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { background: var(--cream); font-family: var(--font-stack); color: var(--text-primary); margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 100vh; }
+    #view-connected { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+    #view-connected.hidden { display: none; }
+    #view-setup { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
     .card + .card { margin-top: 12px; }
     .card-icon { width: 20px; height: 20px; color: var(--text-muted); }
@@ -173,14 +177,14 @@
     .hidden { display: none !important; }
 
     .connection-strip { font-size: 12px; color: var(--text-secondary, #5C5346); padding: 8px 12px; }
-    .ops-panel { margin: 8px 12px; }
-    .ops-panel-header { width: 100%; text-align: left; background: transparent; border: 1px solid #EDE6D6; border-radius: 8px; padding: 8px 10px; cursor: pointer; font: inherit; font-size: 12.5px; }
-    .ops-panel-body { padding: 6px 0 0 0; max-height: 180px; overflow-y: auto; }
+    .ops-panel { margin: 8px 12px; display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+    .ops-panel-header { width: 100%; text-align: left; background: transparent; border: 1px solid #EDE6D6; border-radius: 8px; padding: 8px 10px; cursor: pointer; font: inherit; font-size: 12.5px; flex-shrink: 0; }
+    .ops-panel-body { padding: 6px 2px 6px 0; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     .ops-panel-body.hidden { display: none; }
     .ops-category { font-size: 11px; font-weight: 600; margin-top: 6px; color: #7A7164; text-transform: uppercase; letter-spacing: 0.5px; }
     .ops-item { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11.5px; padding: 2px 0; }
-    .activity-log { margin: 8px 12px; font-size: 11px; color: #7A7164; }
-    .footer { padding: 6px 12px; border-top: 1px solid #EDE6D6; font-size: 11px; color: #7A7164; }
+    .activity-log { margin: 8px 12px; font-size: 11px; color: #7A7164; flex-shrink: 0; }
+    .footer { padding: 6px 12px; border-top: 1px solid #EDE6D6; font-size: 11px; color: #7A7164; flex-shrink: 0; }
     .btn-subtle { font: inherit; font-size: 11.5px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px 6px; border-radius: 6px; }
     .btn-subtle:hover { background: var(--cream); color: var(--text-primary); }
     .toast { position: fixed; bottom: 16px; left: 16px; right: 16px; background: var(--text-primary); color: #FFF; padding: 8px 12px; border-radius: 10px; font-size: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10; }
@@ -206,9 +210,9 @@
     <div class="card" role="region" aria-label="Claude Code">
       <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6l4 4-4 4M12 16h8"/></svg>
       <div class="card-title">Claude Code</div>
-      <div class="card-desc">One-click install. Adds the PluginOS MCP server and a built-in skill that teaches Claude to use PluginOS efficiently across Figma tasks. Works in the Claude Desktop app or terminal.</div>
+      <div class="card-desc">Two commands: add the marketplace, then install the plugin. Copy and paste into Claude Code — both lines at once. This registers the PluginOS MCP server and the built-in skill that teaches Claude to use it.</div>
       <div class="card-actions">
-        <button class="btn" id="btn-copy-install">Copy install command</button>
+        <button class="btn" id="btn-copy-install">Copy install commands</button>
       </div>
     </div>
 
