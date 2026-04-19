@@ -1,5 +1,6 @@
 import { registerOperation } from "./registry";
 import type { OperationContext } from "./context";
+import { withHint } from "@pluginos/shared";
 
 // --- list_variables ---
 registerOperation({
@@ -46,11 +47,12 @@ registerOperation({
       });
     }
 
-    return {
+    const payload = {
       collections: result,
       total_variables: totalVars,
       summary: `${collections.length} collections, ${totalVars} variables.`,
     };
+    return withHint(payload, undefined, ["export_tokens", "find_non_style_colors"]);
   },
 });
 

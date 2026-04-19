@@ -1,5 +1,6 @@
 import { registerOperation } from "./registry";
 import type { OperationContext } from "./context";
+import { withHint } from "@pluginos/shared";
 
 // --- lint_styles ---
 registerOperation({
@@ -87,12 +88,13 @@ registerOperation({
       }
     }
 
-    return {
+    const result = {
       total_nodes: nodes.length,
       issues: issues.slice(0, MAX_RESULTS),
       total_issues: issues.length,
       summary: `Scanned ${nodes.length} nodes. Found ${issues.length} style issues.`,
     };
+    return withHint(result, undefined, ["lint_detached", "check_contrast"]);
   },
 });
 
@@ -144,11 +146,12 @@ registerOperation({
       }
     }
 
-    return {
+    const result = {
       detached: detached.slice(0, MAX_RESULTS),
       count: detached.length,
       summary: `Found ${detached.length} likely detached instances on ${(params.scope as string) || "selection"}.`,
     };
+    return withHint(result, undefined, ["analyze_overrides"]);
   },
 });
 

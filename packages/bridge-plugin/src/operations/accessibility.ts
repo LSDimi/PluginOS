@@ -1,5 +1,6 @@
 import { registerOperation } from "./registry";
 import type { OperationContext } from "./context";
+import { withHint } from "@pluginos/shared";
 
 function computeColor(
   fills: readonly Paint[],
@@ -103,13 +104,14 @@ registerOperation({
     const passing = results.filter((r) => r.aa_pass).length;
     const failing = results.length - passing;
 
-    return {
+    const result = {
       results: results.slice(0, MAX_RESULTS),
       total_checked: results.length,
       passing,
       failing,
       summary: `Checked ${results.length} text nodes. ${passing} pass WCAG AA, ${failing} fail.`,
     };
+    return withHint(result, undefined, ["check_touch_targets"]);
   },
 });
 

@@ -1,5 +1,6 @@
 import { registerOperation } from "./registry";
 import type { OperationContext } from "./context";
+import { withHint } from "@pluginos/shared";
 
 function rgbToHex(r: number, g: number, b: number): string {
   var toHex = function (c: number) {
@@ -47,11 +48,12 @@ registerOperation({
     var colors = Array.from(colorMap.values()).sort(function (a, b) {
       return b.count - a.count;
     });
-    return {
+    var result = {
       colors: colors.slice(0, MAX_RESULTS),
       total_unique: colors.length,
       summary: "Found " + colors.length + " unique colors across " + nodes.length + " nodes.",
     };
+    return withHint(result, undefined, ["find_non_style_colors"]);
   },
 });
 
