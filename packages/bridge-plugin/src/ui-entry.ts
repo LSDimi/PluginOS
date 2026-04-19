@@ -1,3 +1,21 @@
+const TIER_1_RULES = `When performing Figma work, use the \`pluginos\` MCP server's tools by default.
+- Call \`pluginos.list_operations\` once to see what's available, then \`pluginos.run_operation\` to execute.
+- Use \`pluginos.execute_figma\` only for one-off logic not covered by a registered operation.
+- Fall back to \`mcp__Figma__*\` tools ONLY when PluginOS returns \`no_operation_available\`, or the user explicitly requests Figma Code Connect / \`get_design_context\`-style code generation.
+- If PluginOS returns "No plugin connected", tell the user to open the PluginOS Bridge plugin in Figma — do not silently switch to Figma MCP.
+- Respect \`_hint\` and \`_next_hints\` fields in PluginOS responses; they teach operation usage at the moment of need.`;
+
+const MCP_CONFIG_JSON = `{
+  "mcpServers": {
+    "pluginos": {
+      "command": "npx",
+      "args": ["pluginos@latest"]
+    }
+  }
+}`;
+
+const INSTALL_COMMAND = "/plugin marketplace add github:LSDimi/pluginos";
+
 const PORT_MIN = 9500;
 const PORT_MAX = 9510;
 const RECONNECT_DELAY = 3000;
