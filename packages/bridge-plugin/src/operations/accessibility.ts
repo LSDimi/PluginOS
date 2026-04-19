@@ -34,13 +34,14 @@ registerOperation({
   manifest: {
     name: "check_contrast",
     description:
-      "Check color contrast ratios for all text nodes against their parent backgrounds. Reports WCAG AA and AAA compliance.",
+      "Check color contrast ratios for all text nodes against their parent backgrounds. Reports WCAG AA and AAA compliance. Defaults to selection; pass scope: 'page' to scan the whole page.",
     category: "accessibility" as const,
+    defaultScope: "selection",
     params: {
       scope: {
         type: "string",
         required: false,
-        description: "'page' (default) or 'selection'",
+        description: "'selection' (default) or 'page'",
       },
     },
     returns:
@@ -117,13 +118,14 @@ registerOperation({
   manifest: {
     name: "check_touch_targets",
     description:
-      "Find interactive elements (buttons, links, inputs) smaller than 44x44px minimum touch target size (WCAG 2.5.8).",
+      "Find interactive elements (buttons, links, inputs) smaller than 44x44px minimum touch target size (WCAG 2.5.8). Defaults to selection; pass scope: 'page' to scan the whole page.",
     category: "accessibility" as const,
+    defaultScope: "selection",
     params: {
       scope: {
         type: "string",
         required: false,
-        description: "'page' (default) or 'selection'",
+        description: "'selection' (default) or 'page'",
       },
       min_size: {
         type: "number",
