@@ -6,13 +6,14 @@ registerOperation({
   manifest: {
     name: "lint_styles",
     description:
-      "Find layers using local styles instead of library styles, or no style at all. Reports fills, strokes, text styles, and effects that don't reference a shared style.",
+      "Find layers using local styles instead of library styles, or no style at all. Reports fills, strokes, text styles, and effects that don't reference a shared style. Defaults to selection; pass scope: 'page' to scan the whole page.",
     category: "lint" as const,
+    defaultScope: "selection",
     params: {
       scope: {
         type: "string",
         required: false,
-        description: "'page' (default) or 'selection'",
+        description: "'selection' (default) or 'page'",
       },
     },
     returns: "{ total_nodes, issues: Array<{nodeId, nodeName, nodeType, issue}>, summary }",
@@ -100,13 +101,14 @@ registerOperation({
   manifest: {
     name: "lint_detached",
     description:
-      "Find all frames that were once component instances but have been detached. Uses naming heuristics to detect likely detached instances.",
+      "Find all frames that were once component instances but have been detached. Uses naming heuristics to detect likely detached instances. Defaults to selection; pass scope: 'page' to scan the whole page.",
     category: "lint" as const,
+    defaultScope: "selection",
     params: {
       scope: {
         type: "string",
         required: false,
-        description: "'page' (default) or 'selection'",
+        description: "'selection' (default) or 'page'",
       },
     },
     returns: "{ detached: Array<{nodeId, nodeName, parentName}>, count, summary }",
@@ -155,13 +157,14 @@ registerOperation({
   manifest: {
     name: "lint_naming",
     description:
-      "Find layers with default names like 'Frame 1', 'Rectangle 2', 'Group 3' that should be renamed for clarity.",
+      "Find layers with default names like 'Frame 1', 'Rectangle 2', 'Group 3' that should be renamed for clarity. Defaults to selection; pass scope: 'page' to scan the whole page.",
     category: "lint" as const,
+    defaultScope: "selection",
     params: {
       scope: {
         type: "string",
         required: false,
-        description: "'page' (default) or 'selection'",
+        description: "'selection' (default) or 'page'",
       },
     },
     returns: "{ unnamed: Array<{nodeId, nodeName, nodeType}>, count, summary }",
