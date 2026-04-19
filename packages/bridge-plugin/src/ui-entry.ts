@@ -39,6 +39,67 @@ function showView(view: "setup" | "connected") {
     setup.classList.remove("hidden");
     connected.classList.add("hidden");
   }
+  document.body.dataset.view = view;
+  updateHeaderToggle();
+}
+
+function flashCopied(btn: HTMLButtonElement, label = "✓ Copied") {
+  const original = btn.textContent;
+  btn.classList.add("copied");
+  btn.textContent = label;
+  setTimeout(() => {
+    btn.classList.remove("copied");
+    btn.textContent = original;
+  }, 2500);
+}
+
+async function copyToClipboard(text: string, btn: HTMLButtonElement, confirmLabel?: string) {
+  try { await navigator.clipboard.writeText(text); }
+  catch { /* swallow; flashCopied still runs */ }
+  flashCopied(btn, confirmLabel || "✓ Copied");
+}
+
+// --- Toast ---
+function showToast(text: string, durationMs: number) {
+  const el = document.getElementById("toast")!;
+  el.textContent = text;
+  el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), durationMs);
+}
+
+let pendingFirstConnectToast = false;
+
+function armToastTrigger() {
+  const fire = () => {
+    if (!pendingFirstConnectToast) return;
+    showToast("Connected. Haven't copied the usage rules yet? Tap ⚙ Setup above.", 6000);
+    localStorage.setItem("pluginos-first-connect-seen", "1");
+    pendingFirstConnectToast = false;
+    cleanup();
+  };
+  const onVis = () => { if (document.visibilityState === "visible") fire(); };
+  const hardFallback = setTimeout(() => { pendingFirstConnectToast = false; cleanup(); }, 5 * 60 * 1000);
+  const cleanup = () => {
+    document.removeEventListener("visibilitychange", onVis);
+    document.removeEventListener("mousemove", fire);
+    document.removeEventListener("click", fire);
+    document.removeEventListener("keydown", fire);
+    clearTimeout(hardFallback);
+  };
+  document.addEventListener("visibilitychange", onVis);
+  document.addEventListener("mousemove", fire, { once: true });
+  document.addEventListener("click", fire, { once: true });
+  document.addEventListener("keydown", fire, { once: true });
+}
+
+// --- Header toggle ---
+function updateHeaderToggle() {
+  const headerToggle = document.getElementById("header-toggle") as HTMLButtonElement | null;
+  if (!headerToggle) return;
+  const view = document.body.dataset.view;
+  if (view === "connected") { headerToggle.hidden = false; headerToggle.textContent = "⚙ Setup"; }
+  else if (view === "setup" && ws !== null) { headerToggle.hidden = false; headerToggle.textContent = "◀ Done"; }
+  else { headerToggle.hidden = true; }
 }
 
 function updateStatus(connected: boolean, text: string) {
@@ -150,6 +211,22 @@ function wireOpsToggle() {
 
 wireOpsToggle();
 
+// --- Wire header toggle ---
+const headerToggle = document.getElementById("header-toggle") as HTMLButtonElement;
+if (headerToggle) {
+  headerToggle.addEventListener("click", () => {
+    if (document.body.dataset.view === "connected") showView("setup");
+    else if (document.body.dataset.view === "setup" && ws !== null) showView("connected");
+  });
+}
+
+// --- Wire copy buttons ---
+document.getElementById("btn-copy-install")!.addEventListener("click", (e) => copyToClipboard(INSTALL_COMMAND, e.currentTarget as HTMLButtonElement, "✓ Copied — paste in Claude Code"));
+document.getElementById("btn-copy-mcp-cursor")!.addEventListener("click", (e) => copyToClipboard(MCP_CONFIG_JSON, e.currentTarget as HTMLButtonElement));
+document.getElementById("btn-copy-rules-cursor")!.addEventListener("click", (e) => copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement));
+document.getElementById("btn-copy-mcp-chat")!.addEventListener("click", (e) => copyToClipboard(MCP_CONFIG_JSON, e.currentTarget as HTMLButtonElement));
+document.getElementById("btn-copy-rules-chat")!.addEventListener("click", (e) => copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement));
+
 // Forward messages from code.js (plugin sandbox) to WebSocket
 window.onmessage = (event: MessageEvent) => {
   const msg = event.data.pluginMessage;
@@ -220,6 +297,12 @@ function tryConnect(port: number): Promise<void> {
       parent.postMessage({ pluginMessage: { type: "__ui_list_operations" } }, "*");
 
       parent.postMessage({ pluginMessage: { type: "ws-connected" } }, "*");
+
+      if (!localStorage.getItem("pluginos-first-connect-seen")) {
+        pendingFirstConnectToast = true;
+        armToastTrigger();
+      }
+
       resolve();
     };
 

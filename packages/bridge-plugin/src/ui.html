@@ -181,6 +181,10 @@
     .ops-item { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11.5px; padding: 2px 0; }
     .activity-log { margin: 8px 12px; font-size: 11px; color: #7A7164; }
     .footer { padding: 6px 12px; border-top: 1px solid #EDE6D6; font-size: 11px; color: #7A7164; }
+    .btn-subtle { font: inherit; font-size: 11.5px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+    .btn-subtle:hover { background: var(--cream); color: var(--text-primary); }
+    .toast { position: fixed; bottom: 16px; left: 16px; right: 16px; background: var(--text-primary); color: #FFF; padding: 8px 12px; border-radius: 10px; font-size: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10; }
+    .toast.hidden { display: none; }
   </style>
 </head>
 <body>
@@ -193,6 +197,7 @@
       <div class="dot searching" id="dot"></div>
       <span class="badge-text" id="status-text">Searching...</span>
     </div>
+    <button id="header-toggle" class="btn-subtle" hidden>⚙ Setup</button>
   </div>
   <div class="divider"></div>
 
@@ -250,5 +255,6 @@
       <span id="ops-run-count">0 ops run</span>
     </div>
   </div>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 </body>
 </html>
