@@ -39,8 +39,10 @@ describe("operations.md (sync-ops output)", () => {
   });
 
   it("has a markdown table with correct headers", () => {
-    expect(content).toContain("| Op | Category | Default scope | Description |");
-    expect(content).toContain("|---|---|---|---|");
+    // Prettier re-aligns the table after sync-ops writes it, so columns may be
+    // padded with extra whitespace. Match loosely on the column sequence.
+    expect(content).toMatch(/\|\s*Op\s*\|\s*Category\s*\|\s*Default scope\s*\|\s*Description\s*\|/);
+    expect(content).toMatch(/\|\s*-+\s*\|\s*-+\s*\|\s*-+\s*\|\s*-+\s*\|/);
   });
 
   it("includes lint operations", () => {
@@ -65,17 +67,18 @@ describe("operations.md (sync-ops output)", () => {
   });
 
   it("ops with selection default scope have 'selection' in default-scope column", () => {
-    // lint_styles defaults to selection
+    // lint_styles defaults to selection. Prettier may pad `| selection    |`
+    // so match on the word with optional surrounding whitespace inside bars.
     const lintStylesLine = lines.find((l) => l.includes("`lint_styles`"));
     expect(lintStylesLine).toBeDefined();
-    expect(lintStylesLine).toContain("| selection |");
+    expect(lintStylesLine).toMatch(/\|\s*selection\s*\|/);
   });
 
   it("ops with page default scope have 'page' in default-scope column", () => {
     // export_tokens defaults to page
     const exportTokensLine = lines.find((l) => l.includes("`export_tokens`"));
     expect(exportTokensLine).toBeDefined();
-    expect(exportTokensLine).toContain("| page |");
+    expect(exportTokensLine).toMatch(/\|\s*page\s*\|/);
   });
 
   it("snapshot matches expected structure", () => {
