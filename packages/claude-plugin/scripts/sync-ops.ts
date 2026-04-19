@@ -1,6 +1,7 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { execSync } from "node:child_process";
 
 async function loadManifests() {
   process.env.PLUGINOS_SYNC = "1";
@@ -67,5 +68,12 @@ function render(manifests: any[]): string {
   const target = resolve(__dirname, "../skills/pluginos-figma/references/operations.md");
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, md);
+  // Normalize through prettier so the file matches repo formatting conventions
+  // (prevents pre-push format:check failures and CI drift).
+  try {
+    execSync(`npx --no-install prettier --write "${target}"`, { stdio: "inherit" });
+  } catch {
+    console.warn(`[sync-ops] prettier not available; skipping format pass`);
+  }
   console.log(`Wrote ${manifests.length} ops to ${target}`);
 })();
