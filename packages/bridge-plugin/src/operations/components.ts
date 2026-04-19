@@ -73,13 +73,14 @@ registerOperation({
   manifest: {
     name: "analyze_overrides",
     description:
-      "Analyze all component instances and report which have overrides applied, what fields are overridden, and how many.",
+      "Analyze all component instances and report which have overrides applied, what fields are overridden, and how many. Defaults to selection; pass scope: 'page' to scan the whole page.",
     category: "components" as const,
+    defaultScope: "selection",
     params: {
       scope: {
         type: "string",
         required: false,
-        description: "'page' (default) or 'selection'",
+        description: "'selection' (default) or 'page'",
       },
     },
     returns:

@@ -60,10 +60,11 @@ registerOperation({
   manifest: {
     name: "find_non_style_colors",
     description:
-      "Find all nodes using hardcoded fill colors that are not linked to a local or library style.",
+      "Find all nodes using hardcoded fill colors that are not linked to a local or library style. Defaults to selection; pass scope: 'page' to scan the whole page.",
     category: "colors" as const,
+    defaultScope: "selection",
     params: {
-      scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
+      scope: { type: "string", required: false, description: "'selection' (default) or 'page'" },
     },
     returns: "{ violations: Array<{nodeId, nodeName, hex}>, count, summary }",
   },
