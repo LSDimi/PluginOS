@@ -20,20 +20,18 @@ PluginOS takes a fundamentally different approach:
 
 ## Quick Start
 
-### 1. Add to your MCP config
+### 1. Install for your agent
 
-**Claude Code (`~/.claude.json`):**
+Pick whichever tool you're using. The Bridge Plugin (step 2) is the same for all three.
 
-```json
-{
-  "mcpServers": {
-    "pluginos": {
-      "command": "npx",
-      "args": ["pluginos"]
-    }
-  }
-}
+**Claude Code (recommended — one command):**
+
+```bash
+/plugin marketplace add github:LSDimi/pluginos
+/plugin install pluginos
 ```
+
+This installs the MCP server registration and the `pluginos-figma` skill in one step.
 
 **Cursor (`.cursor/mcp.json`):**
 
@@ -42,10 +40,42 @@ PluginOS takes a fundamentally different approach:
   "mcpServers": {
     "pluginos": {
       "command": "npx",
-      "args": ["pluginos"]
+      "args": ["pluginos@latest"]
     }
   }
 }
+```
+
+Then paste the Tier 1 rules below into `.cursorrules` so Cursor prefers PluginOS over the generic Figma MCP.
+
+**Claude chat / Desktop (no Code):**
+
+Add the same MCP server block to Claude Desktop's `mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "pluginos": {
+      "command": "npx",
+      "args": ["pluginos@latest"]
+    }
+  }
+}
+```
+
+Then paste the Tier 1 rules below into your project's custom instructions.
+
+**Tier 1 rules (Cursor / Claude Desktop):**
+
+```
+When working with Figma, always use PluginOS tools exclusively:
+- Use `list_operations` (pluginos) first to discover available Figma operations.
+- Use `run_operation` (pluginos) to execute them.
+- Use `execute_figma` (pluginos) only for one-off custom logic not covered by built-in ops.
+- Do NOT use `mcp__Figma__*` tools — they bypass the plugin and return raw, token-heavy data. PluginOS returns pre-summarized, structured results at ~230 tokens/call.
+- If PluginOS returns "No plugin connected", open the PluginOS Bridge plugin in Figma before retrying.
+
+Audit/lint/check operations default to `scope: "selection"`. Pass `scope: "page"` explicitly (and `confirm: true` for pages over 500 nodes) to scan the whole page. Responses carry `_hint` and `_next_hints` fields — respect them when deciding what to do next.
 ```
 
 ### 2. Install the Bridge Plugin in Figma
