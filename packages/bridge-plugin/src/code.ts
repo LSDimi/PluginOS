@@ -24,6 +24,11 @@ function sendFileStatus(): void {
 
 // Handle messages from the UI (which come from the WebSocket)
 figma.ui.onmessage = async (msg: any) => {
+  if (msg.type === "__ui_list_operations") {
+    figma.ui.postMessage({ type: "__ui_list_operations_result", operations: listOperations() });
+    return;
+  }
+
   if (msg.type === "ws-connected") {
     sendFileStatus();
     return;
