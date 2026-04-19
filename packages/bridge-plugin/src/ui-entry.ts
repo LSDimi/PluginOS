@@ -309,6 +309,12 @@ window.onmessage = (event: MessageEvent) => {
     updateFilename(msg.payload.fileName);
   }
 
+  // Operation results flow plugin → server: count them here, not on socket.onmessage.
+  if (msg.type === "ws-send" && msg.payload?.type === "result") {
+    incrementOps();
+    updateActivity(msg.payload.success ? "Last operation succeeded" : "Last operation failed");
+  }
+
   if (msg.type === "ws-send" && ws?.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(msg.payload));
   }
@@ -383,14 +389,8 @@ function tryConnect(port: number): Promise<void> {
           updateActivity("Running: " + label);
         }
 
-        // Forward to code.js
+        // Forward to code.js. Results are counted in window.onmessage (plugin → server path).
         parent.postMessage({ pluginMessage: { type: "ws-message", payload: data } }, "*");
-
-        // Track results
-        if (data.type === "result") {
-          incrementOps();
-          updateActivity(data.success ? "Last operation succeeded" : "Last operation failed");
-        }
       } catch {
         /* ignore malformed */
       }
