@@ -2,19 +2,31 @@
 <html>
 <head>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: Inter, system-ui, -apple-system, sans-serif;
-      font-size: 11px;
-      background: var(--figma-color-bg, #fff);
-      color: var(--figma-color-text, #333);
-      padding: 12px 14px;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      user-select: none;
+    :root {
+      --cream: #FAF9F5;
+      --card-bg: #FFFFFE;
+      --card-border: #EDE6D6;
+      --text-primary: #2D2A22;
+      --text-secondary: #5C5346;
+      --text-muted: #7A7164;
+      --accent: #D97757;
+      --accent-pressed: #C4653F;
+      --radius: 14px;
+      --shadow: 0 1px 2px rgba(60, 40, 20, 0.04);
+      --font-stack: "Styrene B", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
     }
+    body { background: var(--cream); font-family: var(--font-stack); color: var(--text-primary); margin: 0; padding: 0; }
+    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+    .card + .card { margin-top: 12px; }
+    .card-icon { width: 20px; height: 20px; color: var(--text-muted); }
+    .card-title { font-size: 14px; font-weight: 600; margin-top: 8px; }
+    .card-desc { font-size: 12.5px; font-weight: 400; color: var(--text-secondary); line-height: 1.4; margin-top: 4px; }
+    .card-actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn { font: inherit; font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--card-border); background: transparent; color: var(--text-primary); cursor: pointer; }
+    .btn:hover { background: var(--cream); }
+    .btn.copied { background: var(--accent); color: #FFF; border-color: var(--accent); }
+    .cards-container { padding: 12px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     .header {
       display: flex;
       align-items: center;

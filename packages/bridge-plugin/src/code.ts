@@ -3,7 +3,7 @@ import { createOperationContext } from "./operations/context";
 import { safeSerialize } from "./utils/serializer";
 
 // Show the UI (which handles WebSocket)
-figma.showUI(__html__, { width: 280, height: 240, visible: true });
+figma.showUI(__html__, { width: 320, height: 480, themeColors: true });
 
 // Send file status to MCP server on connection
 function sendFileStatus(): void {
