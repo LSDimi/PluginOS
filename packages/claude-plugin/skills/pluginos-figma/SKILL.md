@@ -61,17 +61,11 @@ If any `pluginos.*` tool returns "No plugin connected" or times out:
 
 ## Don'ts
 
-- Don't call `list_operations` more than once per session — the quick-list below is canonical. Only re-call if you suspect staleness.
+- Don't call `list_operations` more than once per session — use `references/operations.md` as the canonical reference. Only re-call if you suspect staleness.
 - Don't chain more than 3 ops without a user-visible summary checkpoint.
 - Don't use `execute_figma` when a registered op fits — it costs more tokens and loses serialization safety.
 - Don't use `mcp__Figma__*` without first confirming PluginOS can't handle the task.
 
 ## Operations quick-list
 
-See `references/operations.md` for full details (descriptions, parameters, default scope). Below is the current set for planning purposes:
-
-<!-- OPS-QUICK-LIST-START -->
-
-(Auto-synced from `references/operations.md`. Names + categories only; no descriptions to keep the skill bounded. Use the Read tool on the references file if you need full op signatures.)
-
-<!-- OPS-QUICK-LIST-END -->
+Use the Read tool on `references/operations.md` for the full operations table (names, categories, default scopes, descriptions). Call `pluginos.list_operations` if the reference seems stale.

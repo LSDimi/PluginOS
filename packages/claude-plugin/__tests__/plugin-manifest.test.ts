@@ -44,6 +44,6 @@ describe(".mcp.json", () => {
   it("spawns pluginos via npx", () => {
     const server = mcp.mcpServers.pluginos;
     expect(server.command).toBe("npx");
-    expect(server.args).toContain("pluginos@latest");
+    expect(server.args).toContain("pluginos@0.4.0");
   });
 });

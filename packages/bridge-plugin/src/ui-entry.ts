@@ -1,21 +1,23 @@
-const TIER_1_RULES = `When performing Figma work, use the \`pluginos\` MCP server's tools by default.
-- Call \`pluginos.list_operations\` once to see what's available, then \`pluginos.run_operation\` to execute.
-- Use \`pluginos.execute_figma\` only for one-off logic not covered by a registered operation.
-- Fall back to \`mcp__Figma__*\` tools ONLY when PluginOS returns \`no_operation_available\`, or the user explicitly requests Figma Code Connect / \`get_design_context\`-style code generation.
-- If PluginOS returns "No plugin connected", tell the user to open the PluginOS Bridge plugin in Figma — do not silently switch to Figma MCP.
-- Respect \`_hint\` and \`_next_hints\` fields in PluginOS responses; they teach operation usage at the moment of need.`;
+const TIER_1_RULES = `When working with Figma, always use PluginOS tools exclusively:
+- Use \`list_operations\` (pluginos) first to discover available Figma operations.
+- Use \`run_operation\` (pluginos) to execute them.
+- Use \`execute_figma\` (pluginos) only for one-off custom logic not covered by built-in ops.
+- Do NOT use \`mcp__Figma__*\` tools — they bypass the plugin and return raw, token-heavy data. PluginOS returns pre-summarized, structured results at ~230 tokens/call.
+- If PluginOS returns "No plugin connected", open the PluginOS Bridge plugin in Figma before retrying.
+
+Audit/lint/check operations default to \`scope: "selection"\`. Pass \`scope: "page"\` explicitly (and \`confirm: true\` for pages over 500 nodes) to scan the whole page. Responses carry \`_hint\` and \`_next_hints\` fields — respect them when deciding what to do next.`;
 
 const MCP_CONFIG_JSON = `{
   "mcpServers": {
     "pluginos": {
       "command": "npx",
-      "args": ["pluginos@latest"]
+      "args": ["pluginos@0.4.0"]
     }
   }
 }`;
 
 const INSTALL_COMMAND = `/plugin marketplace add github:LSDimi/pluginos
-/plugin install pluginos@pluginos`;
+/plugin install pluginos`;
 
 const PORT_MIN = 9500;
 const PORT_MAX = 9510;

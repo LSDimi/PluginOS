@@ -16,6 +16,12 @@ registerOperation({
         required: false,
         description: "'selection' (default) or 'page'",
       },
+      confirm: {
+        type: "boolean",
+        required: false,
+        description:
+          "Set to true to proceed when page scan exceeds 500 nodes. Required when scope is 'page' on large pages.",
+      },
     },
     returns: "{ total_nodes, issues: Array<{nodeId, nodeName, nodeType, issue}>, summary }",
   },
@@ -112,6 +118,12 @@ registerOperation({
         required: false,
         description: "'selection' (default) or 'page'",
       },
+      confirm: {
+        type: "boolean",
+        required: false,
+        description:
+          "Set to true to proceed when page scan exceeds 500 nodes. Required when scope is 'page' on large pages.",
+      },
     },
     returns: "{ detached: Array<{nodeId, nodeName, parentName}>, count, summary }",
   },
@@ -168,6 +180,12 @@ registerOperation({
         type: "string",
         required: false,
         description: "'selection' (default) or 'page'",
+      },
+      confirm: {
+        type: "boolean",
+        required: false,
+        description:
+          "Set to true to proceed when page scan exceeds 500 nodes. Required when scope is 'page' on large pages.",
       },
     },
     returns: "{ unnamed: Array<{nodeId, nodeName, nodeType}>, count, summary }",

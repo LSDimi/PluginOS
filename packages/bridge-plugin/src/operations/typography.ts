@@ -11,6 +11,12 @@ registerOperation({
     defaultScope: "selection",
     params: {
       scope: { type: "string", required: false, description: "'selection' (default) or 'page'" },
+      confirm: {
+        type: "boolean",
+        required: false,
+        description:
+          "Set to true to proceed when page scan exceeds 500 nodes. Required when scope is 'page' on large pages.",
+      },
     },
     returns:
       "{ styles: Array<{font, size, weight, lineHeight, count}>, total_text_nodes, unique_styles, summary }",

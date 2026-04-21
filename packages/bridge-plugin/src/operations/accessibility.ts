@@ -44,6 +44,12 @@ registerOperation({
         required: false,
         description: "'selection' (default) or 'page'",
       },
+      confirm: {
+        type: "boolean",
+        required: false,
+        description:
+          "Set to true to proceed when page scan exceeds 500 nodes. Required when scope is 'page' on large pages.",
+      },
     },
     returns:
       "{ results: Array<{nodeId, text_preview, ratio, aa_pass, aaa_pass, font_size}>, passing, failing, summary }",
@@ -133,6 +139,12 @@ registerOperation({
         type: "number",
         required: false,
         description: "Minimum touch target size in px (default: 44)",
+      },
+      confirm: {
+        type: "boolean",
+        required: false,
+        description:
+          "Set to true to proceed when page scan exceeds 500 nodes. Required when scope is 'page' on large pages.",
       },
     },
     returns: "{ violations: Array<{nodeId, nodeName, width, height}>, count, summary }",

@@ -35,4 +35,12 @@ describe("defaultScope on flipped ops", () => {
     expect(manifest, `manifest for ${opName} missing`).toBeDefined();
     expect(manifest!.description).toMatch(/Defaults to selection/i);
   });
+
+  it.each(FLIPPED)("%s declares a 'confirm' param", (opName) => {
+    const manifest = listOperations().find((m) => m.name === opName);
+    expect(manifest, `manifest for ${opName} missing`).toBeDefined();
+    expect(manifest!.params.confirm).toBeDefined();
+    expect(manifest!.params.confirm.type).toBe("boolean");
+    expect(manifest!.params.confirm.required).toBe(false);
+  });
 });
