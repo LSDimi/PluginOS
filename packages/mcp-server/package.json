@@ -4,7 +4,9 @@
   "description": "Agent-native Figma operations platform — run 28 Figma operations from any LLM agent at ~230 tokens per call",
   "type": "module",
   "main": "dist/index.js",
-  "bin": "./bin/pluginos.js",
+  "bin": {
+    "pluginos": "bin/pluginos.js"
+  },
   "files": [
     "dist",
     "bin"
