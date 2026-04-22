@@ -1,5 +1,6 @@
 import { registerOperation } from "./registry";
 import type { OperationContext } from "./context";
+import { withHint } from "@pluginos/shared";
 
 function computeColor(
   fills: readonly Paint[],
@@ -34,13 +35,20 @@ registerOperation({
   manifest: {
     name: "check_contrast",
     description:
-      "Check color contrast ratios for all text nodes against their parent backgrounds. Reports WCAG AA and AAA compliance.",
+      "Check color contrast ratios for all text nodes against their parent backgrounds. Reports WCAG AA and AAA compliance. Defaults to selection; pass scope: 'page' to scan the whole page.",
     category: "accessibility" as const,
+    defaultScope: "selection",
     params: {
       scope: {
         type: "string",
         required: false,
-        description: "'page' (default) or 'selection'",
+        description: "'selection' (default) or 'page'",
+      },
+      confirm: {
+        type: "boolean",
+        required: false,
+        description:
+          "Set to true to proceed when page scan exceeds 500 nodes. Required when scope is 'page' on large pages.",
       },
     },
     returns:
@@ -102,13 +110,14 @@ registerOperation({
     const passing = results.filter((r) => r.aa_pass).length;
     const failing = results.length - passing;
 
-    return {
+    const result = {
       results: results.slice(0, MAX_RESULTS),
       total_checked: results.length,
       passing,
       failing,
       summary: `Checked ${results.length} text nodes. ${passing} pass WCAG AA, ${failing} fail.`,
     };
+    return withHint(result, undefined, ["check_touch_targets"]);
   },
 });
 
@@ -117,18 +126,25 @@ registerOperation({
   manifest: {
     name: "check_touch_targets",
     description:
-      "Find interactive elements (buttons, links, inputs) smaller than 44x44px minimum touch target size (WCAG 2.5.8).",
+      "Find interactive elements (buttons, links, inputs) smaller than 44x44px minimum touch target size (WCAG 2.5.8). Defaults to selection; pass scope: 'page' to scan the whole page.",
     category: "accessibility" as const,
+    defaultScope: "selection",
     params: {
       scope: {
         type: "string",
         required: false,
-        description: "'page' (default) or 'selection'",
+        description: "'selection' (default) or 'page'",
       },
       min_size: {
         type: "number",
         required: false,
         description: "Minimum touch target size in px (default: 44)",
+      },
+      confirm: {
+        type: "boolean",
+        required: false,
+        description:
+          "Set to true to proceed when page scan exceeds 500 nodes. Required when scope is 'page' on large pages.",
       },
     },
     returns: "{ violations: Array<{nodeId, nodeName, width, height}>, count, summary }",

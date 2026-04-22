@@ -16,12 +16,15 @@ export type { IPluginBridge, BridgeStatus, FileInfo } from "@pluginos/shared";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function loadUiContent(): string {
+  // Monorepo paths are checked FIRST so a standalone `npm run build
+  // -w packages/bridge-plugin` is picked up immediately — otherwise the
+  // stale copy that tsup bundled into mcp-server/dist wins and serves
+  // until mcp-server is rebuilt too. The bundled fallback remains last
+  // for npm/npx installs where the bridge-plugin workspace is absent.
   const candidates = [
-    // Bundled alongside dist (npm/npx installs)
-    join(__dirname, "ui.html"),
-    // Monorepo development
     join(__dirname, "../../bridge-plugin/dist/ui.html"),
     join(process.cwd(), "packages/bridge-plugin/dist/ui.html"),
+    join(__dirname, "ui.html"),
   ];
   for (const path of candidates) {
     if (existsSync(path)) {
@@ -31,13 +34,11 @@ function loadUiContent(): string {
   return "<html><body><p>PluginOS UI not found. Run: npm run build -w packages/bridge-plugin</p></body></html>";
 }
 
-let cachedUi: string | null = null;
-
 async function main() {
-  const httpServer = createHttpServer(() => {
-    if (!cachedUi) cachedUi = loadUiContent();
-    return cachedUi;
-  });
+  // Re-read on every request so rebuilds land without restarting the server.
+  // ui.html is ~70KB; the tradeoff is worth the smoother dev loop and avoids
+  // stale UIs when users swap between local and published builds.
+  const httpServer = createHttpServer(() => loadUiContent());
 
   const wsServer = new WebSocketPluginBridge({ httpServer });
   const port = await wsServer.start();

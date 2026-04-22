@@ -6,10 +6,17 @@ registerOperation({
   manifest: {
     name: "audit_text_styles",
     description:
-      "Audit all text nodes for style consistency. Reports font family, size, weight, and line height usage with counts.",
+      "Audit all text nodes for style consistency. Reports font family, size, weight, and line height usage with counts. Defaults to selection; pass scope: 'page' to scan the whole page.",
     category: "typography" as const,
+    defaultScope: "selection",
     params: {
-      scope: { type: "string", required: false, description: "'page' (default) or 'selection'" },
+      scope: { type: "string", required: false, description: "'selection' (default) or 'page'" },
+      confirm: {
+        type: "boolean",
+        required: false,
+        description:
+          "Set to true to proceed when page scan exceeds 500 nodes. Required when scope is 'page' on large pages.",
+      },
     },
     returns:
       "{ styles: Array<{font, size, weight, lineHeight, count}>, total_text_nodes, unique_styles, summary }",

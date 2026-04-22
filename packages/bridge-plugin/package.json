@@ -1,14 +1,16 @@
 {
   "name": "@pluginos/bridge-plugin",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "private": true,
   "scripts": {
     "build": "webpack --mode production",
-    "dev": "webpack --mode development --watch"
+    "dev": "webpack --mode development --watch",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.100.0",
     "typescript": "^5.5.0",
+    "vitest": "^2.1.0",
     "webpack": "^5.90.0",
     "webpack-cli": "^5.1.0",
     "ts-loader": "^9.5.0",

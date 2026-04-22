@@ -2,7 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "target": "ES2017",
+    "lib": ["ES2017"]
   },
   "include": ["src"]
 }

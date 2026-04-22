@@ -1,0 +1,16 @@
+{
+  "name": "@pluginos/claude-plugin",
+  "version": "0.4.0",
+  "private": true,
+  "description": "Claude Code plugin for PluginOS — bundles MCP server registration and the pluginos-figma skill.",
+  "scripts": {
+    "sync-ops": "tsx scripts/sync-ops.ts",
+    "build": "npm run sync-ops",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "vitest": "^1.0.0",
+    "typescript": "^5.0.0"
+  }
+}

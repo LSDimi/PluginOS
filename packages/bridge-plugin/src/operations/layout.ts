@@ -6,8 +6,9 @@ registerOperation({
   manifest: {
     name: "audit_spacing",
     description:
-      "Audit spacing values (padding, gap, item spacing) across auto-layout frames. Reports non-standard values.",
+      "Audit spacing values (padding, gap, item spacing) across auto-layout frames. Reports non-standard values. Defaults to selection; pass scope: 'page' to scan the whole page.",
     category: "layout" as const,
+    defaultScope: "selection",
     params: {
       allowed_values: {
         type: "string[]",
@@ -17,7 +18,13 @@ registerOperation({
       scope: {
         type: "string",
         required: false,
-        description: "'page' (default) or 'selection'",
+        description: "'selection' (default) or 'page'",
+      },
+      confirm: {
+        type: "boolean",
+        required: false,
+        description:
+          "Set to true to proceed when page scan exceeds 500 nodes. Required when scope is 'page' on large pages.",
       },
     },
     returns:

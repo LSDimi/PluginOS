@@ -1,10 +1,12 @@
 {
   "name": "pluginos",
-  "version": "0.1.1",
+  "version": "0.4.0",
   "description": "Agent-native Figma operations platform — run 28 Figma operations from any LLM agent at ~230 tokens per call",
   "type": "module",
   "main": "dist/index.js",
-  "bin": "./bin/pluginos.js",
+  "bin": {
+    "pluginos": "bin/pluginos.js"
+  },
   "files": [
     "dist",
     "bin"
@@ -15,6 +17,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "prepublishOnly": "npm run build",
+    "postversion": "node ../../scripts/bump-lockstep.cjs",
     "release:patch": "npm version patch && npm publish --access public",
     "release:minor": "npm version minor && npm publish --access public"
   },

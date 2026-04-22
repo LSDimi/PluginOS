@@ -1,9 +1,30 @@
+const TIER_1_RULES = `When working with Figma, always use PluginOS tools exclusively:
+- Use \`list_operations\` (pluginos) first to discover available Figma operations.
+- Use \`run_operation\` (pluginos) to execute them.
+- Use \`execute_figma\` (pluginos) only for one-off custom logic not covered by built-in ops.
+- Do NOT use \`mcp__Figma__*\` tools — they bypass the plugin and return raw, token-heavy data. PluginOS returns pre-summarized, structured results at ~230 tokens/call.
+- If PluginOS returns "No plugin connected", open the PluginOS Bridge plugin in Figma before retrying.
+
+Audit/lint/check operations default to \`scope: "selection"\`. Pass \`scope: "page"\` explicitly (and \`confirm: true\` for pages over 500 nodes) to scan the whole page. Responses carry \`_hint\` and \`_next_hints\` fields — respect them when deciding what to do next.`;
+
+const MCP_CONFIG_JSON = `{
+  "mcpServers": {
+    "pluginos": {
+      "command": "npx",
+      "args": ["pluginos@0.4.0"]
+    }
+  }
+}`;
+
+const INSTALL_COMMAND = `/plugin marketplace add github:LSDimi/pluginos
+/plugin install pluginos`;
+
 const PORT_MIN = 9500;
 const PORT_MAX = 9510;
 const RECONNECT_DELAY = 3000;
 
 let ws: WebSocket | null = null;
-let opsCount = 0;
+let opsRunCount = 0;
 let scanAttempts = 0;
 
 function $(id: string): HTMLElement {
@@ -13,16 +34,116 @@ function $(id: string): HTMLElement {
 function showView(view: "setup" | "connected") {
   const setup = $("view-setup");
   const connected = $("view-connected");
-  const activity = $("activity");
 
   if (view === "connected") {
     setup.classList.add("hidden");
     connected.classList.remove("hidden");
-    activity.classList.remove("hidden");
   } else {
     setup.classList.remove("hidden");
     connected.classList.add("hidden");
-    activity.classList.add("hidden");
+  }
+  document.body.dataset.view = view;
+  updateHeaderToggle();
+}
+
+function flashCopied(btn: HTMLButtonElement, label = "✓ Copied") {
+  const original = btn.textContent;
+  btn.classList.add("copied");
+  btn.textContent = label;
+  setTimeout(() => {
+    btn.classList.remove("copied");
+    btn.textContent = original;
+  }, 2500);
+}
+
+function copyViaTextarea(text: string): boolean {
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.top = "0";
+    ta.style.left = "0";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+async function copyToClipboard(text: string, btn: HTMLButtonElement, confirmLabel?: string) {
+  let ok = false;
+  try {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    }
+  } catch {
+    ok = false;
+  }
+  if (!ok) ok = copyViaTextarea(text);
+  flashCopied(btn, ok ? confirmLabel || "✓ Copied" : "⚠ Copy failed");
+}
+
+// --- Toast ---
+function showToast(text: string, durationMs: number) {
+  const el = document.getElementById("toast")!;
+  el.textContent = text;
+  el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), durationMs);
+}
+
+let pendingFirstConnectToast = false;
+
+function armToastTrigger() {
+  const fire = () => {
+    if (!pendingFirstConnectToast) return;
+    showToast("Connected. Haven't copied the usage rules yet? Tap ⚙ Setup above.", 6000);
+    localStorage.setItem("pluginos-first-connect-seen", "1");
+    pendingFirstConnectToast = false;
+    cleanup();
+  };
+  const onVis = () => {
+    if (document.visibilityState === "visible") fire();
+  };
+  const hardFallback = setTimeout(
+    () => {
+      pendingFirstConnectToast = false;
+      cleanup();
+    },
+    5 * 60 * 1000
+  );
+  const cleanup = () => {
+    document.removeEventListener("visibilitychange", onVis);
+    document.removeEventListener("mousemove", fire);
+    document.removeEventListener("click", fire);
+    document.removeEventListener("keydown", fire);
+    clearTimeout(hardFallback);
+  };
+  document.addEventListener("visibilitychange", onVis);
+  document.addEventListener("mousemove", fire, { once: true });
+  document.addEventListener("click", fire, { once: true });
+  document.addEventListener("keydown", fire, { once: true });
+}
+
+// --- Header toggle ---
+function updateHeaderToggle() {
+  const headerToggle = document.getElementById("header-toggle") as HTMLButtonElement | null;
+  if (!headerToggle) return;
+  const view = document.body.dataset.view;
+  if (view === "connected") {
+    headerToggle.hidden = false;
+    headerToggle.textContent = "⚙ Setup";
+  } else if (view === "setup" && ws !== null) {
+    headerToggle.hidden = false;
+    headerToggle.textContent = "◀ Done";
+  } else {
+    headerToggle.hidden = true;
   }
 }
 
@@ -47,22 +168,154 @@ function hideError() {
 }
 
 function updateActivity(text: string) {
-  $("activity").textContent = text;
+  const el = $("activity-log");
+  if (el) el.textContent = text;
 }
 
 function updatePort(port: number | null) {
-  $("port-display").textContent = port ? String(port) : "\u2014";
+  $("conn-port").textContent = port ? String(port) : "\u2014";
+}
+
+function updateFilename(name: string) {
+  const el = $("conn-filename");
+  if (el) {
+    el.textContent = name || "\u2014";
+    el.title = name || "";
+  }
 }
 
 function incrementOps() {
-  opsCount++;
-  $("ops-count").textContent = String(opsCount);
+  opsRunCount++;
+  const el = $("ops-run-count");
+  if (el) el.textContent = opsRunCount + " ops run";
 }
+
+function renderOpsPanel(ops: any[]) {
+  const countEl = document.getElementById("ops-count")!;
+  const bodyEl = document.getElementById("ops-panel-body")!;
+  countEl.textContent = String(ops.length);
+
+  const grouped: Record<string, any[]> = {};
+  for (const op of ops) {
+    grouped[op.category] ||= [];
+    grouped[op.category].push(op);
+  }
+  const categoryOrder = [
+    "lint",
+    "accessibility",
+    "components",
+    "tokens",
+    "layout",
+    "content",
+    "export",
+    "assets",
+    "annotations",
+    "colors",
+    "typography",
+    "cleanup",
+    "data",
+    "custom",
+  ];
+
+  bodyEl.innerHTML = "";
+  for (const cat of categoryOrder) {
+    const list = grouped[cat];
+    if (!list?.length) continue;
+    const h = document.createElement("h3");
+    h.className = "ops-category";
+    h.textContent = `${cat} (${list.length})`;
+    bodyEl.appendChild(h);
+    list.sort((a, b) => a.name.localeCompare(b.name));
+    for (const op of list) {
+      const row = document.createElement("div");
+      row.className = "ops-item";
+      row.textContent = op.name;
+      bodyEl.appendChild(row);
+    }
+  }
+}
+
+// Wire ops panel toggle
+function wireOpsToggle() {
+  const toggle = document.getElementById("ops-panel-toggle")!;
+  const body = document.getElementById("ops-panel-body")!;
+  const chevron = document.getElementById("ops-panel-chevron")!;
+  toggle.addEventListener("click", () => {
+    const expanded = toggle.getAttribute("aria-expanded") === "true";
+    toggle.setAttribute("aria-expanded", String(!expanded));
+    body.classList.toggle("hidden");
+    chevron.textContent = expanded ? "▸" : "▾";
+  });
+  toggle.addEventListener("keydown", (e: any) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggle.click();
+    }
+  });
+}
+
+wireOpsToggle();
+
+// --- Wire header toggle ---
+const headerToggle = document.getElementById("header-toggle") as HTMLButtonElement;
+if (headerToggle) {
+  headerToggle.addEventListener("click", () => {
+    if (document.body.dataset.view === "connected") showView("setup");
+    else if (document.body.dataset.view === "setup" && ws !== null) showView("connected");
+  });
+}
+
+// --- Wire copy buttons ---
+document
+  .getElementById("btn-copy-install")!
+  .addEventListener("click", (e) =>
+    copyToClipboard(
+      INSTALL_COMMAND,
+      e.currentTarget as HTMLButtonElement,
+      "✓ Copied — paste in Claude Code"
+    )
+  );
+document
+  .getElementById("btn-copy-mcp-cursor")!
+  .addEventListener("click", (e) =>
+    copyToClipboard(MCP_CONFIG_JSON, e.currentTarget as HTMLButtonElement)
+  );
+document
+  .getElementById("btn-copy-rules-cursor")!
+  .addEventListener("click", (e) =>
+    copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement)
+  );
+document
+  .getElementById("btn-copy-mcp-chat")!
+  .addEventListener("click", (e) =>
+    copyToClipboard(MCP_CONFIG_JSON, e.currentTarget as HTMLButtonElement)
+  );
+document
+  .getElementById("btn-copy-rules-chat")!
+  .addEventListener("click", (e) =>
+    copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement)
+  );
 
 // Forward messages from code.js (plugin sandbox) to WebSocket
 window.onmessage = (event: MessageEvent) => {
   const msg = event.data.pluginMessage;
   if (!msg) return;
+
+  if (msg.type === "__ui_list_operations_result") {
+    renderOpsPanel(msg.operations);
+    return;
+  }
+
+  // Update filename from status messages
+  if (msg.type === "ws-send" && msg.payload?.type === "status" && msg.payload?.fileName) {
+    updateFilename(msg.payload.fileName);
+  }
+
+  // Operation results flow plugin → server: count them here, not on socket.onmessage.
+  if (msg.type === "ws-send" && msg.payload?.type === "result") {
+    incrementOps();
+    updateActivity(msg.payload.success ? "Last operation succeeded" : "Last operation failed");
+  }
 
   if (msg.type === "ws-send" && ws?.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(msg.payload));
@@ -115,7 +368,16 @@ function tryConnect(port: number): Promise<void> {
       showView("connected");
       updateActivity("Ready for operations");
 
+      // Request ops list for the panel
+      parent.postMessage({ pluginMessage: { type: "__ui_list_operations" } }, "*");
+
       parent.postMessage({ pluginMessage: { type: "ws-connected" } }, "*");
+
+      if (!localStorage.getItem("pluginos-first-connect-seen")) {
+        pendingFirstConnectToast = true;
+        armToastTrigger();
+      }
+
       resolve();
     };
 
@@ -129,14 +391,8 @@ function tryConnect(port: number): Promise<void> {
           updateActivity("Running: " + label);
         }
 
-        // Forward to code.js
+        // Forward to code.js. Results are counted in window.onmessage (plugin → server path).
         parent.postMessage({ pluginMessage: { type: "ws-message", payload: data } }, "*");
-
-        // Track results
-        if (data.type === "result") {
-          incrementOps();
-          updateActivity(data.success ? "Last operation succeeded" : "Last operation failed");
-        }
       } catch {
         /* ignore malformed */
       }

@@ -12,6 +12,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Do NOT use `mcp__Figma__*` tools** (`get_design_context`, `get_variable_defs`, `get_screenshot`, etc.) — these bypass the plugin and return raw, token-heavy data. PluginOS returns pre-summarized, structured results at ~230 tokens/call.
 - If PluginOS returns "No plugin connected", instruct the user to open the PluginOS Bridge plugin in Figma before retrying.
 
+### Scope defaults and hint protocol (v0.4+)
+
+Audit/lint/check operations (e.g. `lint_styles`, `lint_detached`, `lint_naming`, `check_contrast`, `check_touch_targets`, `audit_spacing`, `audit_text_styles`, `find_non_style_colors`, `analyze_overrides`) now default to `scope: "selection"`. To scan the whole page:
+
+- Pass `scope: "page"` explicitly.
+- If the page has more than 500 nodes, the operation returns `{ requires_confirm: true, estimated_nodes, _hint }`. Re-invoke with `confirm: true` to proceed.
+
+Responses may include `_hint` (human-readable guidance for interpreting this particular response) and `_next_hints` (suggested follow-up operations). Surface these when deciding what to do next.
+
+The authored skill for Claude Code lives at `packages/claude-plugin/skills/pluginos-figma/SKILL.md` — keep it under 1150 tokens (enforced in CI) and regenerate the ops reference via `npm run sync-ops -w packages/claude-plugin` after registry changes.
+
 ## Build & Development Commands
 
 ```bash

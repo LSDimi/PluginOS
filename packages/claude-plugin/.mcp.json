@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pluginos": {
+      "command": "npx",
+      "args": ["pluginos@0.4.0"]
+    }
+  }
+}
