@@ -22,16 +22,15 @@ PluginOS takes a fundamentally different approach:
 
 ### 1. Install for your agent
 
-Pick whichever tool you're using. The Bridge Plugin (step 2) is the same for all three.
+Pick whichever tool you're using. The Bridge Plugin (step 2) is the same for all of them.
 
-**Claude Code (recommended — one command):**
+**Claude Desktop (recommended for designers — one click):**
 
-```bash
-/plugin marketplace add github:LSDimi/pluginos
-/plugin install pluginos
-```
+1. Download [`pluginos.dxt`](https://github.com/LSDimi/pluginos/releases/latest/download/pluginos.dxt) from the latest GitHub Release.
+2. Double-click the downloaded file. Claude Desktop opens an install dialog.
+3. Confirm. PluginOS appears in Claude Desktop's connector list.
 
-This installs the MCP server registration and the `pluginos-figma` skill in one step.
+No JSON editing, no terminal. Note: Claude.ai web is **not** supported — it cannot reach local MCP servers.
 
 **Cursor (`.cursor/mcp.json`):**
 
@@ -48,9 +47,16 @@ This installs the MCP server registration and the `pluginos-figma` skill in one 
 
 Then paste the Tier 1 rules below into `.cursorrules` so Cursor prefers PluginOS over the generic Figma MCP.
 
-**Claude chat / Desktop (no Code):**
+**Claude Code (CLI — engineers):**
 
-Add the same MCP server block to Claude Desktop's `mcp.json`:
+```bash
+/plugin marketplace add github:LSDimi/pluginos
+/plugin install pluginos
+```
+
+Installs the MCP server registration and the `pluginos-figma` skill in one step.
+
+**Manual (advanced — edit `claude_desktop_config.json` directly):**
 
 ```json
 {
