@@ -29,9 +29,7 @@ describe("build:dxt", () => {
 
   it("declares pluginos@<version> as the mcp command", () => {
     const zip = new AdmZip(outFile);
-    const manifest = JSON.parse(
-      zip.getEntry("manifest.json")!.getData().toString("utf8")
-    );
+    const manifest = JSON.parse(zip.getEntry("manifest.json")!.getData().toString("utf8"));
     const pkg = JSON.parse(readFileSync(join(pkgRoot, "package.json"), "utf8"));
     expect(manifest.server.mcp_config.args).toContain(`pluginos@${pkg.version}`);
   });
