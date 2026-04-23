@@ -129,9 +129,9 @@
       }, 1000);
     }
 
-    var MCP_CONFIG_JSON = JSON.stringify({ mcpServers: { pluginos: { command: "npx", args: ["pluginos@latest"] } } }, null, 2);
-    var TIER_1_RULES = "When working with Figma, always use PluginOS tools exclusively.\n- Use list_operations (pluginos) first to discover available Figma operations.\n- Use run_operation (pluginos) to execute them.\n- Use execute_figma (pluginos) only for one-off custom logic not covered by built-in ops.";
-    var INSTALL_COMMAND = "claude mcp add pluginos -- npx pluginos@latest\nclaude \"$(curl -fsSL https://raw.githubusercontent.com/LSDimi/pluginos/main/packages/claude-plugin/skills/pluginos-figma/SKILL.md)\"";
+    var MCP_CONFIG_JSON = JSON.stringify({ mcpServers: { pluginos: { command: "npx", args: ["pluginos@0.4.0"] } } }, null, 2);
+    var TIER_1_RULES = "When working with Figma, always use PluginOS tools exclusively:\n- Use `list_operations` (pluginos) first to discover available Figma operations.\n- Use `run_operation` (pluginos) to execute them.\n- Use `execute_figma` (pluginos) only for one-off custom logic not covered by built-in ops.\n- Do NOT use `mcp__Figma__*` tools — they bypass the plugin and return raw, token-heavy data. PluginOS returns pre-summarized, structured results at ~230 tokens/call.\n- If PluginOS returns \"No plugin connected\", open the PluginOS Bridge plugin in Figma before retrying.\n\nAudit/lint/check operations default to `scope: \"selection\"`. Pass `scope: \"page\"` explicitly (and `confirm: true` for pages over 500 nodes) to scan the whole page. Responses carry `_hint` and `_next_hints` fields — respect them when deciding what to do next.";
+    var INSTALL_COMMAND = "/plugin marketplace add github:LSDimi/pluginos\n/plugin install pluginos";
 
     function wireCopy(btnId, text) {
       var btn = document.getElementById(btnId);
