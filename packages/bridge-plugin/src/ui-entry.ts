@@ -285,16 +285,6 @@ document
   .addEventListener("click", (e) =>
     copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement)
   );
-document
-  .getElementById("btn-copy-mcp-chat")!
-  .addEventListener("click", (e) =>
-    copyToClipboard(MCP_CONFIG_JSON, e.currentTarget as HTMLButtonElement)
-  );
-document
-  .getElementById("btn-copy-rules-chat")!
-  .addEventListener("click", (e) =>
-    copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement)
-  );
 
 // Forward messages from code.js (plugin sandbox) to WebSocket
 window.onmessage = (event: MessageEvent) => {

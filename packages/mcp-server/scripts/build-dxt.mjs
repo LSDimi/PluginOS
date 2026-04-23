@@ -29,9 +29,7 @@ if (manifest.version !== pkg.version) {
 }
 
 if (Array.isArray(manifest?.server?.mcp_config?.args)) {
-  const versioned = manifest.server.mcp_config.args.find((a) =>
-    /^pluginos@/.test(a)
-  );
+  const versioned = manifest.server.mcp_config.args.find((a) => /^pluginos@/.test(a));
   if (versioned && versioned !== `pluginos@${pkg.version}`) {
     console.error(
       `[build-dxt] manifest mcp_config args pin ${versioned} but package is ${pkg.version}`
