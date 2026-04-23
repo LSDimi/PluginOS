@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  dxt:
+    name: Build and upload pluginos.dxt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared
+        run: npm run build:shared
+
+      - name: Build mcp-server
+        run: npm run build -w packages/mcp-server
+
+      - name: Build DXT artifact
+        run: npm run build:dxt -w packages/mcp-server
+
+      - name: Upload DXT to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: packages/mcp-server/dist/pluginos.dxt
+          fail_on_unmatched_files: true
