@@ -30,6 +30,11 @@ const targets = [
     path: "packages/claude-plugin/.claude-plugin/plugin.json",
     field: "version",
   },
+  {
+    label: "packages/mcp-server/dxt/manifest.json",
+    path: "packages/mcp-server/dxt/manifest.json",
+    field: "version",
+  },
 ];
 
 const readings = targets.map((t) => {
@@ -52,4 +57,4 @@ if (versions.size !== 1) {
 }
 
 const [version] = readings.map((r) => r.version);
-console.log(`[check-version-lockstep] ✓ All 5 manifests share version ${version}`);
+console.log(`[check-version-lockstep] ✓ All ${readings.length} manifests share version ${version}`);

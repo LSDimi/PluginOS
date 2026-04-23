@@ -11,7 +11,7 @@ const MCP_CONFIG_JSON = `{
   "mcpServers": {
     "pluginos": {
       "command": "npx",
-      "args": ["pluginos@0.4.0"]
+      "args": ["-y", "pluginos@0.4.0"]
     }
   }
 }`;
@@ -282,16 +282,6 @@ document
   );
 document
   .getElementById("btn-copy-rules-cursor")!
-  .addEventListener("click", (e) =>
-    copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement)
-  );
-document
-  .getElementById("btn-copy-mcp-chat")!
-  .addEventListener("click", (e) =>
-    copyToClipboard(MCP_CONFIG_JSON, e.currentTarget as HTMLButtonElement)
-  );
-document
-  .getElementById("btn-copy-rules-chat")!
   .addEventListener("click", (e) =>
     copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement)
   );

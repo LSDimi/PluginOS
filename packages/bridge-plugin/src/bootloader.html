@@ -25,18 +25,17 @@
     .status-sub  { font-size: 10px; color: var(--figma-color-text-secondary, #999); margin-top: 1px; }
     .divider { height: 1px; background: var(--figma-color-border, #e5e5e5); }
     .setup-section { padding: 10px 12px 0; display: none; }
-    .action-card {
-      width: 100%; display: flex; align-items: center; gap: 10px;
-      padding: 8px 10px; margin-bottom: 7px;
-      background: var(--figma-color-bg-secondary, #f5f5f5);
-      border: 1px solid var(--figma-color-border, #e5e5e5);
-      border-radius: 6px; cursor: pointer; text-align: left;
-      font-family: inherit; font-size: 11px; transition: background 0.15s;
-    }
-    .action-card:hover { background: var(--figma-color-bg-hover, #ebebeb); }
-    .action-icon { font-size: 15px; flex-shrink: 0; width: 18px; text-align: center; }
-    .action-title { font-size: 11px; font-weight: 600; color: var(--figma-color-text); }
-    .action-desc  { font-size: 10px; color: var(--figma-color-text-secondary, #999); margin-top: 1px; }
+    .setup-cards { display: flex; flex-direction: column; gap: 8px; }
+    .card { padding: 10px 12px; background: var(--figma-color-bg-secondary, #f5f5f5); border: 1px solid var(--figma-color-border, #e5e5e5); border-radius: 6px; }
+    .card-title { font-size: 11px; font-weight: 600; color: var(--figma-color-text); margin-bottom: 4px; }
+    .card-desc  { font-size: 10px; color: var(--figma-color-text-secondary, #999); margin-bottom: 8px; }
+    .card-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .btn { font-family: inherit; font-size: 10px; padding: 4px 10px; border: 1px solid var(--figma-color-border, #e5e5e5); border-radius: 4px; background: var(--figma-color-bg, #fff); color: var(--figma-color-text, #111); cursor: pointer; transition: background 0.15s; }
+    .btn:hover { background: var(--figma-color-bg-hover, #ebebeb); }
+    .btn.copied { color: #1bc47d; border-color: #1bc47d; }
+    .btn-primary { background: var(--figma-color-text, #111); color: var(--figma-color-bg, #fff); border-color: var(--figma-color-text, #111); text-decoration: none; display: inline-block; }
+    .btn-primary:hover { opacity: 0.9; }
+    a.btn { text-decoration: none; }
     .progress-section { padding: 8px 12px 10px; display: none; }
     .progress-bar { height: 2px; background: var(--figma-color-border, #e5e5e5); border-radius: 1px; overflow: hidden; }
     .progress-fill { height: 100%; width: 0%; background: #f5a623; border-radius: 1px; }
@@ -59,20 +58,32 @@
   <div class="divider"></div>
 
   <div class="setup-section" id="setup-section">
-    <button class="action-card" onclick="copyPrompt()">
-      <span class="action-icon">›</span>
-      <div>
-        <div class="action-title">Easy setup (beginner)</div>
-        <div class="action-desc" id="prompt-desc">Click here to copy the prompt and paste in your project’s AI chat to configure PluginOS</div>
+    <div class="setup-cards">
+    <div class="card" role="region" aria-label="Claude Desktop">
+      <div class="card-title">Claude Desktop</div>
+      <div class="card-desc">One-click install. Download the PluginOS extension for Claude Desktop, double-click to install, then return here. No terminal, no JSON.</div>
+      <div class="card-actions">
+        <a class="btn btn-primary" id="btn-download-dxt" href="https://github.com/LSDimi/pluginos/releases/latest/download/pluginos.dxt" download>Download for Claude Desktop</a>
       </div>
-    </button>
-    <button class="action-card" onclick="copyConfig()">
-      <span class="action-icon">⎘</span>
-      <div>
-        <div class="action-title">Copy MCP config</div>
-        <div class="action-desc" id="copy-desc">Paste in your IDE’s MCP server list or Claude Connectors</div>
+    </div>
+
+    <div class="card" role="region" aria-label="Cursor">
+      <div class="card-title">Cursor</div>
+      <div class="card-desc">For engineers. Add PluginOS as an MCP server in Cursor settings, then paste the usage rules into <code>.cursorrules</code>.</div>
+      <div class="card-actions">
+        <button class="btn" id="btn-copy-mcp-cursor">1. Copy MCP config</button>
+        <button class="btn" id="btn-copy-rules-cursor">2. Copy rules</button>
       </div>
-    </button>
+    </div>
+
+    <div class="card" role="region" aria-label="Claude Code">
+      <div class="card-title">Claude Code (CLI)</div>
+      <div class="card-desc">For terminal users. Two commands — paste both at once into Claude Code to register the MCP server and skill.</div>
+      <div class="card-actions">
+        <button class="btn" id="btn-copy-install">Copy install commands</button>
+      </div>
+    </div>
+    </div>
   </div>
 
   <div class="progress-section" id="progress-section">
@@ -118,39 +129,42 @@
       }, 1000);
     }
 
-    var PROMPT_TEXT = "Start the PluginOS MCP server if it’s not already running: `npx pluginos`\n\nThen find this project’s agent instructions file (CLAUDE.md, AGENTS.md, .cursorrules, or equivalent — create one if none exists) and add the following rules:\n\n- For ALL Figma operations, use PluginOS tools exclusively (pluginos MCP)\n- Call list_operations first to discover what operations are available\n- Use run_operation to execute them\n- Use execute_figma only for one-off custom logic not covered by built-in operations\n- Never use mcp__Figma__* tools — they bypass the plugin and return raw, token-heavy data (~10x token cost)\n- If PluginOS returns “No plugin connected”, ask the user to open the PluginOS Bridge plugin in Figma first\n\nConfirm once the server is running and the instruction file has been updated.";
-    var CONFIG_TEXT = JSON.stringify({ mcpServers: { pluginos: { command: "npx", args: ["pluginos@latest"] } } }, null, 2);
+    var MCP_CONFIG_JSON = JSON.stringify({ mcpServers: { pluginos: { command: "npx", args: ["-y", "pluginos@0.4.0"] } } }, null, 2);
+    var TIER_1_RULES = "When working with Figma, always use PluginOS tools exclusively:\n- Use `list_operations` (pluginos) first to discover available Figma operations.\n- Use `run_operation` (pluginos) to execute them.\n- Use `execute_figma` (pluginos) only for one-off custom logic not covered by built-in ops.\n- Do NOT use `mcp__Figma__*` tools — they bypass the plugin and return raw, token-heavy data. PluginOS returns pre-summarized, structured results at ~230 tokens/call.\n- If PluginOS returns \"No plugin connected\", open the PluginOS Bridge plugin in Figma before retrying.\n\nAudit/lint/check operations default to `scope: \"selection\"`. Pass `scope: \"page\"` explicitly (and `confirm: true` for pages over 500 nodes) to scan the whole page. Responses carry `_hint` and `_next_hints` fields — respect them when deciding what to do next.";
+    var INSTALL_COMMAND = "/plugin marketplace add github:LSDimi/pluginos\n/plugin install pluginos";
 
-    function doCopy(text, descId, revertText) {
-      var d = el(descId);
-      function onOk() {
-        d.textContent = "✓ Copied!";
-        setTimeout(function() { d.textContent = revertText; }, 2500);
-      }
-      function onFail() { d.textContent = "Copy failed — please try again"; }
-      function fallback() {
-        try {
-          var ta = document.createElement("textarea");
-          ta.value = text;
-          ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;";
-          document.body.appendChild(ta);
-          ta.focus(); ta.select();
-          document.execCommand("copy") ? onOk() : onFail();
-          document.body.removeChild(ta);
-        } catch(e) { onFail(); }
-      }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(onOk).catch(fallback);
-      } else { fallback(); }
+    function wireCopy(btnId, text) {
+      var btn = document.getElementById(btnId);
+      if (!btn) return;
+      btn.addEventListener("click", function() {
+        function onOk() {
+          btn.classList.add("copied");
+          var orig = btn.textContent;
+          btn.textContent = "Copied!";
+          setTimeout(function() { btn.textContent = orig; btn.classList.remove("copied"); }, 2500);
+        }
+        function onFail() { btn.textContent = "Copy failed"; }
+        function fallback() {
+          try {
+            var ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;";
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            document.execCommand("copy") ? onOk() : onFail();
+            document.body.removeChild(ta);
+          } catch(e) { onFail(); }
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(onOk).catch(fallback);
+        } else { fallback(); }
+      });
     }
-    function copyConfig() {
-      doCopy(CONFIG_TEXT, "copy-desc", "Paste in your IDE’s MCP server list or Claude Connectors");
-    }
-    function copyPrompt() {
-      doCopy(PROMPT_TEXT, "prompt-desc", "Click here to copy the prompt and paste in your project’s AI chat to configure PluginOS");
-    }
+    wireCopy("btn-copy-install",      INSTALL_COMMAND);
+    wireCopy("btn-copy-mcp-cursor",   MCP_CONFIG_JSON);
+    wireCopy("btn-copy-rules-cursor", TIER_1_RULES);
 
-        function tryBootload() {
+    function tryBootload() {
       setDot("dot-yellow");
       setStatus("Connecting…", "Searching for PluginOS server");
       showSection("setup-section",    false);
