@@ -39,7 +39,7 @@ No JSON editing, no terminal. Note: Claude.ai web is **not** supported — it ca
   "mcpServers": {
     "pluginos": {
       "command": "npx",
-      "args": ["pluginos@latest"]
+      "args": ["-y", "pluginos@latest"]
     }
   }
 }
@@ -63,7 +63,7 @@ Installs the MCP server registration and the `pluginos-figma` skill in one step.
   "mcpServers": {
     "pluginos": {
       "command": "npx",
-      "args": ["pluginos@latest"]
+      "args": ["-y", "pluginos@latest"]
     }
   }
 }

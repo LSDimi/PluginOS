@@ -11,7 +11,7 @@ const MCP_CONFIG_JSON = `{
   "mcpServers": {
     "pluginos": {
       "command": "npx",
-      "args": ["pluginos@0.4.0"]
+      "args": ["-y", "pluginos@0.4.0"]
     }
   }
 }`;
