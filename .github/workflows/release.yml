@@ -26,6 +26,9 @@ jobs:
       - name: Build shared
         run: npm run build:shared
 
+      - name: Build bridge-plugin
+        run: npm run build -w packages/bridge-plugin
+
       - name: Build mcp-server
         run: npm run build -w packages/mcp-server
 
