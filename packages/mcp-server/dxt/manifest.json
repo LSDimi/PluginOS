@@ -2,7 +2,7 @@
   "dxt_version": "0.1",
   "name": "pluginos",
   "display_name": "PluginOS",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Agent-native Figma operations — run 28 Figma operations from Claude Desktop at ~230 tokens per call.",
   "long_description": "PluginOS bridges Claude Desktop with Figma through a local MCP server and a companion Figma plugin. After installing this extension, open the PluginOS Bridge plugin inside Figma and Claude Desktop will be able to read selections, run audits, apply variables, and execute design operations on your behalf.",
   "author": {
@@ -20,7 +20,7 @@
     "entry_point": "npx",
     "mcp_config": {
       "command": "npx",
-      "args": ["-y", "pluginos@0.4.0"]
+      "args": ["-y", "pluginos@0.4.1"]
     }
   },
   "compatibility": {
