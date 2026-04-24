@@ -19,6 +19,8 @@ const MCP_CONFIG_JSON = `{
 const INSTALL_COMMAND = `/plugin marketplace add github:LSDimi/pluginos
 /plugin install pluginos`;
 
+const DXT_URL = "https://github.com/LSDimi/pluginos/releases/latest/download/pluginos.dxt";
+
 const PORT_MIN = 9500;
 const PORT_MAX = 9510;
 const RECONNECT_DELAY = 3000;
@@ -284,6 +286,23 @@ document
   .getElementById("btn-copy-rules-cursor")!
   .addEventListener("click", (e) =>
     copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement)
+  );
+
+document
+  .getElementById("btn-download-dxt")!
+  .addEventListener("click", (e) => {
+    e.preventDefault();
+    parent.postMessage(
+      { pluginMessage: { type: "open-external", url: DXT_URL } },
+      "*"
+    );
+    flashCopied(e.currentTarget as HTMLButtonElement, "✓ Opening in browser…");
+  });
+
+document
+  .getElementById("btn-copy-dxt-url")!
+  .addEventListener("click", (e) =>
+    copyToClipboard(DXT_URL, e.currentTarget as HTMLButtonElement, "✓ Link copied")
   );
 
 // Forward messages from code.js (plugin sandbox) to WebSocket
