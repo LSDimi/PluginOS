@@ -63,7 +63,8 @@
       <div class="card-title">Claude Desktop</div>
       <div class="card-desc">One-click install. Download the PluginOS extension for Claude Desktop, double-click to install, then return here. No terminal, no JSON.</div>
       <div class="card-actions">
-        <a class="btn btn-primary" id="btn-download-dxt" href="https://github.com/LSDimi/pluginos/releases/latest/download/pluginos.dxt" download>Download for Claude Desktop</a>
+        <button class="btn btn-primary" id="btn-download-dxt">Download for Claude Desktop</button>
+        <button class="btn" id="btn-copy-dxt-url">Copy link</button>
       </div>
     </div>
 
@@ -132,6 +133,7 @@
     var MCP_CONFIG_JSON = JSON.stringify({ mcpServers: { pluginos: { command: "npx", args: ["-y", "pluginos@0.4.1"] } } }, null, 2);
     var TIER_1_RULES = "When working with Figma, always use PluginOS tools exclusively:\n- Use `list_operations` (pluginos) first to discover available Figma operations.\n- Use `run_operation` (pluginos) to execute them.\n- Use `execute_figma` (pluginos) only for one-off custom logic not covered by built-in ops.\n- Do NOT use `mcp__Figma__*` tools — they bypass the plugin and return raw, token-heavy data. PluginOS returns pre-summarized, structured results at ~230 tokens/call.\n- If PluginOS returns \"No plugin connected\", open the PluginOS Bridge plugin in Figma before retrying.\n\nAudit/lint/check operations default to `scope: \"selection\"`. Pass `scope: \"page\"` explicitly (and `confirm: true` for pages over 500 nodes) to scan the whole page. Responses carry `_hint` and `_next_hints` fields — respect them when deciding what to do next.";
     var INSTALL_COMMAND = "/plugin marketplace add github:LSDimi/pluginos\n/plugin install pluginos";
+    var DXT_URL = "https://github.com/LSDimi/pluginos/releases/latest/download/pluginos.dxt";
 
     function wireCopy(btnId, text) {
       var btn = document.getElementById(btnId);
@@ -160,9 +162,27 @@
         } else { fallback(); }
       });
     }
+    (function wireDownloadDxt() {
+      var btn = document.getElementById("btn-download-dxt");
+      if (!btn) return;
+      btn.addEventListener("click", function() {
+        parent.postMessage(
+          { pluginMessage: { type: "open-external", url: DXT_URL } },
+          "*"
+        );
+        btn.classList.add("copied");
+        var orig = btn.textContent;
+        btn.textContent = "✓ Opening in browser…";
+        setTimeout(function() {
+          btn.textContent = orig;
+          btn.classList.remove("copied");
+        }, 2500);
+      });
+    })();
     wireCopy("btn-copy-install",      INSTALL_COMMAND);
     wireCopy("btn-copy-mcp-cursor",   MCP_CONFIG_JSON);
     wireCopy("btn-copy-rules-cursor", TIER_1_RULES);
+    wireCopy("btn-copy-dxt-url", DXT_URL);
 
     function tryBootload() {
       setDot("dot-yellow");
