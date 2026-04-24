@@ -11,7 +11,7 @@
  * caller chain handlers without re-checking `msg.type`.
  */
 export function handleOpenExternal(
-  msg: { type?: string; url?: unknown },
+  msg: { type?: string; url?: unknown; [key: string]: unknown },
   figmaRef: Pick<PluginAPI, "openExternal">
 ): boolean {
   if (msg.type !== "open-external") return false;
