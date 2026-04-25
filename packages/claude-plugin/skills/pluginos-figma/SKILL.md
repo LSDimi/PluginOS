@@ -15,17 +15,18 @@ You have `pluginos` MCP tools available AND the user is doing Figma work: design
 
 ## Tool routing (iron rule)
 
-Always try `pluginos.*` first:
+**Step 0: always call `pluginos.get_status` first** to confirm the bridge plugin is connected before any Figma work. If it returns disconnected, follow the Connection troubleshooting steps below — do NOT silently fall back to `mcp__Figma__*`.
+
+Then prefer `pluginos.*`:
 
 - `pluginos.list_operations` — discover what's available (only needed once per session; see quick-list below).
 - `pluginos.run_operation` — execute a registered operation.
 - `pluginos.execute_figma` — arbitrary plugin JS, only when no registered op fits.
 
-Fall back to `mcp__Figma__*` tools ONLY when:
+**Avoid `mcp__Figma__*` tools** (`get_design_context`, `get_variable_defs`, `get_screenshot`, etc.). They bypass the plugin and return raw, token-heavy node dumps; PluginOS returns pre-summarized, structured results at ~230 tokens/call. The only acceptable fallbacks to `mcp__Figma__*` are:
 
-- PluginOS explicitly returns `no_operation_available`.
-- The user requests Figma Code Connect mapping / `get_design_context`-style code generation.
-- PluginOS is unreachable (see Connection troubleshooting below).
+- PluginOS explicitly returns `no_operation_available` AND `execute_figma` cannot reasonably do the job.
+- The user explicitly requests Figma Code Connect mapping or `get_design_context`-style code generation.
 
 Never mix: one-shot a Figma task with either PluginOS or Figma MCP, don't interleave.
 

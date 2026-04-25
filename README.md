@@ -22,15 +22,16 @@ PluginOS takes a fundamentally different approach:
 
 ### 1. Install for your agent
 
-Pick whichever tool you're using. The Bridge Plugin (step 2) is the same for all of them.
-
-**Claude Desktop (recommended for designers — one click):**
+**Recommended — Claude Desktop (one click, no terminal):**
 
 1. Download [`pluginos.dxt`](https://github.com/LSDimi/pluginos/releases/latest/download/pluginos.dxt) from the latest GitHub Release.
 2. Double-click the downloaded file. Claude Desktop opens an install dialog.
 3. Confirm. PluginOS appears in Claude Desktop's connector list.
 
 No JSON editing, no terminal. Note: Claude.ai web is **not** supported — it cannot reach local MCP servers.
+
+<details>
+<summary><strong>Other AI tools</strong> (Cursor, Claude Code CLI, manual config)</summary>
 
 **Cursor (`.cursor/mcp.json`):**
 
@@ -56,22 +57,11 @@ Then paste the Tier 1 rules below into `.cursorrules` so Cursor prefers PluginOS
 
 Installs the MCP server registration and the `pluginos-figma` skill in one step.
 
-**Manual (advanced — edit `claude_desktop_config.json` directly):**
+**Manual (other MCP-capable clients):** Use the same `mcpServers` JSON block as Cursor above and paste the Tier 1 rules below into your project's custom instructions.
 
-```json
-{
-  "mcpServers": {
-    "pluginos": {
-      "command": "npx",
-      "args": ["-y", "pluginos@latest"]
-    }
-  }
-}
-```
+</details>
 
-Then paste the Tier 1 rules below into your project's custom instructions.
-
-**Tier 1 rules (Cursor / Claude Desktop):**
+**Tier 1 rules (paste into Cursor / Claude Desktop / other clients):**
 
 ```
 When working with Figma, always use PluginOS tools exclusively:
