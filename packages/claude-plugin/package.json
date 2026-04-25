@@ -1,6 +1,6 @@
 {
   "name": "@pluginos/claude-plugin",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "private": true,
   "description": "Claude Code plugin for PluginOS — bundles MCP server registration and the pluginos-figma skill.",
   "scripts": {
