@@ -15,7 +15,7 @@ export function handleOpenExternal(
   figmaRef: Pick<PluginAPI, "openExternal">
 ): boolean {
   if (msg.type !== "open-external") return false;
-  if (typeof msg.url !== "string") return false;
+  if (typeof msg.url !== "string" || msg.url.length === 0) return false;
   figmaRef.openExternal(msg.url);
   return true;
 }

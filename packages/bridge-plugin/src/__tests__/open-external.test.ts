@@ -33,6 +33,28 @@ describe("handleOpenExternal", () => {
     expect(openExternal).not.toHaveBeenCalled();
   });
 
+  it("does NOT call figma.openExternal when url is an empty string", () => {
+    const openExternal = vi.fn();
+    const figmaRef = { openExternal } as unknown as PluginAPI;
+    const dispatched = handleOpenExternal(
+      { type: "open-external", url: "" },
+      figmaRef
+    );
+    expect(dispatched).toBe(false);
+    expect(openExternal).not.toHaveBeenCalled();
+  });
+
+  it("does NOT call figma.openExternal when url is null", () => {
+    const openExternal = vi.fn();
+    const figmaRef = { openExternal } as unknown as PluginAPI;
+    const dispatched = handleOpenExternal(
+      { type: "open-external", url: null },
+      figmaRef
+    );
+    expect(dispatched).toBe(false);
+    expect(openExternal).not.toHaveBeenCalled();
+  });
+
   it("returns false for unrelated message types", () => {
     const openExternal = vi.fn();
     const figmaRef = { openExternal } as unknown as PluginAPI;
