@@ -288,16 +288,11 @@ document
     copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement)
   );
 
-document
-  .getElementById("btn-download-dxt")!
-  .addEventListener("click", (e) => {
-    e.preventDefault();
-    parent.postMessage(
-      { pluginMessage: { type: "open-external", url: DXT_URL } },
-      "*"
-    );
-    flashCopied(e.currentTarget as HTMLButtonElement, "✓ Opening in browser…");
-  });
+document.getElementById("btn-download-dxt")!.addEventListener("click", (e) => {
+  e.preventDefault();
+  parent.postMessage({ pluginMessage: { type: "open-external", url: DXT_URL } }, "*");
+  flashCopied(e.currentTarget as HTMLButtonElement, "✓ Opening in browser…");
+});
 
 document
   .getElementById("btn-copy-dxt-url")!

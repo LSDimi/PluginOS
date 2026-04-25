@@ -25,10 +25,7 @@ describe("handleOpenExternal", () => {
   it("does NOT call figma.openExternal when url is not a string", () => {
     const openExternal = vi.fn();
     const figmaRef = { openExternal } as unknown as PluginAPI;
-    const dispatched = handleOpenExternal(
-      { type: "open-external", url: 42 },
-      figmaRef
-    );
+    const dispatched = handleOpenExternal({ type: "open-external", url: 42 }, figmaRef);
     expect(dispatched).toBe(false);
     expect(openExternal).not.toHaveBeenCalled();
   });
@@ -36,10 +33,7 @@ describe("handleOpenExternal", () => {
   it("does NOT call figma.openExternal when url is an empty string", () => {
     const openExternal = vi.fn();
     const figmaRef = { openExternal } as unknown as PluginAPI;
-    const dispatched = handleOpenExternal(
-      { type: "open-external", url: "" },
-      figmaRef
-    );
+    const dispatched = handleOpenExternal({ type: "open-external", url: "" }, figmaRef);
     expect(dispatched).toBe(false);
     expect(openExternal).not.toHaveBeenCalled();
   });
@@ -47,10 +41,7 @@ describe("handleOpenExternal", () => {
   it("does NOT call figma.openExternal when url is null", () => {
     const openExternal = vi.fn();
     const figmaRef = { openExternal } as unknown as PluginAPI;
-    const dispatched = handleOpenExternal(
-      { type: "open-external", url: null },
-      figmaRef
-    );
+    const dispatched = handleOpenExternal({ type: "open-external", url: null }, figmaRef);
     expect(dispatched).toBe(false);
     expect(openExternal).not.toHaveBeenCalled();
   });
@@ -58,10 +49,7 @@ describe("handleOpenExternal", () => {
   it("returns false for unrelated message types", () => {
     const openExternal = vi.fn();
     const figmaRef = { openExternal } as unknown as PluginAPI;
-    const dispatched = handleOpenExternal(
-      { type: "ws-message", payload: {} },
-      figmaRef
-    );
+    const dispatched = handleOpenExternal({ type: "ws-message", payload: {} }, figmaRef);
     expect(dispatched).toBe(false);
     expect(openExternal).not.toHaveBeenCalled();
   });
