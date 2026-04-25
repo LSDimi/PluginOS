@@ -1,3 +1,5 @@
+import { DXT_URL } from "./constants";
+
 const TIER_1_RULES = `When working with Figma, always use PluginOS tools exclusively:
 - Use \`list_operations\` (pluginos) first to discover available Figma operations.
 - Use \`run_operation\` (pluginos) to execute them.
@@ -18,8 +20,6 @@ const MCP_CONFIG_JSON = `{
 
 const INSTALL_COMMAND = `/plugin marketplace add github:LSDimi/pluginos
 /plugin install pluginos`;
-
-const DXT_URL = "https://github.com/LSDimi/pluginos/releases/latest/download/pluginos.dxt";
 
 const PORT_MIN = 9500;
 const PORT_MAX = 9510;
@@ -188,6 +188,7 @@ function updateFilename(name: string) {
 
 function incrementOps() {
   opsRunCount++;
+  console.warn("[pluginos:debug] incrementOps called, count=" + opsRunCount);
   const el = $("ops-run-count");
   if (el) el.textContent = opsRunCount + " ops run";
 }
@@ -304,6 +305,12 @@ document
 window.onmessage = (event: MessageEvent) => {
   const msg = event.data.pluginMessage;
   if (!msg) return;
+  console.warn(
+    "[pluginos:debug] window.onmessage type=" +
+      msg?.type +
+      " payload.type=" +
+      msg?.payload?.type
+  );
 
   if (msg.type === "__ui_list_operations_result") {
     renderOpsPanel(msg.operations);

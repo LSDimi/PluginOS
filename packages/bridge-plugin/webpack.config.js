@@ -2,6 +2,11 @@ const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const HtmlInlineScriptPlugin = require("html-inline-script-webpack-plugin");
 
+// MUST match src/constants.ts (DXT_URL). Source of truth lives in constants.ts;
+// duplicated here because webpack.config.js cannot require a .ts file directly.
+const DXT_URL =
+  "https://github.com/LSDimi/pluginos/releases/latest/download/pluginos.dxt";
+
 const noModernSyntax = {
   arrowFunction: true,
   const: true,
@@ -60,6 +65,7 @@ module.exports = (env, argv) => [
         template: "./src/bootloader.html",
         filename: "bootloader.html",
         inject: false,
+        templateParameters: { DXT_URL },
       }),
     ],
     mode: argv.mode || "production",
