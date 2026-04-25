@@ -306,10 +306,7 @@ window.onmessage = (event: MessageEvent) => {
   const msg = event.data.pluginMessage;
   if (!msg) return;
   console.warn(
-    "[pluginos:debug] window.onmessage type=" +
-      msg?.type +
-      " payload.type=" +
-      msg?.payload?.type
+    "[pluginos:debug] window.onmessage type=" + msg?.type + " payload.type=" + msg?.payload?.type
   );
 
   if (msg.type === "__ui_list_operations_result") {

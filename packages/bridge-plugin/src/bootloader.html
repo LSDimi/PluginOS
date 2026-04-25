@@ -2,12 +2,25 @@
 <html>
 <head>
   <style>
+    /* Tokens aligned with ui.html — keep in sync. */
+    :root {
+      --cream: #FAF9F5;
+      --card-bg: #FFFFFE;
+      --card-border: #EDE6D6;
+      --text-primary: #2D2A22;
+      --text-secondary: #5C5346;
+      --text-muted: #7A7164;
+      --accent: #D97757;
+      --radius: 14px;
+      --shadow: 0 1px 2px rgba(60, 40, 20, 0.04);
+      --font-stack: "Styrene B", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: Inter, system-ui, sans-serif;
-      font-size: 11px;
-      background: var(--figma-color-bg);
-      color: var(--figma-color-text);
+      font-family: var(--font-stack);
+      font-size: 12.5px;
+      background: var(--cream);
+      color: var(--text-primary);
       display: flex;
       flex-direction: column;
       height: 100vh;
@@ -21,25 +34,25 @@
     .dot-green  { background: #1bc47d; }
     .dot-yellow { background: #f5a623; animation: pulse 1.2s ease-in-out infinite; }
     @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.35} }
-    .status-text { font-weight: 600; font-size: 11px; }
-    .status-sub  { font-size: 10px; color: var(--figma-color-text-secondary, #999); margin-top: 1px; }
-    .divider { height: 1px; background: var(--figma-color-border, #e5e5e5); }
-    .setup-section { padding: 10px 12px 0; display: none; }
-    .setup-cards { display: flex; flex-direction: column; gap: 8px; }
-    .card { padding: 10px 12px; background: var(--figma-color-bg-secondary, #f5f5f5); border: 1px solid var(--figma-color-border, #e5e5e5); border-radius: 6px; }
-    .card-title { font-size: 11px; font-weight: 600; color: var(--figma-color-text); margin-bottom: 4px; }
-    .card-desc  { font-size: 10px; color: var(--figma-color-text-secondary, #999); margin-bottom: 8px; }
-    .card-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-    .btn { font-family: inherit; font-size: 10px; padding: 4px 10px; border: 1px solid var(--figma-color-border, #e5e5e5); border-radius: 4px; background: var(--figma-color-bg, #fff); color: var(--figma-color-text, #111); cursor: pointer; transition: background 0.15s; }
-    .btn:hover { background: var(--figma-color-bg-hover, #ebebeb); }
-    .btn.copied { color: #1bc47d; border-color: #1bc47d; }
-    .btn-primary { background: var(--figma-color-text, #111); color: var(--figma-color-bg, #fff); border-color: var(--figma-color-text, #111); text-decoration: none; display: inline-block; }
+    .status-text { font-weight: 600; font-size: 12px; }
+    .status-sub  { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .divider { height: 1px; background: var(--card-border); }
+    .setup-section { padding: 12px; display: none; }
+    .setup-cards { display: flex; flex-direction: column; gap: 12px; }
+    .card { padding: 16px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .card-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+    .card-desc  { font-size: 12.5px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 12px; }
+    .card-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .btn { font: inherit; font-size: 12px; font-weight: 500; padding: 6px 12px; border: 1px solid var(--card-border); border-radius: 8px; background: transparent; color: var(--text-primary); cursor: pointer; transition: background 0.15s; }
+    .btn:hover { background: var(--cream); }
+    .btn.copied { background: var(--accent); color: #FFF; border-color: var(--accent); }
+    .btn-primary { background: var(--text-primary); color: var(--card-bg); border-color: var(--text-primary); text-decoration: none; display: inline-block; }
     .btn-primary:hover { opacity: 0.9; }
     a.btn { text-decoration: none; }
     .progress-section { padding: 8px 12px 10px; display: none; }
-    .progress-bar { height: 2px; background: var(--figma-color-border, #e5e5e5); border-radius: 1px; overflow: hidden; }
-    .progress-fill { height: 100%; width: 0%; background: #f5a623; border-radius: 1px; }
-    .countdown-text { font-size: 10px; color: var(--figma-color-text-secondary, #999); margin-top: 5px; text-align: center; }
+    .progress-bar { height: 2px; background: var(--card-border); border-radius: 1px; overflow: hidden; }
+    .progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 1px; }
+    .countdown-text { font-size: 11px; color: var(--text-muted); margin-top: 5px; text-align: center; }
   </style>
 </head>
 <body>
