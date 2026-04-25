@@ -1,6 +1,7 @@
 import { getOperation, listOperations } from "./operations/index";
 import { createOperationContext } from "./operations/context";
 import { safeSerialize } from "./utils/serializer";
+import { handleOpenExternal } from "./handlers/open-external";
 
 // Show the UI (which handles WebSocket)
 figma.showUI(__html__, { width: 320, height: 480, themeColors: true });
@@ -26,6 +27,10 @@ function sendFileStatus(): void {
 figma.ui.onmessage = async (msg: any) => {
   if (msg.type === "__ui_list_operations") {
     figma.ui.postMessage({ type: "__ui_list_operations_result", operations: listOperations() });
+    return;
+  }
+
+  if (handleOpenExternal(msg, figma)) {
     return;
   }
 
