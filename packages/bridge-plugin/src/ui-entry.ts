@@ -49,6 +49,7 @@ function showView(view: "setup" | "connected") {
 }
 
 function flashCopied(btn: HTMLButtonElement, label = "✓ Copied") {
+  if (btn.classList.contains("copied")) return;
   const original = btn.textContent;
   btn.classList.add("copied");
   btn.textContent = label;
@@ -188,7 +189,8 @@ function updateFilename(name: string) {
 
 function incrementOps() {
   opsRunCount++;
-  console.warn("[pluginos:debug] incrementOps called, count=" + opsRunCount);
+  // eslint-disable-next-line no-console
+  console.log("[pluginos:debug] incrementOps called, count=" + opsRunCount);
   const el = $("ops-run-count");
   if (el) el.textContent = opsRunCount + " ops run";
 }
@@ -305,8 +307,9 @@ document
 window.onmessage = (event: MessageEvent) => {
   const msg = event.data.pluginMessage;
   if (!msg) return;
-  console.warn(
-    "[pluginos:debug] window.onmessage type=" + msg?.type + " payload.type=" + msg?.payload?.type
+  // eslint-disable-next-line no-console
+  console.log(
+    "[pluginos:debug] window.onmessage type=" + msg.type + " payload.type=" + msg?.payload?.type
   );
 
   if (msg.type === "__ui_list_operations_result") {

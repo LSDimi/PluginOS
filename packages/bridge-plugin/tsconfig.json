@@ -5,6 +5,7 @@
     "rootDir": "src",
     "outDir": "dist",
     "module": "ESNext",
+    "resolveJsonModule": true,
     "lib": ["ES2017", "DOM"],
     "typeRoots": ["../../node_modules/@types", "../../node_modules/@figma"],
     "types": ["plugin-typings"]

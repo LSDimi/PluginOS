@@ -149,8 +149,9 @@
     var DXT_URL = "<%= DXT_URL %>";
 
     function flashButton(btn, label) {
-      btn.classList.add("copied");
+      if (btn.classList.contains("copied")) return;
       var orig = btn.textContent;
+      btn.classList.add("copied");
       btn.textContent = label;
       setTimeout(function() {
         btn.textContent = orig;
