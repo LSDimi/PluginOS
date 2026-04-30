@@ -1,3 +1,7 @@
+import { DXT_URL } from "./constants.json";
+
+declare const __MCP_VERSION__: string;
+
 const TIER_1_RULES = `When working with Figma, always use PluginOS tools exclusively:
 - Use \`list_operations\` (pluginos) first to discover available Figma operations.
 - Use \`run_operation\` (pluginos) to execute them.
@@ -11,15 +15,13 @@ const MCP_CONFIG_JSON = `{
   "mcpServers": {
     "pluginos": {
       "command": "npx",
-      "args": ["-y", "pluginos@0.4.2"]
+      "args": ["-y", "pluginos@${__MCP_VERSION__}"]
     }
   }
 }`;
 
 const INSTALL_COMMAND = `/plugin marketplace add github:LSDimi/pluginos
 /plugin install pluginos`;
-
-const DXT_URL = "https://github.com/LSDimi/pluginos/releases/latest/download/pluginos.dxt";
 
 const PORT_MIN = 9500;
 const PORT_MAX = 9510;
@@ -49,6 +51,7 @@ function showView(view: "setup" | "connected") {
 }
 
 function flashCopied(btn: HTMLButtonElement, label = "✓ Copied") {
+  if (btn.classList.contains("copied")) return;
   const original = btn.textContent;
   btn.classList.add("copied");
   btn.textContent = label;

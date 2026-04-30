@@ -14,6 +14,8 @@ export default tseslint.config(
       "**/*.cjs",
       "**/*.mjs",
       "!eslint.config.js",
+      ".claude/",
+      ".worktrees/",
     ],
   },
   {

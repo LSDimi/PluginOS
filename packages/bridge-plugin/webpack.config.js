@@ -1,6 +1,10 @@
 const path = require("path");
+const webpack = require("webpack");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const HtmlInlineScriptPlugin = require("html-inline-script-webpack-plugin");
+
+const { DXT_URL } = require("./src/constants.json");
+const { version: MCP_VERSION } = require("../mcp-server/package.json");
 
 const noModernSyntax = {
   arrowFunction: true,
@@ -41,6 +45,9 @@ module.exports = (env, argv) => [
     resolve: { extensions: [".ts", ".js"] },
     devtool: false,
     plugins: [
+      new webpack.DefinePlugin({
+        __MCP_VERSION__: JSON.stringify(MCP_VERSION),
+      }),
       new HtmlWebpackPlugin({
         template: "./src/ui.html",
         filename: "ui.html",
@@ -60,6 +67,7 @@ module.exports = (env, argv) => [
         template: "./src/bootloader.html",
         filename: "bootloader.html",
         inject: false,
+        templateParameters: { DXT_URL, MCP_VERSION },
       }),
     ],
     mode: argv.mode || "production",
