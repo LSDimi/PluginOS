@@ -1,7 +1,7 @@
 {
   "name": "pluginos",
   "displayName": "PluginOS for Figma",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Token-efficient Figma automation via MCP. Bridges Claude to Figma without burning tokens on raw node dumps.",
   "author": {
     "name": "LSDimi",
