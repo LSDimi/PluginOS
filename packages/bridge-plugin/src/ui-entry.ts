@@ -1,4 +1,6 @@
-import { DXT_URL } from "./constants";
+import { DXT_URL } from "./constants.json";
+
+declare const __MCP_VERSION__: string;
 
 const TIER_1_RULES = `When working with Figma, always use PluginOS tools exclusively:
 - Use \`list_operations\` (pluginos) first to discover available Figma operations.
@@ -13,7 +15,7 @@ const MCP_CONFIG_JSON = `{
   "mcpServers": {
     "pluginos": {
       "command": "npx",
-      "args": ["-y", "pluginos@0.4.2"]
+      "args": ["-y", "pluginos@${__MCP_VERSION__}"]
     }
   }
 }`;
@@ -189,8 +191,6 @@ function updateFilename(name: string) {
 
 function incrementOps() {
   opsRunCount++;
-  // eslint-disable-next-line no-console
-  console.log("[pluginos:debug] incrementOps called, count=" + opsRunCount);
   const el = $("ops-run-count");
   if (el) el.textContent = opsRunCount + " ops run";
 }
@@ -307,10 +307,6 @@ document
 window.onmessage = (event: MessageEvent) => {
   const msg = event.data.pluginMessage;
   if (!msg) return;
-  // eslint-disable-next-line no-console
-  console.log(
-    "[pluginos:debug] window.onmessage type=" + msg.type + " payload.type=" + msg?.payload?.type
-  );
 
   if (msg.type === "__ui_list_operations_result") {
     renderOpsPanel(msg.operations);

@@ -30,6 +30,8 @@ PluginOS takes a fundamentally different approach:
 
 No JSON editing, no terminal. Note: Claude.ai web is **not** supported — it cannot reach local MCP servers.
 
+Using Cursor or Claude Code CLI? Open the section below for the right config.
+
 <details>
 <summary><strong>Other AI tools</strong> (Cursor, Claude Code CLI, manual config)</summary>
 
