@@ -1,0 +1,15 @@
+{
+  "name": "pluginos",
+  "owner": {
+    "name": "LSDimi",
+    "url": "https://github.com/LSDimi"
+  },
+  "plugins": [
+    {
+      "name": "pluginos",
+      "source": "./packages/claude-plugin",
+      "description": "Token-efficient Figma automation via MCP. Bridges Claude to Figma without burning tokens on raw node dumps.",
+      "category": "design"
+    }
+  ]
+}
