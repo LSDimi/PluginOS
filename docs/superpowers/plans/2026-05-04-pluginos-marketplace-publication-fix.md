@@ -43,6 +43,9 @@ Create `.claude-plugin/marketplace.json` with this exact content:
 ```json
 {
   "name": "pluginos",
+  "metadata": {
+    "description": "Run any Figma operation from any LLM agent at ~230 tokens per call instead of ~28,000 — a 15× cost reduction on real design workflows.\nPluginOS bridges your Figma files to Claude, Cursor, Windsurf, or any MCP-compatible agent through 5 focused tools that discover operations on demand. No giant tool schemas bloating context. No raw node dumps confusing your agent.\n⚠️ Requires the free PluginOS Bridge plugin running in Figma:\n👉 https://www.figma.com/community/plugin/1626608701431483287\nOpen it once before your first agent call — it auto-reconnects after that."
+  },
   "owner": {
     "name": "LSDimi",
     "url": "https://github.com/LSDimi"
@@ -61,7 +64,9 @@ Create `.claude-plugin/marketplace.json` with this exact content:
 Notes:
 - `source` is a relative path from the repo root to the directory containing the existing nested `.claude-plugin/plugin.json`.
 - No `version` field — version is sourced from the referenced `plugin.json` to avoid duplication.
-- `category` is included on a best-effort basis; a later validation step will confirm the schema accepts it.
+- `category` is accepted by the schema (verified during implementation).
+- `metadata.description` is **required** by the marketplace.json schema — its absence triggers a validation warning, and it must be nested under `metadata` (top-level `description` is rejected as an unrecognized key). Verified empirically against `claude plugin validate` during implementation. Reuses the approved long-form copy from the prior Anthropic marketplace submission.
+- The `displayName` field tested on plugin entries during PR review was rejected by the schema (`Unrecognized key: "displayName"`); the marketplace listing's display title comes from the Anthropic submission form metadata, not from `marketplace.json`.
 
 - [ ] **Step 3: Validate JSON syntax**
 
