@@ -1,0 +1,18 @@
+{
+  "name": "pluginos",
+  "metadata": {
+    "description": "Run any Figma operation from any LLM agent at ~230 tokens per call instead of ~28,000 — a 15× cost reduction on real design workflows.\nPluginOS bridges your Figma files to Claude, Cursor, Windsurf, or any MCP-compatible agent through 5 focused tools that discover operations on demand. No giant tool schemas bloating context. No raw node dumps confusing your agent.\n⚠️ Requires the free PluginOS Bridge plugin running in Figma:\n👉 https://www.figma.com/community/plugin/1626608701431483287\nOpen it once before your first agent call — it auto-reconnects after that."
+  },
+  "owner": {
+    "name": "LSDimi",
+    "url": "https://github.com/LSDimi"
+  },
+  "plugins": [
+    {
+      "name": "pluginos",
+      "source": "./packages/claude-plugin",
+      "description": "Token-efficient Figma automation via MCP. Bridges Claude to Figma without burning tokens on raw node dumps.",
+      "category": "design"
+    }
+  ]
+}

@@ -9,7 +9,6 @@ describe("plugin.json", () => {
 
   it("has required fields", () => {
     expect(manifest.name).toBe("pluginos");
-    expect(manifest.displayName).toBe("PluginOS for Figma");
     expect(manifest.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(manifest.description).toBeTruthy();
     expect(manifest.license).toBe("MIT");
@@ -21,10 +20,9 @@ describe("plugin.json", () => {
     expect(manifest.author.url).toMatch(/^https?:\/\//);
   });
 
-  it("has repository with type and url", () => {
-    expect(manifest.repository).toBeDefined();
-    expect(manifest.repository.type).toBe("git");
-    expect(manifest.repository.url).toMatch(/github\.com/);
+  it("has repository as a github url string", () => {
+    expect(typeof manifest.repository).toBe("string");
+    expect(manifest.repository).toMatch(/github\.com/);
   });
 
   it("version matches package.json", () => {
@@ -41,9 +39,9 @@ describe(".mcp.json", () => {
     expect(mcp.mcpServers.pluginos).toBeDefined();
   });
 
-  it("spawns pluginos via npx", () => {
+  it("spawns pluginos via npx with floating version", () => {
     const server = mcp.mcpServers.pluginos;
     expect(server.command).toBe("npx");
-    expect(server.args).toContain("pluginos@0.4.0");
+    expect(server.args).toEqual(["-y", "pluginos"]);
   });
 });
