@@ -20,7 +20,7 @@ const MCP_CONFIG_JSON = `{
   }
 }`;
 
-const INSTALL_COMMAND = `/plugin marketplace add github:LSDimi/pluginos
+const INSTALL_COMMAND = `/plugin marketplace add LSDimi/pluginos
 /plugin install pluginos`;
 
 const PORT_MIN = 9500;

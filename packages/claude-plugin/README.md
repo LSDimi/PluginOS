@@ -4,8 +4,8 @@ Claude Code plugin that bundles the PluginOS MCP server registration and the `pl
 
 ## Install
 
-```
-/plugin marketplace add github:LSDimi/pluginos
+```bash
+/plugin marketplace add LSDimi/pluginos
 /plugin install pluginos
 ```
 

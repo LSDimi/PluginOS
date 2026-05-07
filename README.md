@@ -53,7 +53,7 @@ Then paste the Tier 1 rules below into `.cursorrules` so Cursor prefers PluginOS
 **Claude Code (CLI — engineers):**
 
 ```bash
-/plugin marketplace add github:LSDimi/pluginos
+/plugin marketplace add LSDimi/pluginos
 /plugin install pluginos
 ```
 
