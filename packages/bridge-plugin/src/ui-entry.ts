@@ -133,6 +133,14 @@ function wireRetryButton(): void {
   });
 }
 
+function wireDxtButton(): void {
+  // Use figma.openExternal via code.ts — clicking an <a href> would navigate
+  // the plugin iframe itself and blank the UI (see handlers/open-external.ts).
+  $("btn-dxt").addEventListener("click", () => {
+    parent.postMessage({ pluginMessage: { type: "open-external", url: DXT_DOWNLOAD_URL } }, "*");
+  });
+}
+
 function recordHistory(entry: LogEntry): void {
   activityLog.push(entry);
   activityLog.render();
@@ -337,6 +345,7 @@ function bootstrap(): void {
   wireCopyButtons();
   wireWhyToggle();
   wireRetryButton();
+  wireDxtButton();
   activityLog = new ActivityLog($("activity-log"));
   activityLog.render();
   void scanAndConnect();
