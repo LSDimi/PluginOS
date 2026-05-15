@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 const fs = require("node:fs");
-const uiPath = "packages/bridge-plugin/src/ui-entry.ts";
-const content = fs.readFileSync(uiPath, "utf8");
+const stringsPath = "packages/bridge-plugin/src/ui/strings.ts";
+const content = fs.readFileSync(stringsPath, "utf8");
 
-const match = content.match(/const TIER_1_RULES = `([\s\S]*?)`;/);
+const match = content.match(/export const TIER_1_RULES = `([\s\S]*?)`;/);
 if (!match) {
-  console.error("FAIL: TIER_1_RULES not found in ui-entry.ts");
+  console.error(`FAIL: TIER_1_RULES not found in ${stringsPath}`);
   process.exit(1);
 }
 const rules = match[1];

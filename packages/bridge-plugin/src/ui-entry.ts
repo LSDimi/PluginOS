@@ -10,6 +10,7 @@ import {
   CLAUDE_CODE_STEP_2,
   CURSOR_NPX_COMMAND,
   CURSOR_MCP_CONFIG,
+  TIER_1_RULES,
   WHY_THIS_SETUP,
 } from "./ui/strings";
 
@@ -85,6 +86,7 @@ function wireCopyButtons(): void {
     "cc-2": () => CLAUDE_CODE_STEP_2,
     "other-1": () => CURSOR_NPX_COMMAND,
     "other-2": () => CURSOR_MCP_CONFIG,
+    "other-3": () => TIER_1_RULES,
     mismatch: () => $("mismatch-cmd").textContent ?? "",
   };
   document.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((btn) => {
