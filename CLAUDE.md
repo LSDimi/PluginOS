@@ -82,7 +82,7 @@ Always check ALL locations where a file or reference exists before declaring a t
 All 4 packages + DXT manifest + plugin.json must share the same version. CI enforces this via `check-version-lockstep.cjs`.
 
 ```bash
-cd packages/mcp-server && npm version patch   # bumps mcp-server
+npm version patch -w packages/mcp-server   # bumps mcp-server
 node scripts/bump-lockstep.cjs                 # propagates to all other manifests
 ```
 
