@@ -32,7 +32,8 @@ describe("ActivityLog", () => {
 
   it("caps visible entries to 5 but keeps up to 50 in memory", () => {
     const log = new ActivityLog(host);
-    for (let i = 0; i < 60; i++) log.push({ op: `op_${i}`, status: "ok", durationMs: 10, params: {} });
+    for (let i = 0; i < 60; i++)
+      log.push({ op: `op_${i}`, status: "ok", durationMs: 10, params: {} });
     log.render();
     expect(host.querySelectorAll(".activity-row").length).toBe(5);
     expect(log.size()).toBe(50);

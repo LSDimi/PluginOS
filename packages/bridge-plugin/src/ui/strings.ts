@@ -17,7 +17,7 @@ export const CURSOR_MCP_CONFIG = JSON.stringify(
     },
   },
   null,
-  2,
+  2
 );
 
 export const WHY_THIS_SETUP =

@@ -41,7 +41,8 @@ export class ActivityLog {
 
   private row = (entry: LogEntry): string => {
     const cls = entry.status === "error" ? "activity-op err" : "activity-op";
-    const marker = entry.status === "error" ? `<span class="x">✗</span>` : `<span class="check">✓</span>`;
+    const marker =
+      entry.status === "error" ? `<span class="x">✗</span>` : `<span class="check">✓</span>`;
     const ago = formatAgo(Date.now() - (entry.at ?? Date.now()));
     const title = entry.error ? ` title="${escapeAttr(entry.error)}"` : "";
     return `
@@ -69,7 +70,11 @@ function formatAgo(ms: number): string {
 }
 
 function escapeAttr(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function escapeText(s: string): string {

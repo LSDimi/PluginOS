@@ -22,7 +22,7 @@ describe("theme detection", () => {
     window.dispatchEvent(
       new MessageEvent("message", {
         data: { pluginMessage: { type: "THEME_CHANGE", theme: "dark" } },
-      }),
+      })
     );
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
   });
@@ -33,7 +33,7 @@ describe("theme detection", () => {
     window.dispatchEvent(
       new MessageEvent("message", {
         data: { pluginMessage: { type: "THEME_CHANGE", theme: "sepia" } },
-      }),
+      })
     );
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
   });

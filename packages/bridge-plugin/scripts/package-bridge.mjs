@@ -22,7 +22,9 @@ const distDir = join(pkgRoot, "dist");
 const requiredFiles = ["code.js", "bootloader.html", "ui.html"];
 for (const f of requiredFiles) {
   if (!existsSync(join(distDir, f))) {
-    console.error(`[package-bridge] missing dist/${f} — run \`npm run build -w packages/bridge-plugin\` first`);
+    console.error(
+      `[package-bridge] missing dist/${f} — run \`npm run build -w packages/bridge-plugin\` first`
+    );
     process.exit(1);
   }
 }

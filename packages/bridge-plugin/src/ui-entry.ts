@@ -20,7 +20,6 @@ const RECONNECT_GIVEUP_MS = 30_000;
 
 type StatusState = "disconnected" | "connecting" | "connected" | "running" | "mismatch";
 
-let ws: WebSocket | null = null;
 let reconnectIndex = 0;
 let reconnectTimer: number | null = null;
 let reconnectStartedAt = 0;
@@ -144,7 +143,8 @@ function showMismatch(serverVersion: string): void {
         ? `/plugin marketplace update LSDimi/pluginos`
         : `npx pluginos@${VERSION}`;
   $("mismatch-cmd").textContent = cmd;
-  $("mismatch-text").textContent = `Plugin v${VERSION} expects a compatible server. Server reported v${serverVersion}.`;
+  $("mismatch-text").textContent =
+    `Plugin v${VERSION} expects a compatible server. Server reported v${serverVersion}.`;
   setStatus("mismatch");
   showView("mismatch");
 }
@@ -191,7 +191,6 @@ function tryConnect(port: number): Promise<boolean> {
       if (settled) return;
       settled = true;
       window.clearTimeout(timeout);
-      ws = socket;
       attachSocketHandlers(socket!, port);
       resolve(true);
     });
@@ -241,7 +240,6 @@ function attachSocketHandlers(socket: WebSocket, port: number): void {
   });
 
   socket.addEventListener("close", () => {
-    ws = null;
     setStatus("connecting", "Reconnecting…");
     scheduleReconnect();
   });

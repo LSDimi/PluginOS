@@ -25,14 +25,18 @@ describe("agent picker", () => {
   it("defaults to claude-desktop on first ever open", () => {
     initAgentPicker();
     expect(getCurrentAgent()).toBe("claude-desktop");
-    expect(document.querySelector('.agent[data-agent="claude-desktop"]')?.classList.contains("on")).toBe(true);
+    expect(
+      document.querySelector('.agent[data-agent="claude-desktop"]')?.classList.contains("on")
+    ).toBe(true);
   });
 
   it("restores previously selected agent from storage", () => {
     setupDom("claude-code");
     initAgentPicker();
     expect(getCurrentAgent()).toBe("claude-code");
-    expect(document.querySelector('.agent[data-agent="claude-code"]')?.classList.contains("on")).toBe(true);
+    expect(
+      document.querySelector('.agent[data-agent="claude-code"]')?.classList.contains("on")
+    ).toBe(true);
   });
 
   it("switches selection on click and persists", () => {
@@ -47,11 +51,11 @@ describe("agent picker", () => {
     initAgentPicker();
     const cc = document.querySelector('.agent[data-agent="claude-code"]') as HTMLElement;
     cc.click();
+    expect((document.querySelector('[data-action-for="claude-code"]') as HTMLElement).hidden).toBe(
+      false
+    );
     expect(
-      (document.querySelector('[data-action-for="claude-code"]') as HTMLElement).hidden,
-    ).toBe(false);
-    expect(
-      (document.querySelector('[data-action-for="claude-desktop"]') as HTMLElement).hidden,
+      (document.querySelector('[data-action-for="claude-desktop"]') as HTMLElement).hidden
     ).toBe(true);
   });
 });
