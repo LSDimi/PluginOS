@@ -9,6 +9,9 @@ import type {
   FileInfo,
 } from "@pluginos/shared";
 import { parseMessage } from "@pluginos/shared";
+import pkg from "../package.json" with { type: "json" };
+
+const SERVER_VERSION = pkg.version;
 
 interface ConnectedFile {
   ws: WebSocket;
@@ -106,6 +109,14 @@ export class WebSocketPluginBridge implements IPluginBridge {
   private setupServer(): void {
     this.wss!.on("connection", (ws) => {
       let fileKey: string | null = null;
+
+      // Emit a hello message so the plugin UI can check version compatibility
+      // before treating this connection as usable.
+      try {
+        ws.send(JSON.stringify({ type: "SERVER_HELLO", version: SERVER_VERSION }));
+      } catch {
+        // ignore — socket may already be closing
+      }
 
       ws.on("message", (data) => {
         const msg = parseMessage(data.toString());

@@ -15,6 +15,29 @@ describe("WebSocketPluginBridge", () => {
     expect(port).toBe(9550);
   });
 
+  it("emits SERVER_HELLO with version on connect", async () => {
+    server = new WebSocketPluginBridge({ portRange: [9549, 9549] });
+    await server.start();
+
+    const client = new WebSocket("ws://localhost:9549");
+    const firstMessage = await new Promise<string>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error("no hello within 1s")), 1000);
+      client.on("message", (data) => {
+        clearTimeout(timeout);
+        resolve(data.toString());
+      });
+      client.on("error", reject);
+    });
+
+    const parsed = JSON.parse(firstMessage);
+    expect(parsed.type).toBe("SERVER_HELLO");
+    expect(typeof parsed.version).toBe("string");
+    expect(parsed.version).toMatch(/^\d+\.\d+\.\d+$/);
+
+    client.close();
+    await new Promise((r) => setTimeout(r, 50));
+  });
+
   it("accepts connections and tracks files", async () => {
     server = new WebSocketPluginBridge({ portRange: [9551, 9551] });
     await server.start();

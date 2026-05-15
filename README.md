@@ -78,10 +78,12 @@ Audit/lint/check operations default to `scope: "selection"`. Pass `scope: "page"
 
 ### 2. Install the Bridge Plugin in Figma
 
-1. Open Figma Desktop
-2. Right-click canvas > Plugins > Development > Import plugin from manifest
-3. Select `packages/bridge-plugin/manifest.json`
-4. Run the plugin — it auto-connects to the MCP server
+1. Download `pluginos-bridge-v<version>.zip` from the [latest release](https://github.com/LSDimi/pluginos/releases/latest). Unzip anywhere.
+2. Open Figma Desktop. Menu → **Plugins → Development → Import plugin from manifest…**
+3. Select the `manifest.json` from the unzipped folder.
+4. Run **PluginOS Bridge** — it auto-connects to the MCP server.
+
+Full setup walkthrough (with screenshots, troubleshooting, and team distribution): [INSTALL.md](INSTALL.md).
 
 ### 3. Use it
 

@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   dxt:
-    name: Build and upload pluginos.dxt
+    name: Build and upload release artifacts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,8 +35,13 @@ jobs:
       - name: Build DXT artifact
         run: npm run build:dxt -w packages/mcp-server
 
-      - name: Upload DXT to release
+      - name: Package bridge plugin zip
+        run: npm run package -w packages/bridge-plugin
+
+      - name: Upload release artifacts
         uses: softprops/action-gh-release@v2
         with:
-          files: packages/mcp-server/dist/pluginos.dxt
+          files: |
+            packages/mcp-server/dist/pluginos.dxt
+            packages/bridge-plugin/dist/pluginos-bridge-v*.zip
           fail_on_unmatched_files: true
