@@ -5,10 +5,12 @@
   "scripts": {
     "build": "webpack --mode production",
     "dev": "webpack --mode development --watch",
-    "test": "vitest run"
+    "test": "vitest run",
+    "package": "node scripts/package-bridge.mjs"
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.100.0",
+    "adm-zip": "^0.5.17",
     "happy-dom": "^20.9.0",
     "html-inline-script-webpack-plugin": "^3.2.1",
     "html-webpack-plugin": "^5.6.0",
