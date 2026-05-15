@@ -5,6 +5,8 @@ const HtmlInlineScriptPlugin = require("html-inline-script-webpack-plugin");
 
 const { DXT_URL } = require("./src/constants.json");
 const { version: MCP_VERSION } = require("../mcp-server/package.json");
+const TOKENS_CSS = require("./src/ui/tokens.cjs");
+const ICONS_SVG = require("./src/ui/icons.cjs");
 
 const noModernSyntax = {
   arrowFunction: true,
@@ -13,6 +15,8 @@ const noModernSyntax = {
   forOf: true,
   optionalChaining: false,
 };
+
+const templateParams = { DXT_URL, MCP_VERSION, TOKENS_CSS, ICONS_SVG };
 
 module.exports = (env, argv) => [
   // Plugin code (sandbox)
@@ -52,6 +56,7 @@ module.exports = (env, argv) => [
         template: "./src/ui.html",
         filename: "ui.html",
         inject: "body",
+        templateParameters: templateParams,
       }),
       new HtmlInlineScriptPlugin(),
     ],
@@ -67,7 +72,7 @@ module.exports = (env, argv) => [
         template: "./src/bootloader.html",
         filename: "bootloader.html",
         inject: false,
-        templateParameters: { DXT_URL, MCP_VERSION },
+        templateParameters: templateParams,
       }),
     ],
     mode: argv.mode || "production",
