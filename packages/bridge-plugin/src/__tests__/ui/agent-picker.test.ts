@@ -58,4 +58,28 @@ describe("agent picker", () => {
       (document.querySelector('[data-action-for="claude-desktop"]') as HTMLElement).hidden
     ).toBe(true);
   });
+
+  it("sets aria-checked on the selected card and clears it on others", () => {
+    initAgentPicker();
+    const cc = document.querySelector('.agent[data-agent="claude-code"]') as HTMLElement;
+    cc.click();
+    expect(cc.getAttribute("aria-checked")).toBe("true");
+    expect(
+      document.querySelector('.agent[data-agent="claude-desktop"]')?.getAttribute("aria-checked")
+    ).toBe("false");
+    expect(document.querySelector('.agent[data-agent="other"]')?.getAttribute("aria-checked")).toBe(
+      "false"
+    );
+  });
+
+  it("activates a card on Enter and Space keypress", () => {
+    initAgentPicker();
+    const other = document.querySelector('.agent[data-agent="other"]') as HTMLElement;
+    other.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(getCurrentAgent()).toBe("other");
+
+    const cc = document.querySelector('.agent[data-agent="claude-code"]') as HTMLElement;
+    cc.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+    expect(getCurrentAgent()).toBe("claude-code");
+  });
 });

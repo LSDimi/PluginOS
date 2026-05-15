@@ -20,6 +20,7 @@ const RECONNECT_GIVEUP_MS = 30_000;
 
 type StatusState = "disconnected" | "connecting" | "connected" | "running" | "mismatch";
 
+let activeSocket: WebSocket | null = null;
 let reconnectIndex = 0;
 let reconnectTimer: number | null = null;
 let reconnectStartedAt = 0;
@@ -191,6 +192,7 @@ function tryConnect(port: number): Promise<boolean> {
       if (settled) return;
       settled = true;
       window.clearTimeout(timeout);
+      activeSocket = socket;
       attachSocketHandlers(socket!, port);
       resolve(true);
     });
@@ -206,9 +208,10 @@ function tryConnect(port: number): Promise<boolean> {
 
 function attachSocketHandlers(socket: WebSocket, port: number): void {
   socket.addEventListener("message", (e: MessageEvent) => {
+    const raw = typeof e.data === "string" ? e.data : "";
     let msg: any;
     try {
-      msg = JSON.parse(typeof e.data === "string" ? e.data : "");
+      msg = JSON.parse(raw);
     } catch {
       return;
     }
@@ -223,11 +226,16 @@ function attachSocketHandlers(socket: WebSocket, port: number): void {
       showView("connected");
       activityLog.render();
       reconnectIndex = 0;
-      // Notify plugin code so it can send status (matches existing handshake)
+      // Tell code.ts so it can post the initial status (file name, etc.) back through us.
       parent.postMessage({ pluginMessage: { type: "ws-connected" } }, "*");
-    } else if (msg?.type === "OP_START") {
+      return;
+    }
+    if (msg?.type === "OP_START") {
       showRunning(true, msg.op, msg.params);
-    } else if (msg?.type === "OP_END") {
+      // OP_START/OP_END are local-only telemetry, never forwarded to code.ts.
+      return;
+    }
+    if (msg?.type === "OP_END") {
       showRunning(false);
       recordHistory({
         op: msg.op,
@@ -236,12 +244,37 @@ function attachSocketHandlers(socket: WebSocket, port: number): void {
         params: msg.params ?? {},
         error: msg.error,
       });
+      return;
     }
+    // Everything else (run_operation, execute, etc.) is forwarded to code.ts via postMessage.
+    parent.postMessage({ pluginMessage: { type: "ws-message", payload: msg } }, "*");
   });
 
   socket.addEventListener("close", () => {
+    if (activeSocket === socket) activeSocket = null;
+    parent.postMessage({ pluginMessage: { type: "ws-disconnected" } }, "*");
     setStatus("connecting", "Reconnecting…");
     scheduleReconnect();
+  });
+}
+
+/**
+ * Listen for postMessage from code.ts and forward outbound `ws-send` payloads
+ * to the live MCP-server socket. Also picks up THEME_CHANGE and FILE_NAME
+ * messages (handled by theme.ts and bootstrap's own listener respectively, but
+ * surfaced here for the ws-send relay).
+ */
+function attachOutboundRelay(): void {
+  window.addEventListener("message", (event: MessageEvent) => {
+    const msg = event.data?.pluginMessage;
+    if (!msg || msg.type !== "ws-send") return;
+    if (activeSocket?.readyState === WebSocket.OPEN) {
+      try {
+        activeSocket.send(JSON.stringify(msg.payload));
+      } catch {
+        // ignored — socket may have closed mid-send; reconnect logic will handle it.
+      }
+    }
   });
 }
 
@@ -285,6 +318,7 @@ function bootstrap(): void {
   applyTheme(detectInitialTheme());
   attachThemeListener();
   attachPluginMessageListener();
+  attachOutboundRelay();
   initAgentPicker();
   populateStaticStrings();
   wireCopyButtons();

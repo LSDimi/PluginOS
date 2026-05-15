@@ -128,3 +128,12 @@ if (typeof self !== "undefined" && "addEventListener" in self) {
 // Update status when page changes
 figma.on("currentpagechange", sendFileStatus);
 figma.on("documentchange", sendFileName);
+
+// Re-send theme whenever Figma's editor theme changes (light/dark toggle).
+// `themechange` is a newer event; wrap in try/catch so older clients don't crash.
+try {
+  // @ts-expect-error themechange is not in older @figma/plugin-typings
+  figma.on("themechange", sendTheme);
+} catch {
+  // ignored — event unsupported in this Figma client
+}
