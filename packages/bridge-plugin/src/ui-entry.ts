@@ -1,428 +1,304 @@
-import { DXT_URL } from "./constants.json";
-
-declare const __MCP_VERSION__: string;
-
-const TIER_1_RULES = `When working with Figma, always use PluginOS tools exclusively:
-- Use \`list_operations\` (pluginos) first to discover available Figma operations.
-- Use \`run_operation\` (pluginos) to execute them.
-- Use \`execute_figma\` (pluginos) only for one-off custom logic not covered by built-in ops.
-- Do NOT use \`mcp__Figma__*\` tools — they bypass the plugin and return raw, token-heavy data. PluginOS returns pre-summarized, structured results at ~230 tokens/call.
-- If PluginOS returns "No plugin connected", open the PluginOS Bridge plugin in Figma before retrying.
-
-Audit/lint/check operations default to \`scope: "selection"\`. Pass \`scope: "page"\` explicitly (and \`confirm: true\` for pages over 500 nodes) to scan the whole page. Responses carry \`_hint\` and \`_next_hints\` fields — respect them when deciding what to do next.`;
-
-const MCP_CONFIG_JSON = `{
-  "mcpServers": {
-    "pluginos": {
-      "command": "npx",
-      "args": ["-y", "pluginos@${__MCP_VERSION__}"]
-    }
-  }
-}`;
-
-const INSTALL_COMMAND = `/plugin marketplace add LSDimi/pluginos
-/plugin install pluginos`;
+import { initAgentPicker, getCurrentAgent } from "./ui/agent-picker";
+import { attachThemeListener, detectInitialTheme, applyTheme } from "./ui/theme";
+import { getLastPort, setLastPort } from "./ui/storage";
+import { ActivityLog, type LogEntry } from "./ui/activity-log";
+import { isCompatible } from "./ui/version-check";
+import {
+  VERSION,
+  DXT_DOWNLOAD_URL,
+  CLAUDE_CODE_STEP_1,
+  CLAUDE_CODE_STEP_2,
+  CURSOR_NPX_COMMAND,
+  CURSOR_MCP_CONFIG,
+  WHY_THIS_SETUP,
+} from "./ui/strings";
 
 const PORT_MIN = 9500;
 const PORT_MAX = 9510;
-const RECONNECT_DELAY = 3000;
+const RECONNECT_BACKOFF_MS = [1000, 3000, 5000, 10000];
+const RECONNECT_GIVEUP_MS = 30_000;
+
+type StatusState = "disconnected" | "connecting" | "connected" | "running" | "mismatch";
 
 let ws: WebSocket | null = null;
-let opsRunCount = 0;
-let scanAttempts = 0;
+let reconnectIndex = 0;
+let reconnectTimer: number | null = null;
+let reconnectStartedAt = 0;
+let activityLog: ActivityLog;
+let runStartedAt = 0;
+let elapsedTimer: number | null = null;
+let cachedFileName = "—";
 
-function $(id: string): HTMLElement {
-  return document.getElementById(id)!;
+const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+function setStatus(state: StatusState, text?: string): void {
+  const pill = $("status-pill");
+  pill.dataset.state = state;
+  const textMap: Record<StatusState, string> = {
+    disconnected: "Not connected",
+    connecting: "Connecting…",
+    connected: "Connected",
+    running: "Running",
+    mismatch: "Update needed",
+  };
+  $("status-text").textContent = text ?? textMap[state];
 }
 
-function showView(view: "setup" | "connected") {
-  const setup = $("view-setup");
-  const connected = $("view-connected");
+function showView(view: "disconnected" | "connected" | "mismatch"): void {
+  $("view-disconnected").hidden = view !== "disconnected";
+  $("view-connected").hidden = view !== "connected";
+  $("view-mismatch").hidden = view !== "mismatch";
+}
 
-  if (view === "connected") {
-    setup.classList.add("hidden");
-    connected.classList.remove("hidden");
+function showRunning(running: boolean, op?: string, params?: Record<string, unknown>): void {
+  $("running-block").hidden = !running;
+  $("idle-block").hidden = running;
+  if (running) {
+    runStartedAt = Date.now();
+    $("run-op").textContent = op ?? "—";
+    $("run-params").textContent = formatParams(params);
+    if (elapsedTimer != null) window.clearInterval(elapsedTimer);
+    elapsedTimer = window.setInterval(() => {
+      const s = ((Date.now() - runStartedAt) / 1000).toFixed(1);
+      $("run-elapsed").textContent = `${s}s elapsed`;
+    }, 100);
+    setStatus("running");
   } else {
-    setup.classList.remove("hidden");
-    connected.classList.add("hidden");
-  }
-  document.body.dataset.view = view;
-  updateHeaderToggle();
-}
-
-function flashCopied(btn: HTMLButtonElement, label = "✓ Copied") {
-  if (btn.classList.contains("copied")) return;
-  const original = btn.textContent;
-  btn.classList.add("copied");
-  btn.textContent = label;
-  setTimeout(() => {
-    btn.classList.remove("copied");
-    btn.textContent = original;
-  }, 2500);
-}
-
-function copyViaTextarea(text: string): boolean {
-  try {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.top = "0";
-    ta.style.left = "0";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    ta.setSelectionRange(0, text.length);
-    const ok = document.execCommand("copy");
-    document.body.removeChild(ta);
-    return ok;
-  } catch {
-    return false;
+    if (elapsedTimer != null) window.clearInterval(elapsedTimer);
+    elapsedTimer = null;
+    setStatus("connected");
   }
 }
 
-async function copyToClipboard(text: string, btn: HTMLButtonElement, confirmLabel?: string) {
-  let ok = false;
-  try {
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-      await navigator.clipboard.writeText(text);
-      ok = true;
-    }
-  } catch {
-    ok = false;
-  }
-  if (!ok) ok = copyViaTextarea(text);
-  flashCopied(btn, ok ? confirmLabel || "✓ Copied" : "⚠ Copy failed");
+function formatParams(p: Record<string, unknown> | undefined): string {
+  if (!p) return "—";
+  const entries = Object.entries(p);
+  if (entries.length === 0) return "—";
+  return entries
+    .map(([k, v]) => `${k}: ${typeof v === "string" ? `"${v}"` : JSON.stringify(v)}`)
+    .join(" · ");
 }
 
-// --- Toast ---
-function showToast(text: string, durationMs: number) {
-  const el = document.getElementById("toast")!;
-  el.textContent = text;
-  el.classList.remove("hidden");
-  setTimeout(() => el.classList.add("hidden"), durationMs);
-}
-
-let pendingFirstConnectToast = false;
-
-function armToastTrigger() {
-  const fire = () => {
-    if (!pendingFirstConnectToast) return;
-    showToast("Connected. Haven't copied the usage rules yet? Tap ⚙ Setup above.", 6000);
-    localStorage.setItem("pluginos-first-connect-seen", "1");
-    pendingFirstConnectToast = false;
-    cleanup();
+function wireCopyButtons(): void {
+  const map: Record<string, () => string> = {
+    "cc-1": () => CLAUDE_CODE_STEP_1,
+    "cc-2": () => CLAUDE_CODE_STEP_2,
+    "other-1": () => CURSOR_NPX_COMMAND,
+    "other-2": () => CURSOR_MCP_CONFIG,
+    mismatch: () => $("mismatch-cmd").textContent ?? "",
   };
-  const onVis = () => {
-    if (document.visibilityState === "visible") fire();
-  };
-  const hardFallback = setTimeout(
-    () => {
-      pendingFirstConnectToast = false;
-      cleanup();
-    },
-    5 * 60 * 1000
-  );
-  const cleanup = () => {
-    document.removeEventListener("visibilitychange", onVis);
-    document.removeEventListener("mousemove", fire);
-    document.removeEventListener("click", fire);
-    document.removeEventListener("keydown", fire);
-    clearTimeout(hardFallback);
-  };
-  document.addEventListener("visibilitychange", onVis);
-  document.addEventListener("mousemove", fire, { once: true });
-  document.addEventListener("click", fire, { once: true });
-  document.addEventListener("keydown", fire, { once: true });
-}
-
-// --- Header toggle ---
-function updateHeaderToggle() {
-  const headerToggle = document.getElementById("header-toggle") as HTMLButtonElement | null;
-  if (!headerToggle) return;
-  const view = document.body.dataset.view;
-  if (view === "connected") {
-    headerToggle.hidden = false;
-    headerToggle.textContent = "⚙ Setup";
-  } else if (view === "setup" && ws !== null) {
-    headerToggle.hidden = false;
-    headerToggle.textContent = "◀ Done";
-  } else {
-    headerToggle.hidden = true;
-  }
-}
-
-function updateStatus(connected: boolean, text: string) {
-  const dot = $("dot");
-  const statusText = $("status-text");
-  dot.className = connected ? "dot connected" : "dot";
-  statusText.textContent = text;
-}
-
-function showError(msg: string) {
-  const el = $("error-msg");
-  if (el) {
-    el.textContent = msg;
-    el.classList.remove("hidden");
-  }
-}
-
-function hideError() {
-  const el = $("error-msg");
-  if (el) el.classList.add("hidden");
-}
-
-function updateActivity(text: string) {
-  const el = $("activity-log");
-  if (el) el.textContent = text;
-}
-
-function updatePort(port: number | null) {
-  $("conn-port").textContent = port ? String(port) : "\u2014";
-}
-
-function updateFilename(name: string) {
-  const el = $("conn-filename");
-  if (el) {
-    el.textContent = name || "\u2014";
-    el.title = name || "";
-  }
-}
-
-function incrementOps() {
-  opsRunCount++;
-  const el = $("ops-run-count");
-  if (el) el.textContent = opsRunCount + " ops run";
-}
-
-function renderOpsPanel(ops: any[]) {
-  const countEl = document.getElementById("ops-count")!;
-  const bodyEl = document.getElementById("ops-panel-body")!;
-  countEl.textContent = String(ops.length);
-
-  const grouped: Record<string, any[]> = {};
-  for (const op of ops) {
-    grouped[op.category] ||= [];
-    grouped[op.category].push(op);
-  }
-  const categoryOrder = [
-    "lint",
-    "accessibility",
-    "components",
-    "tokens",
-    "layout",
-    "content",
-    "export",
-    "assets",
-    "annotations",
-    "colors",
-    "typography",
-    "cleanup",
-    "data",
-    "custom",
-  ];
-
-  bodyEl.innerHTML = "";
-  for (const cat of categoryOrder) {
-    const list = grouped[cat];
-    if (!list?.length) continue;
-    const h = document.createElement("h3");
-    h.className = "ops-category";
-    h.textContent = `${cat} (${list.length})`;
-    bodyEl.appendChild(h);
-    list.sort((a, b) => a.name.localeCompare(b.name));
-    for (const op of list) {
-      const row = document.createElement("div");
-      row.className = "ops-item";
-      row.textContent = op.name;
-      bodyEl.appendChild(row);
-    }
-  }
-}
-
-// Wire ops panel toggle
-function wireOpsToggle() {
-  const toggle = document.getElementById("ops-panel-toggle")!;
-  const body = document.getElementById("ops-panel-body")!;
-  const chevron = document.getElementById("ops-panel-chevron")!;
-  toggle.addEventListener("click", () => {
-    const expanded = toggle.getAttribute("aria-expanded") === "true";
-    toggle.setAttribute("aria-expanded", String(!expanded));
-    body.classList.toggle("hidden");
-    chevron.textContent = expanded ? "▸" : "▾";
-  });
-  toggle.addEventListener("keydown", (e: any) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      toggle.click();
-    }
-  });
-}
-
-wireOpsToggle();
-
-// --- Wire header toggle ---
-const headerToggle = document.getElementById("header-toggle") as HTMLButtonElement;
-if (headerToggle) {
-  headerToggle.addEventListener("click", () => {
-    if (document.body.dataset.view === "connected") showView("setup");
-    else if (document.body.dataset.view === "setup" && ws !== null) showView("connected");
-  });
-}
-
-// --- Wire copy buttons ---
-document
-  .getElementById("btn-copy-install")!
-  .addEventListener("click", (e) =>
-    copyToClipboard(
-      INSTALL_COMMAND,
-      e.currentTarget as HTMLButtonElement,
-      "✓ Copied — paste in Claude Code"
-    )
-  );
-document
-  .getElementById("btn-copy-mcp-cursor")!
-  .addEventListener("click", (e) =>
-    copyToClipboard(MCP_CONFIG_JSON, e.currentTarget as HTMLButtonElement)
-  );
-document
-  .getElementById("btn-copy-rules-cursor")!
-  .addEventListener("click", (e) =>
-    copyToClipboard(TIER_1_RULES, e.currentTarget as HTMLButtonElement)
-  );
-
-document.getElementById("btn-download-dxt")!.addEventListener("click", (e) => {
-  e.preventDefault();
-  parent.postMessage({ pluginMessage: { type: "open-external", url: DXT_URL } }, "*");
-  flashCopied(e.currentTarget as HTMLButtonElement, "✓ Opening in browser…");
-});
-
-document
-  .getElementById("btn-copy-dxt-url")!
-  .addEventListener("click", (e) =>
-    copyToClipboard(DXT_URL, e.currentTarget as HTMLButtonElement, "✓ Link copied")
-  );
-
-// Forward messages from code.js (plugin sandbox) to WebSocket
-window.onmessage = (event: MessageEvent) => {
-  const msg = event.data.pluginMessage;
-  if (!msg) return;
-
-  if (msg.type === "__ui_list_operations_result") {
-    renderOpsPanel(msg.operations);
-    return;
-  }
-
-  // Update filename from status messages
-  if (msg.type === "ws-send" && msg.payload?.type === "status" && msg.payload?.fileName) {
-    updateFilename(msg.payload.fileName);
-  }
-
-  // Operation results flow plugin → server: count them here, not on socket.onmessage.
-  if (msg.type === "ws-send" && msg.payload?.type === "result") {
-    incrementOps();
-    updateActivity(msg.payload.success ? "Last operation succeeded" : "Last operation failed");
-  }
-
-  if (msg.type === "ws-send" && ws?.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(msg.payload));
-  }
-};
-
-async function findAndConnect(): Promise<void> {
-  const dot = $("dot");
-  dot.className = "dot searching";
-  $("status-text").textContent = "Searching...";
-  hideError();
-
-  for (let port = PORT_MIN; port <= PORT_MAX; port++) {
-    try {
-      await tryConnect(port);
-      scanAttempts = 0;
-      return;
-    } catch {
-      continue;
-    }
-  }
-
-  // Failed to find server
-  scanAttempts++;
-  updateStatus(false, "Disconnected");
-  showView("setup");
-
-  showError(
-    scanAttempts < 4
-      ? "Searching for server\u2026"
-      : "Still searching \u2014 make sure your MCP config is set up."
-  );
-
-  setTimeout(findAndConnect, RECONNECT_DELAY);
-}
-
-function tryConnect(port: number): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const socket = new WebSocket(`ws://localhost:${port}`);
-    const timeout = setTimeout(() => {
-      socket.close();
-      reject(new Error("timeout"));
-    }, 2000);
-
-    socket.onopen = () => {
-      clearTimeout(timeout);
-      ws = socket;
-      updateStatus(true, "Connected");
-      updatePort(port);
-      showView("connected");
-      updateActivity("Ready for operations");
-
-      // Request ops list for the panel
-      parent.postMessage({ pluginMessage: { type: "__ui_list_operations" } }, "*");
-
-      parent.postMessage({ pluginMessage: { type: "ws-connected" } }, "*");
-
-      if (!localStorage.getItem("pluginos-first-connect-seen")) {
-        pendingFirstConnectToast = true;
-        armToastTrigger();
-      }
-
-      resolve();
-    };
-
-    socket.onmessage = (event: MessageEvent) => {
+  document.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const key = btn.dataset.copy ?? "";
+      const text = map[key]?.() ?? "";
       try {
-        const data = JSON.parse(event.data as string);
-
-        // Track incoming operations
-        if (data.type === "run_operation" || data.type === "execute") {
-          const label = data.type === "run_operation" ? data.operation : "execute_figma";
-          updateActivity("Running: " + label);
-        }
-
-        // Forward to code.js. Results are counted in window.onmessage (plugin → server path).
-        parent.postMessage({ pluginMessage: { type: "ws-message", payload: data } }, "*");
+        await navigator.clipboard.writeText(text);
+        const original = btn.textContent;
+        btn.classList.add("copied");
+        btn.textContent = "✓ Copied";
+        window.setTimeout(() => {
+          btn.classList.remove("copied");
+          btn.textContent = original ?? "Copy";
+        }, 1500);
       } catch {
-        /* ignore malformed */
+        // ignored
       }
-    };
-
-    socket.onclose = () => {
-      if (ws === socket) {
-        ws = null;
-        updateStatus(false, "Disconnected");
-        updatePort(null);
-        showView("setup");
-        showError("Connection lost. Reconnecting\u2026");
-        parent.postMessage({ pluginMessage: { type: "ws-disconnected" } }, "*");
-        setTimeout(findAndConnect, RECONNECT_DELAY);
-      }
-    };
-
-    socket.onerror = () => {
-      clearTimeout(timeout);
-      socket.close();
-      reject(new Error("connection failed"));
-    };
+    });
   });
 }
 
-findAndConnect();
+function populateStaticStrings(): void {
+  $("cc-cmd-1").textContent = CLAUDE_CODE_STEP_1;
+  $("cc-cmd-2").textContent = CLAUDE_CODE_STEP_2;
+  $("other-cmd").textContent = CURSOR_NPX_COMMAND;
+  $("other-config").textContent = CURSOR_MCP_CONFIG;
+  $("why-text").textContent = WHY_THIS_SETUP;
+}
+
+function wireWhyToggle(): void {
+  const wrap = document.querySelector(".why") as HTMLElement;
+  $("why-toggle").addEventListener("click", () => {
+    const expanded = wrap.getAttribute("aria-expanded") === "true";
+    wrap.setAttribute("aria-expanded", expanded ? "false" : "true");
+  });
+}
+
+function wireRetryButton(): void {
+  $("btn-check").addEventListener("click", () => {
+    cancelReconnect();
+    void scanAndConnect();
+  });
+}
+
+function recordHistory(entry: LogEntry): void {
+  activityLog.push(entry);
+  activityLog.render();
+}
+
+function showMismatch(serverVersion: string): void {
+  const agent = getCurrentAgent();
+  const cmd =
+    agent === "claude-desktop"
+      ? `Re-download ${DXT_DOWNLOAD_URL}`
+      : agent === "claude-code"
+        ? `/plugin marketplace update LSDimi/pluginos`
+        : `npx pluginos@${VERSION}`;
+  $("mismatch-cmd").textContent = cmd;
+  $("mismatch-text").textContent = `Plugin v${VERSION} expects a compatible server. Server reported v${serverVersion}.`;
+  setStatus("mismatch");
+  showView("mismatch");
+}
+
+async function scanAndConnect(): Promise<void> {
+  setStatus("connecting");
+  const lastPort = getLastPort();
+  const order: number[] = [];
+  if (lastPort) order.push(lastPort);
+  for (let p = PORT_MIN; p <= PORT_MAX; p++) if (p !== lastPort) order.push(p);
+
+  for (const port of order) {
+    const ok = await tryConnect(port);
+    if (ok) {
+      setLastPort(port);
+      return;
+    }
+  }
+  setStatus("disconnected");
+  scheduleReconnect();
+}
+
+function tryConnect(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    let settled = false;
+    let socket: WebSocket | null = null;
+    try {
+      socket = new WebSocket(`ws://localhost:${port}`);
+    } catch {
+      return resolve(false);
+    }
+    const timeout = window.setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        try {
+          socket?.close();
+        } catch {
+          /* ignore */
+        }
+        resolve(false);
+      }
+    }, 1500);
+    socket.addEventListener("open", () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      ws = socket;
+      attachSocketHandlers(socket!, port);
+      resolve(true);
+    });
+    socket.addEventListener("error", () => {
+      if (!settled) {
+        settled = true;
+        window.clearTimeout(timeout);
+        resolve(false);
+      }
+    });
+  });
+}
+
+function attachSocketHandlers(socket: WebSocket, port: number): void {
+  socket.addEventListener("message", (e: MessageEvent) => {
+    let msg: any;
+    try {
+      msg = JSON.parse(typeof e.data === "string" ? e.data : "");
+    } catch {
+      return;
+    }
+    if (msg?.type === "SERVER_HELLO") {
+      if (!isCompatible(VERSION, msg.version ?? "")) {
+        showMismatch(msg.version ?? "unknown");
+        return;
+      }
+      $("port-url").textContent = `ws://localhost:${port}`;
+      $("file-name").textContent = cachedFileName;
+      setStatus("connected");
+      showView("connected");
+      activityLog.render();
+      reconnectIndex = 0;
+      // Notify plugin code so it can send status (matches existing handshake)
+      parent.postMessage({ pluginMessage: { type: "ws-connected" } }, "*");
+    } else if (msg?.type === "OP_START") {
+      showRunning(true, msg.op, msg.params);
+    } else if (msg?.type === "OP_END") {
+      showRunning(false);
+      recordHistory({
+        op: msg.op,
+        status: msg.status === "ok" ? "ok" : "error",
+        durationMs: msg.durationMs ?? 0,
+        params: msg.params ?? {},
+        error: msg.error,
+      });
+    }
+  });
+
+  socket.addEventListener("close", () => {
+    ws = null;
+    setStatus("connecting", "Reconnecting…");
+    scheduleReconnect();
+  });
+}
+
+function scheduleReconnect(): void {
+  if (reconnectIndex === 0) reconnectStartedAt = Date.now();
+  const delay = RECONNECT_BACKOFF_MS[Math.min(reconnectIndex, RECONNECT_BACKOFF_MS.length - 1)];
+  reconnectIndex += 1;
+  reconnectTimer = window.setTimeout(() => {
+    if (Date.now() - reconnectStartedAt > RECONNECT_GIVEUP_MS) {
+      reconnectIndex = 0;
+      setStatus("disconnected");
+      showView("disconnected");
+      return;
+    }
+    void scanAndConnect();
+  }, delay);
+}
+
+function cancelReconnect(): void {
+  if (reconnectTimer != null) {
+    window.clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  reconnectIndex = 0;
+}
+
+function attachPluginMessageListener(): void {
+  window.addEventListener("message", (event: MessageEvent) => {
+    const msg = event.data?.pluginMessage;
+    if (!msg) return;
+    if (msg.type === "FILE_NAME") {
+      cachedFileName = msg.name ?? "—";
+      const el = document.getElementById("file-name");
+      if (el) el.textContent = cachedFileName;
+    }
+    // THEME_CHANGE is handled by theme.ts's own listener.
+  });
+}
+
+function bootstrap(): void {
+  applyTheme(detectInitialTheme());
+  attachThemeListener();
+  attachPluginMessageListener();
+  initAgentPicker();
+  populateStaticStrings();
+  wireCopyButtons();
+  wireWhyToggle();
+  wireRetryButton();
+  activityLog = new ActivityLog($("activity-log"));
+  activityLog.render();
+  void scanAndConnect();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootstrap);
+} else {
+  bootstrap();
+}

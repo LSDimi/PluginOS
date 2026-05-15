@@ -4,7 +4,20 @@ import { safeSerialize } from "./utils/serializer";
 import { handleOpenExternal } from "./handlers/open-external";
 
 // Show the UI (which handles WebSocket)
-figma.showUI(__html__, { width: 320, height: 480, themeColors: true });
+figma.showUI(__html__, { width: 360, height: 600, themeColors: true });
+
+function sendTheme(): void {
+  // @ts-expect-error figma.editorPreferences is not in older @figma/plugin-typings
+  const theme = (figma.editorPreferences as { theme?: string } | undefined)?.theme;
+  figma.ui.postMessage({ type: "THEME_CHANGE", theme: theme === "dark" ? "dark" : "light" });
+}
+
+function sendFileName(): void {
+  figma.ui.postMessage({ type: "FILE_NAME", name: figma.root.name });
+}
+
+sendTheme();
+sendFileName();
 
 // Send file status to MCP server on connection
 function sendFileStatus(): void {
@@ -114,3 +127,4 @@ if (typeof self !== "undefined" && "addEventListener" in self) {
 
 // Update status when page changes
 figma.on("currentpagechange", sendFileStatus);
+figma.on("documentchange", sendFileName);
