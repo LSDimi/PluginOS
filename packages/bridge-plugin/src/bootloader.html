@@ -56,7 +56,7 @@
       <div class="agent-action" data-action-for="claude-desktop">
         <div class="step">
           <div class="step-header"><span class="step-num">1</span><span class="step-label">Download installer</span></div>
-          <a class="btn-primary" style="display:block;text-decoration:none;text-align:center;" href="<%= DXT_URL %>">Download pluginos.dxt</a>
+          <button id="btn-dxt" class="btn-primary" type="button" data-url="<%= DXT_URL %>">Download pluginos.dxt</button>
         </div>
       </div>
 
@@ -124,6 +124,17 @@
         }
 
         document.getElementById('btn-retry').addEventListener('click', tryFetchUI);
+
+        // Open DXT download via figma.openExternal (handled in code.ts).
+        // A plain <a href> would navigate the iframe and blank the plugin.
+        var dxtBtn = document.getElementById('btn-dxt');
+        if (dxtBtn) {
+          dxtBtn.addEventListener('click', function () {
+            var url = dxtBtn.getAttribute('data-url');
+            if (url) parent.postMessage({ pluginMessage: { type: 'open-external', url: url } }, '*');
+          });
+        }
+
         tryFetchUI();
       })();
     </script>
