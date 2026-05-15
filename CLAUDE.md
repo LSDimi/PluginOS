@@ -99,5 +99,5 @@ Beyond lint/typecheck/test, CI also enforces:
 
 - **Build order matters**: always build `shared` first (`npm run build:shared`), then other packages. `mcp-server` imports from `shared`.
 - TypeScript strict mode. Base config in `tsconfig.base.json` (ES2022, ESNext modules, bundler resolution). Bridge-plugin overrides to ES2015 with DOM lib + Figma typings.
-- Operations self-register via `registerOperation()` in `bridge-plugin/src/operations/`. See `.claude/rules/adding-operations.md` for the full workflow.
+- Operations self-register via registerOperation() in packages/bridge-plugin/src/operations/. See .claude/rules/adding-operations.md for the full workflow.
 - Target `settings.local.json` for local config changes, NOT `settings.json`.
