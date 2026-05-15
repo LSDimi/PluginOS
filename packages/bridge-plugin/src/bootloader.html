@@ -67,6 +67,7 @@
 
       <div class="agent-action" data-action-for="other" hidden>
         <div class="step"><div class="step-header"><span class="step-num">1</span><span class="step-label">Run in terminal</span></div><div class="step-action"><div class="code">npx pluginos@<%= MCP_VERSION %></div><button class="btn-icon" data-copy-text="npx pluginos@<%= MCP_VERSION %>">Copy</button></div></div>
+        <div class="step"><div class="step-header"><span class="step-num">2</span><span class="step-label">Or paste this MCP config</span></div><div class="step-action"><div class="code">{"mcpServers":{"pluginos":{"command":"npx","args":["-y","pluginos@<%= MCP_VERSION %>"]}}}</div><button class="btn-icon" data-copy-text='{"mcpServers":{"pluginos":{"command":"npx","args":["-y","pluginos@<%= MCP_VERSION %>"]}}}'>Copy</button></div></div>
       </div>
 
       <button id="btn-retry" class="btn-secondary">Check for server</button>
@@ -79,17 +80,31 @@
         var PORT_MIN = 9500, PORT_MAX = 9510;
         var agents = document.querySelectorAll('[data-agent]');
         var actions = document.querySelectorAll('[data-action-for]');
+        var VALID = { 'claude-desktop': 1, 'claude-code': 1, 'other': 1 };
         function select(name) {
           agents.forEach(function (a) { a.classList.toggle('on', a.getAttribute('data-agent') === name); });
           actions.forEach(function (a) { a.hidden = a.getAttribute('data-action-for') !== name; });
+          try { localStorage.setItem('pluginos.preferredAgent', name); } catch (e) {}
         }
+        // Restore previously selected agent so it matches what ui.html will show on swap.
+        try {
+          var stored = localStorage.getItem('pluginos.preferredAgent');
+          if (stored && VALID[stored]) select(stored);
+        } catch (e) {}
         agents.forEach(function (a) {
           a.addEventListener('click', function () { select(a.getAttribute('data-agent')); });
         });
         document.querySelectorAll('[data-copy-text]').forEach(function (btn) {
           btn.addEventListener('click', function () {
             var t = btn.getAttribute('data-copy-text');
-            try { navigator.clipboard.writeText(t); btn.textContent = '✓ Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500); } catch (e) {}
+            var original = btn.textContent;
+            try {
+              navigator.clipboard.writeText(t);
+              btn.textContent = '✓ Copied';
+            } catch (e) {
+              btn.textContent = '⚠ Copy failed';
+            }
+            setTimeout(function () { btn.textContent = original; }, 1500);
           });
         });
 

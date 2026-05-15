@@ -22,6 +22,7 @@ const RECONNECT_GIVEUP_MS = 30_000;
 type StatusState = "disconnected" | "connecting" | "connected" | "running" | "mismatch";
 
 let activeSocket: WebSocket | null = null;
+let isScanning = false;
 let reconnectIndex = 0;
 let reconnectTimer: number | null = null;
 let reconnectStartedAt = 0;
@@ -93,18 +94,18 @@ function wireCopyButtons(): void {
     btn.addEventListener("click", async () => {
       const key = btn.dataset.copy ?? "";
       const text = map[key]?.() ?? "";
+      const original = btn.textContent;
       try {
         await navigator.clipboard.writeText(text);
-        const original = btn.textContent;
         btn.classList.add("copied");
         btn.textContent = "✓ Copied";
-        window.setTimeout(() => {
-          btn.classList.remove("copied");
-          btn.textContent = original ?? "Copy";
-        }, 1500);
       } catch {
-        // ignored
+        btn.textContent = "⚠ Copy failed";
       }
+      window.setTimeout(() => {
+        btn.classList.remove("copied");
+        btn.textContent = original ?? "Copy";
+      }, 1500);
     });
   });
 }
@@ -153,21 +154,27 @@ function showMismatch(serverVersion: string): void {
 }
 
 async function scanAndConnect(): Promise<void> {
-  setStatus("connecting");
-  const lastPort = getLastPort();
-  const order: number[] = [];
-  if (lastPort) order.push(lastPort);
-  for (let p = PORT_MIN; p <= PORT_MAX; p++) if (p !== lastPort) order.push(p);
+  if (isScanning) return;
+  isScanning = true;
+  try {
+    setStatus("connecting");
+    const lastPort = getLastPort();
+    const order: number[] = [];
+    if (lastPort) order.push(lastPort);
+    for (let p = PORT_MIN; p <= PORT_MAX; p++) if (p !== lastPort) order.push(p);
 
-  for (const port of order) {
-    const ok = await tryConnect(port);
-    if (ok) {
-      setLastPort(port);
-      return;
+    for (const port of order) {
+      const ok = await tryConnect(port);
+      if (ok) {
+        setLastPort(port);
+        return;
+      }
     }
+    setStatus("disconnected");
+    scheduleReconnect();
+  } finally {
+    isScanning = false;
   }
-  setStatus("disconnected");
-  scheduleReconnect();
 }
 
 function tryConnect(port: number): Promise<boolean> {
@@ -220,6 +227,10 @@ function attachSocketHandlers(socket: WebSocket, port: number): void {
     if (msg?.type === "SERVER_HELLO") {
       if (!isCompatible(VERSION, msg.version ?? "")) {
         showMismatch(msg.version ?? "unknown");
+        // Stop the relay before tearing down so the close handler sees we
+        // intentionally disconnected (no reconnect scheduling).
+        activeSocket = null;
+        socket.close();
         return;
       }
       $("port-url").textContent = `ws://localhost:${port}`;

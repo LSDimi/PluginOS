@@ -18,7 +18,7 @@ The Figma plugin half of PluginOS. Connects to the local `pluginos` MCP server o
 ```bash
 npm run build       # webpack production build → dist/
 npm run dev         # webpack watch mode
-npm run package     # builds + bundles dist into pluginos-bridge-v<X.Y.Z>.zip
+npm run package     # bundles pre-built dist into pluginos-bridge-v<X.Y.Z>.zip (run build first)
 ```
 
 ## Tests

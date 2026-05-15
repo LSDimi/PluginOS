@@ -57,7 +57,7 @@ The MCP server runs whenever Claude Code is open.
 ## Verifying the install
 
 1. Open the PluginOS Bridge plugin in Figma. The status pill should turn green ("Connected") within a few seconds.
-2. In your agent, ask: "list available pluginos operations". You should get a list of 28 operations.
+2. In your agent, ask: "list available pluginos operations". You should get a list of 39 operations.
 
 ---
 

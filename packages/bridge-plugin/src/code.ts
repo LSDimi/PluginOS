@@ -127,7 +127,11 @@ if (typeof self !== "undefined" && "addEventListener" in self) {
 
 // Update status when page changes
 figma.on("currentpagechange", sendFileStatus);
-figma.on("documentchange", sendFileName);
+
+// NOTE: figma.on("documentchange", ...) requires figma.loadAllPagesAsync() first
+// when the manifest uses documentAccess: "dynamic-page" (which we do). The filename
+// is captured once at plugin open via sendFileName(); rename-during-session is rare
+// enough that we accept the staleness rather than pay the loadAllPagesAsync cost.
 
 // Re-send theme whenever Figma's editor theme changes (light/dark toggle).
 // `themechange` is a newer event; wrap in try/catch so older clients don't crash.
