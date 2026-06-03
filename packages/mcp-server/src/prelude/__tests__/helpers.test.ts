@@ -179,3 +179,59 @@ globalThis.__nodes.forEach(place);
     expect(appended).toEqual(nodes);
   });
 });
+
+describe("layoutSpaceBetween", () => {
+  it("for 2 children, picks the last child as grow target (non-TEXT → layoutGrow=1)", async () => {
+    const left = { type: "FRAME", layoutGrow: 0 };
+    const right = { type: "FRAME", layoutGrow: 0 };
+    const frame: Record<string, unknown> = { primaryAxisAlignItems: "INIT" };
+    const ctx = makeContext({});
+    const { wrapped } = wrapScript(`
+PluginOS.layoutSpaceBetween(globalThis.__frame, { children: [globalThis.__left, globalThis.__right] });
+`);
+    (ctx as Record<string, unknown>).__frame = frame;
+    (ctx as Record<string, unknown>).__left = left;
+    (ctx as Record<string, unknown>).__right = right;
+    vm.runInContext(`(async()=>{${wrapped}})()`, ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(frame.primaryAxisAlignItems).toBe("MIN");
+    expect(right.layoutGrow).toBe(1);
+    expect(left.layoutGrow).toBe(0);
+  });
+
+  it("for TEXT grow target, uses layoutSizingHorizontal=FILL", async () => {
+    const left = { type: "TEXT", layoutSizingHorizontal: "HUG" };
+    const right = { type: "FRAME", layoutGrow: 0 };
+    const frame: Record<string, unknown> = {};
+    const ctx = makeContext({});
+    const { wrapped } = wrapScript(`
+PluginOS.layoutSpaceBetween(globalThis.__frame, { growChild: globalThis.__left });
+`);
+    (ctx as Record<string, unknown>).__frame = frame;
+    (ctx as Record<string, unknown>).__left = left;
+    (ctx as Record<string, unknown>).__right = right;
+    vm.runInContext(`(async()=>{${wrapped}})()`, ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(left.layoutSizingHorizontal).toBe("FILL");
+  });
+
+  it("for 3 children, picks the middle child", async () => {
+    const a = { type: "FRAME", layoutGrow: 0 };
+    const b = { type: "FRAME", layoutGrow: 0 };
+    const c = { type: "FRAME", layoutGrow: 0 };
+    const frame: Record<string, unknown> = {};
+    const ctx = makeContext({});
+    const { wrapped } = wrapScript(`
+PluginOS.layoutSpaceBetween(globalThis.__frame, { children: [globalThis.__a, globalThis.__b, globalThis.__c] });
+`);
+    (ctx as Record<string, unknown>).__frame = frame;
+    (ctx as Record<string, unknown>).__a = a;
+    (ctx as Record<string, unknown>).__b = b;
+    (ctx as Record<string, unknown>).__c = c;
+    vm.runInContext(`(async()=>{${wrapped}})()`, ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(b.layoutGrow).toBe(1);
+    expect(a.layoutGrow).toBe(0);
+    expect(c.layoutGrow).toBe(0);
+  });
+});

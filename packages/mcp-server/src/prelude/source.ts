@@ -96,6 +96,22 @@ export const PRELUDE_SOURCE = `// --- PluginOS prelude ---
     };
   };
 
+  P.layoutSpaceBetween = function(frame, opts) {
+    frame.primaryAxisAlignItems = 'MIN';
+    var growChild = opts.growChild;
+    if (!growChild && opts.children) {
+      var kids = opts.children;
+      if (kids.length >= 3) growChild = kids[Math.floor(kids.length / 2)];
+      else if (kids.length === 2) growChild = kids[kids.length - 1];
+    }
+    if (!growChild) throw new Error('[PluginOS.layoutSpaceBetween] no growChild resolvable');
+    if (growChild.type === 'TEXT') {
+      growChild.layoutSizingHorizontal = 'FILL';
+    } else {
+      growChild.layoutGrow = 1;
+    }
+  };
+
   globalThis.PluginOS = P;
 })();
 // --- end prelude ---
