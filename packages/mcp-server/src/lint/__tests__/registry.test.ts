@@ -18,3 +18,15 @@ describe("lint registry", () => {
     expect(results.some((r) => r.ruleId === "dummy")).toBe(true);
   });
 });
+
+describe("default ruleset wired", () => {
+  it("flags figma.notify via runLint", () => {
+    const results = runLint(`figma.notify("hi")`);
+    expect(results.some((r) => r.ruleId === "no-notify")).toBe(true);
+  });
+
+  it("flags itemSpacing AUTO via runLint", () => {
+    const results = runLint(`frame.itemSpacing = "AUTO"`);
+    expect(results.some((r) => r.ruleId === "no-itemspacing-auto")).toBe(true);
+  });
+});
