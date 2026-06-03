@@ -27,6 +27,28 @@ export const PRELUDE_SOURCE = `// --- PluginOS prelude ---
     return node;
   };
 
+  P.bindSpacing = async function(node, vars) {
+    if (!node || !('layoutMode' in node) || node.layoutMode === 'NONE') return;
+    function pick(specific, axis, all) {
+      if (specific) return specific;
+      if (axis) return axis;
+      if (all) return all;
+      return null;
+    }
+    var pairs = [
+      ['paddingTop', pick(vars.paddingTop, vars.paddingY, vars.padding)],
+      ['paddingBottom', pick(vars.paddingBottom, vars.paddingY, vars.padding)],
+      ['paddingLeft', pick(vars.paddingLeft, vars.paddingX, vars.padding)],
+      ['paddingRight', pick(vars.paddingRight, vars.paddingX, vars.padding)],
+      ['itemSpacing', vars.itemSpacing || null],
+    ];
+    for (var i = 0; i < pairs.length; i++) {
+      var field = pairs[i][0];
+      var v = pairs[i][1];
+      if (v) node.setBoundVariable(field, v);
+    }
+  };
+
   globalThis.PluginOS = P;
 })();
 // --- end prelude ---

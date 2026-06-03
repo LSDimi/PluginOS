@@ -64,3 +64,58 @@ try {
     expect(String(ctx.__err)).toContain("[PluginOS.createStyledText]");
   });
 });
+
+describe("bindSpacing", () => {
+  it("binds all four padding fields when given `padding`", async () => {
+    const bound: Array<[string, string]> = [];
+    const node = {
+      layoutMode: "VERTICAL",
+      setBoundVariable: (field: string, v: { id: string }) => bound.push([field, v.id]),
+    };
+    const figma = {};
+    const ctx = makeContext(figma);
+    const { wrapped } = wrapScript(`
+const node = globalThis.__node;
+await PluginOS.bindSpacing(node, { padding: { id: "v1" } });
+`);
+    (ctx as Record<string, unknown>).__node = node;
+    vm.runInContext(`(async()=>{${wrapped}})()`, ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    const fields = bound.map(([f]) => f).sort();
+    expect(fields).toEqual(["paddingBottom", "paddingLeft", "paddingRight", "paddingTop"]);
+    expect(bound.every(([, id]) => id === "v1")).toBe(true);
+  });
+
+  it("specificity: paddingTop overrides padding", async () => {
+    const bound: Array<[string, string]> = [];
+    const node = {
+      layoutMode: "VERTICAL",
+      setBoundVariable: (field: string, v: { id: string }) => bound.push([field, v.id]),
+    };
+    const ctx = makeContext({});
+    const { wrapped } = wrapScript(`
+await PluginOS.bindSpacing(globalThis.__node, { padding: { id: "all" }, paddingTop: { id: "top" } });
+`);
+    (ctx as Record<string, unknown>).__node = node;
+    vm.runInContext(`(async()=>{${wrapped}})()`, ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    const top = bound.find(([f]) => f === "paddingTop");
+    expect(top).toEqual(["paddingTop", "top"]);
+  });
+
+  it("no-ops on non-autolayout node", async () => {
+    const bound: Array<[string, string]> = [];
+    const node = {
+      layoutMode: "NONE",
+      setBoundVariable: (field: string, v: { id: string }) => bound.push([field, v.id]),
+    };
+    const ctx = makeContext({});
+    const { wrapped } = wrapScript(`
+await PluginOS.bindSpacing(globalThis.__node, { padding: { id: "v1" } });
+`);
+    (ctx as Record<string, unknown>).__node = node;
+    vm.runInContext(`(async()=>{${wrapped}})()`, ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(bound).toEqual([]);
+  });
+});
