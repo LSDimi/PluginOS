@@ -119,3 +119,32 @@ await PluginOS.bindSpacing(globalThis.__node, { padding: { id: "v1" } });
     expect(bound).toEqual([]);
   });
 });
+
+describe("combineAsVariantsTiled", () => {
+  it("calls combineAsVariants and sets layout fields", async () => {
+    const set: Record<string, unknown> = { resize: function(w: number, h: number) { this.width = w; this.height = h; } };
+    set.width = 0;
+    set.height = 0;
+    const calls: string[] = [];
+    const figma = {
+      combineAsVariants: (cells: unknown[], parent: unknown) => { calls.push("combine:" + cells.length); return set; },
+    };
+    const cells = [{ width: 100, height: 50 }, { width: 100, height: 50 }, { width: 100, height: 50 }, { width: 100, height: 50 }];
+    const ctx = makeContext(figma);
+    const { wrapped } = wrapScript(`
+const set = PluginOS.combineAsVariantsTiled(globalThis.__cells, {}, { cols: 2, gutter: 10 });
+globalThis.__out = set;
+`);
+    (ctx as Record<string, unknown>).__cells = cells;
+    vm.runInContext(`(async()=>{${wrapped}})()`, ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(calls).toContain("combine:4");
+    expect(set.layoutMode).toBe("HORIZONTAL");
+    expect(set.layoutWrap).toBe("WRAP");
+    expect(set.itemSpacing).toBe(10);
+    expect(set.primaryAxisSizingMode).toBe("FIXED");
+    expect(set.counterAxisSizingMode).toBe("AUTO");
+    expect(set.width).toBeGreaterThan(0);
+    expect(ctx.__out).toBe(set);
+  });
+});

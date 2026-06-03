@@ -49,6 +49,28 @@ export const PRELUDE_SOURCE = `// --- PluginOS prelude ---
     }
   };
 
+  P.combineAsVariantsTiled = function(cells, parent, opts) {
+    opts = opts || {};
+    var cols = opts.cols || Math.ceil(Math.sqrt(cells.length));
+    var gutter = opts.gutter == null ? 16 : opts.gutter;
+    var layoutMode = opts.layoutMode || 'HORIZONTAL';
+    var wrap = opts.wrap !== false;
+    var set = figma.combineAsVariants(cells, parent);
+    set.layoutMode = layoutMode;
+    if (wrap) set.layoutWrap = 'WRAP';
+    set.itemSpacing = gutter;
+    set.counterAxisSpacing = gutter;
+    set.primaryAxisSizingMode = 'FIXED';
+    set.counterAxisSizingMode = 'AUTO';
+    var width = opts.width;
+    if (width == null) {
+      var cellW = cells[0] && cells[0].width ? cells[0].width : 0;
+      width = cols * cellW + (cols - 1) * gutter + 32;
+    }
+    set.resize(width, set.height || 100);
+    return set;
+  };
+
   globalThis.PluginOS = P;
 })();
 // --- end prelude ---
