@@ -71,6 +71,31 @@ export const PRELUDE_SOURCE = `// --- PluginOS prelude ---
     return set;
   };
 
+  P.tileTopLevel = function(page, opts) {
+    opts = opts || {};
+    var cols = opts.cols || 4;
+    var gutter = opts.gutter == null ? 64 : opts.gutter;
+    var origin = opts.origin || { x: 0, y: 0 };
+    var i = 0;
+    var rowH = 0;
+    var cursorX = origin.x;
+    var cursorY = origin.y;
+    return function place(node) {
+      var col = i % cols;
+      if (col === 0 && i > 0) {
+        cursorY += rowH + gutter;
+        cursorX = origin.x;
+        rowH = 0;
+      }
+      node.x = cursorX;
+      node.y = cursorY;
+      page.appendChild(node);
+      cursorX += node.width + gutter;
+      if (node.height > rowH) rowH = node.height;
+      i++;
+    };
+  };
+
   globalThis.PluginOS = P;
 })();
 // --- end prelude ---

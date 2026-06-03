@@ -148,3 +148,34 @@ globalThis.__out = set;
     expect(ctx.__out).toBe(set);
   });
 });
+
+describe("tileTopLevel", () => {
+  it("places nodes in a grid with the configured cols and gutter", async () => {
+    const appended: unknown[] = [];
+    const page = { appendChild: (n: unknown) => appended.push(n) };
+    const nodes = [
+      { width: 100, height: 50, x: 0, y: 0 },
+      { width: 100, height: 50, x: 0, y: 0 },
+      { width: 100, height: 50, x: 0, y: 0 },
+      { width: 100, height: 50, x: 0, y: 0 },
+    ];
+    const ctx = makeContext({});
+    const { wrapped } = wrapScript(`
+const place = PluginOS.tileTopLevel(globalThis.__page, { cols: 2, gutter: 10 });
+globalThis.__nodes.forEach(place);
+`);
+    (ctx as Record<string, unknown>).__page = page;
+    (ctx as Record<string, unknown>).__nodes = nodes;
+    vm.runInContext(`(async()=>{${wrapped}})()`, ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(nodes[0].x).toBe(0);
+    expect(nodes[0].y).toBe(0);
+    expect(nodes[1].x).toBe(110);
+    expect(nodes[1].y).toBe(0);
+    expect(nodes[2].x).toBe(0);
+    expect(nodes[2].y).toBe(60);
+    expect(nodes[3].x).toBe(110);
+    expect(nodes[3].y).toBe(60);
+    expect(appended).toEqual(nodes);
+  });
+});
