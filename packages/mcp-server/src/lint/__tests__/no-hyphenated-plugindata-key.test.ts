@@ -16,6 +16,8 @@ describe("no-hyphenated-plugindata-key rule", () => {
   });
 
   it("does not flag valid keys", () => {
-    expect(noHyphenatedPluginDataKeyRule.check(`figma.root.setPluginData("my_key", "v");`)).toEqual([]);
+    expect(noHyphenatedPluginDataKeyRule.check(`figma.root.setPluginData("my_key", "v");`)).toEqual(
+      []
+    );
   });
 });

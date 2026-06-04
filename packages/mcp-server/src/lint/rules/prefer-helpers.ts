@@ -1,6 +1,12 @@
 import type { LintRule, LintResult } from "../types.js";
 
-const PADDING_FIELDS = ["paddingTop", "paddingBottom", "paddingLeft", "paddingRight", "itemSpacing"];
+const PADDING_FIELDS = [
+  "paddingTop",
+  "paddingBottom",
+  "paddingLeft",
+  "paddingRight",
+  "itemSpacing",
+];
 
 export const preferHelpersRule: LintRule = {
   id: "prefer-helpers",

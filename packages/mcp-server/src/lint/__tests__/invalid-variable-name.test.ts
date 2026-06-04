@@ -24,7 +24,11 @@ describe("invalid-variable-name rule", () => {
   });
 
   it("does not flag valid names", () => {
-    expect(invalidVariableNameRule.check(`figma.variables.createVariable("Spacing_1_5", coll, "FLOAT");`)).toEqual([]);
-    expect(invalidVariableNameRule.check(`figma.variables.createVariable("h1", coll, "STRING");`)).toEqual([]);
+    expect(
+      invalidVariableNameRule.check(`figma.variables.createVariable("Spacing_1_5", coll, "FLOAT");`)
+    ).toEqual([]);
+    expect(
+      invalidVariableNameRule.check(`figma.variables.createVariable("h1", coll, "STRING");`)
+    ).toEqual([]);
   });
 });

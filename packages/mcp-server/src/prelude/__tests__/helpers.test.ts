@@ -19,12 +19,21 @@ describe("createStyledText", () => {
   it("calls loadFontAsync, createText, setTextStyleIdAsync, and sets characters", async () => {
     const calls: string[] = [];
     const textNode: Record<string, unknown> = {
-      setTextStyleIdAsync: async (id: string) => { calls.push("setTextStyle:" + id); },
-      setFillStyleIdAsync: async (id: string) => { calls.push("setFill:" + id); },
+      setTextStyleIdAsync: async (id: string) => {
+        calls.push("setTextStyle:" + id);
+      },
+      setFillStyleIdAsync: async (id: string) => {
+        calls.push("setFill:" + id);
+      },
     };
     const figma = {
-      loadFontAsync: async (font: { family: string; style: string }) => { calls.push(`loadFont:${font.family}/${font.style}`); },
-      createText: () => { calls.push("createText"); return textNode; },
+      loadFontAsync: async (font: { family: string; style: string }) => {
+        calls.push(`loadFont:${font.family}/${font.style}`);
+      },
+      createText: () => {
+        calls.push("createText");
+        return textNode;
+      },
     };
     const userJs = `
 const out = await PluginOS.createStyledText({
@@ -122,14 +131,27 @@ await PluginOS.bindSpacing(globalThis.__node, { padding: { id: "v1" } });
 
 describe("combineAsVariantsTiled", () => {
   it("calls combineAsVariants and sets layout fields", async () => {
-    const set: Record<string, unknown> = { resize: function(w: number, h: number) { this.width = w; this.height = h; } };
+    const set: Record<string, unknown> = {
+      resize: function (w: number, h: number) {
+        this.width = w;
+        this.height = h;
+      },
+    };
     set.width = 0;
     set.height = 0;
     const calls: string[] = [];
     const figma = {
-      combineAsVariants: (cells: unknown[], parent: unknown) => { calls.push("combine:" + cells.length); return set; },
+      combineAsVariants: (cells: unknown[], _parent: unknown) => {
+        calls.push("combine:" + cells.length);
+        return set;
+      },
     };
-    const cells = [{ width: 100, height: 50 }, { width: 100, height: 50 }, { width: 100, height: 50 }, { width: 100, height: 50 }];
+    const cells = [
+      { width: 100, height: 50 },
+      { width: 100, height: 50 },
+      { width: 100, height: 50 },
+      { width: 100, height: 50 },
+    ];
     const ctx = makeContext(figma);
     const { wrapped } = wrapScript(`
 const set = PluginOS.combineAsVariantsTiled(globalThis.__cells, {}, { cols: 2, gutter: 10 });

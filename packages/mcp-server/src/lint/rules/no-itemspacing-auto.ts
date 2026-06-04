@@ -14,7 +14,8 @@ export const noItemSpacingAutoRule: LintRule = {
           ruleId: "no-itemspacing-auto",
           severity: "error",
           line: i + 1,
-          message: 'itemSpacing = "AUTO" is rejected at runtime. Use PluginOS.layoutSpaceBetween(frame, { growChild }) instead.',
+          message:
+            'itemSpacing = "AUTO" is rejected at runtime. Use PluginOS.layoutSpaceBetween(frame, { growChild }) instead.',
         });
       }
     }
