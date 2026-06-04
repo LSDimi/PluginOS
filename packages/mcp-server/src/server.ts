@@ -36,11 +36,12 @@ export function createPluginOSServer(bridge: IPluginBridge) {
       try {
         const result = await bridge.sendAndWait(msg, 5000);
         if (result.success) {
+          const ops = Array.isArray(result.result) ? result.result : [];
           return {
             content: [
               {
                 type: "text" as const,
-                text: JSON.stringify(result.result, null, 2),
+                text: JSON.stringify({ operations: ops, total: ops.length }, null, 2),
               },
             ],
           };
