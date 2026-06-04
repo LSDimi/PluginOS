@@ -1,11 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach } from "vitest";
-import {
-  pillStateFor,
-  pillTextFor,
-  formatElapsed,
-  type AppState,
-} from "../ui/render-ui.js";
+import { pillStateFor, pillTextFor, formatElapsed, type AppState } from "../ui/render-ui.js";
 import { renderUI } from "../ui/render-ui.js";
 
 describe("pillStateFor", () => {
@@ -177,7 +172,9 @@ describe("renderUI", () => {
     expect(document.getElementById("view-mismatch")!.hidden).toBe(false);
     expect(document.getElementById("mismatch-text")!.textContent).toContain("0.4.4");
     expect(document.getElementById("mismatch-text")!.textContent).toContain("0.4.2");
-    expect(document.getElementById("mismatch-text")!.textContent).toContain("Reinstall the plugin.");
+    expect(document.getElementById("mismatch-text")!.textContent).toContain(
+      "Reinstall the plugin."
+    );
   });
 
   it("hides running-block defensively when not connected", () => {

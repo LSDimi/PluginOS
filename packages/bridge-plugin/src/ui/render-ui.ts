@@ -56,8 +56,7 @@ export function renderUI(state: AppState): void {
   el("status-text").textContent = pillTextFor(state);
 
   // 2. Top-level views
-  el("view-disconnected").hidden =
-    state.kind !== "disconnected" && state.kind !== "connecting";
+  el("view-disconnected").hidden = state.kind !== "disconnected" && state.kind !== "connecting";
   el("view-connected").hidden = state.kind !== "connected";
   el("view-mismatch").hidden = state.kind !== "mismatch";
 

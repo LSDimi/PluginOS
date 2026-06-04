@@ -52,9 +52,7 @@ describe("theme fallback chain", () => {
   it("hardcoded fallbacks are still readable when Figma vars are absent", () => {
     injectStylesheet(TOKENS_CSS);
     document.documentElement.setAttribute("data-theme", "dark");
-    const bg = getComputedStyle(document.documentElement)
-      .getPropertyValue("--po-bg")
-      .trim();
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--po-bg").trim();
     expect(bg.length).toBeGreaterThan(0);
   });
 });
