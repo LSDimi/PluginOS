@@ -12,7 +12,7 @@ describe("ActivityLog", () => {
 
   it("renders an empty state when no entries", () => {
     new ActivityLog(host).render();
-    expect(host.textContent).toMatch(/no recent activity/i);
+    expect(host.textContent).toMatch(/no operations yet/i);
   });
 
   it("renders entries with success marker", () => {
@@ -30,12 +30,12 @@ describe("ActivityLog", () => {
     expect(host.querySelector(".activity-op")?.classList.contains("err")).toBe(true);
   });
 
-  it("caps visible entries to 5 but keeps up to 50 in memory", () => {
+  it("caps visible entries to 10 but keeps up to 50 in memory", () => {
     const log = new ActivityLog(host);
     for (let i = 0; i < 60; i++)
       log.push({ op: `op_${i}`, status: "ok", durationMs: 10, params: {} });
     log.render();
-    expect(host.querySelectorAll(".activity-row").length).toBe(5);
+    expect(host.querySelectorAll(".activity-row").length).toBe(10);
     expect(log.size()).toBe(50);
   });
 
