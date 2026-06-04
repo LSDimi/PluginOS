@@ -263,7 +263,7 @@ describe("execute_figma tool", () => {
     })) as ToolResult;
 
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.nodeCount).toBe(42);
+    expect(parsed.result.nodeCount).toBe(42);
     expect(result.isError).toBeFalsy();
 
     await clientTransport.close();

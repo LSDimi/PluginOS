@@ -6,6 +6,8 @@ import {
   CATEGORY_DESCRIPTIONS,
 } from "@pluginos/shared";
 import type { IPluginBridge } from "@pluginos/shared";
+import { wrapScript, PRELUDE_VERSION } from "./prelude/index.js";
+import { runLint } from "./lint/index.js";
 
 export function createPluginOSServer(bridge: IPluginBridge) {
   const server = new McpServer({
@@ -130,16 +132,29 @@ export function createPluginOSServer(bridge: IPluginBridge) {
     },
     async ({ code, timeout, file_key }) => {
       const safeTimeout = Math.min(timeout, 30000);
-      const msg = createExecuteMessage(code, safeTimeout);
+      const lint = runLint(code);
+      const { wrapped } = wrapScript(code);
+      const msg = createExecuteMessage(wrapped, safeTimeout);
+      const startedAt = Date.now();
 
       try {
         const result = await bridge.sendAndWait(msg, safeTimeout + 2000, file_key);
+        const durationMs = Date.now() - startedAt;
         if (result.success) {
           return {
             content: [
               {
                 type: "text" as const,
-                text: JSON.stringify(result.result, null, 2),
+                text: JSON.stringify(
+                  {
+                    result: result.result,
+                    lint,
+                    preludeVersion: PRELUDE_VERSION,
+                    durationMs,
+                  },
+                  null,
+                  2
+                ),
               },
             ],
           };
