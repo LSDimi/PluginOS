@@ -2,12 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  buildStateFile,
-  writeStateFile,
-  readStateFile,
-  removeStateFile,
-} from "../state-file.js";
+import { buildStateFile, writeStateFile, readStateFile, removeStateFile } from "../state-file.js";
 import type { StateFile } from "../types.js";
 
 describe("state-file", () => {

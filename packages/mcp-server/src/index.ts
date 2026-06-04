@@ -128,7 +128,10 @@ async function main(): Promise<void> {
   }
   registerShutdownHandlers();
 
-  const httpServer = createHttpServer(() => loadUiContent(), () => currentState);
+  const httpServer = createHttpServer(
+    () => loadUiContent(),
+    () => currentState
+  );
 
   const wsServer = new WebSocketPluginBridge({ httpServer });
   const port = await wsServer.start();

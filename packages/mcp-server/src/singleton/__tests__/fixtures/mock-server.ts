@@ -1,4 +1,9 @@
-import { acquireSingletonLock, writeSingletonState, buildStateFile, clearSingletonState } from "../../index.js";
+import {
+  acquireSingletonLock,
+  writeSingletonState,
+  buildStateFile,
+  clearSingletonState,
+} from "../../index.js";
 
 const stateDir = process.env.PLUGINOS_STATE_DIR;
 if (!stateDir) {

@@ -60,9 +60,7 @@ export async function acquireSingletonLock(opts: AcquireOptions = {}): Promise<S
     const result = await reapProcess(oldPid);
     if (result.reaped) {
       takeoverFromPid = oldPid;
-      console.error(
-        `[singleton] Reaped PID ${oldPid} (signal: ${result.usedSignal}). Took over.`
-      );
+      console.error(`[singleton] Reaped PID ${oldPid} (signal: ${result.usedSignal}). Took over.`);
     } else {
       console.error(
         `[singleton] Could not reap PID ${oldPid} — proceeding anyway. Port collision may occur.`
