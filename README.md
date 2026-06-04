@@ -101,7 +101,7 @@ The agent calls write operations to create frames, set text, and modify fills �
 
 ```
 Agent ── MCP (stdio) ──> PluginOS Server ── WebSocket ──> Bridge Plugin ──> Figma
-         5 tools           thin router        localhost      26 operations    full API
+         5 tools           thin router        localhost      many operations  full API
          ~600 tokens       routes by name     ports 9500-    executes locally figma.*
          per turn          + params only      9510           returns summaries
 ```
