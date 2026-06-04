@@ -53,11 +53,11 @@
     "@pluginos/shared": "*",
     "@types/adm-zip": "^0.5.8",
     "@types/ws": "^8.5.0",
-    "@vitest/coverage-v8": "^2.1.9",
+    "@vitest/coverage-v8": "^4.1.8",
     "adm-zip": "^0.5.17",
     "tsup": "^8.5.1",
     "tsx": "^4.19.0",
     "typescript": "^5.5.0",
-    "vitest": "^2.1.0"
+    "vitest": "^4.1.8"
   }
 }
