@@ -12,7 +12,7 @@
     "bin"
   ],
   "scripts": {
-    "build": "tsup && cp ../bridge-plugin/dist/ui.html dist/ui.html",
+    "build": "tsup && node scripts/bundle-bridge.cjs",
     "build:dxt": "node scripts/build-dxt.mjs",
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
