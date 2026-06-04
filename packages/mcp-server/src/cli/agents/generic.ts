@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- CLI module emits user-facing stdout messages */
 const SNIPPET = `{
   "mcpServers": {
     "pluginos": {

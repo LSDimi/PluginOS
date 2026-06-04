@@ -113,7 +113,7 @@ describe("runInstall --with-agent", () => {
   it("rejects unknown --with-agent value", async () => {
     const code = await runInstall(["--with-agent", "nonsense"], { skipBridge: true });
     expect(code).toBe(1);
-    const errOutput = err.mock.calls.map((c) => c.join(" ")).join("\n");
+    const errOutput = err.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
     expect(errOutput).toMatch(/unknown agent/i);
     expect(errOutput).toContain("cursor");
     expect(errOutput).toContain("generic");
@@ -122,7 +122,7 @@ describe("runInstall --with-agent", () => {
   it("accepts --with-agent generic and prints the snippet", async () => {
     const code = await runInstall(["--with-agent", "generic"], { skipBridge: true });
     expect(code).toBe(0);
-    const logOutput = log.mock.calls.map((c) => c.join(" ")).join("\n");
+    const logOutput = log.mock.calls.map((c: unknown[]) => c.join(" ")).join("\n");
     expect(logOutput).toContain("mcpServers");
   });
 });

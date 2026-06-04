@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- CLI module emits user-facing stdout messages */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

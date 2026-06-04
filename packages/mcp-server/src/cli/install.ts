@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- CLI module emits user-facing stdout messages */
 import { readFile, writeFile, rename, mkdir, access, chmod } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -88,10 +89,7 @@ export async function installBridge(opts: InstallOptions = {}): Promise<InstallR
   return { ok: true, action, version };
 }
 
-export async function runInstall(
-  args: string[],
-  opts: RunInstallOptions = {}
-): Promise<number> {
+export async function runInstall(args: string[], opts: RunInstallOptions = {}): Promise<number> {
   const withAgentIdx = args.indexOf("--with-agent");
   const agent = withAgentIdx >= 0 ? args[withAgentIdx + 1] : null;
 

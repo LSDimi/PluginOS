@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- CLI module emits user-facing stdout messages */
 import { readFile, writeFile, rename, mkdir, access } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";

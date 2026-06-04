@@ -2,12 +2,12 @@
 
 PluginOS has two halves: **the Figma plugin** (runs inside Figma) and **the MCP server** (runs alongside your agent tool). Install both.
 
-| You're using       | Install method                                            | Time  |
-|--------------------|-----------------------------------------------------------|-------|
-| Claude Desktop     | [Double-click `pluginos.dxt`](#claude-desktop)            | 30 s  |
-| Claude Code        | [`/plugin marketplace add LSDimi/pluginos`](#claude-code) | 30 s  |
-| Cursor             | [`npx pluginos install --with-agent cursor`](#cursor)     | 45 s  |
-| Any other MCP host | [`npx pluginos install`](#any-other-mcp-host)             | 60 s  |
+| You're using       | Install method                                            | Time |
+| ------------------ | --------------------------------------------------------- | ---- |
+| Claude Desktop     | [Double-click `pluginos.dxt`](#claude-desktop)            | 30 s |
+| Claude Code        | [`/plugin marketplace add LSDimi/pluginos`](#claude-code) | 30 s |
+| Cursor             | [`npx pluginos install --with-agent cursor`](#cursor)     | 45 s |
+| Any other MCP host | [`npx pluginos install`](#any-other-mcp-host)             | 60 s |
 
 ---
 
