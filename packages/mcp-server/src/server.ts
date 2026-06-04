@@ -206,5 +206,68 @@ export function createPluginOSServer(bridge: IPluginBridge) {
     }
   );
 
+  server.tool(
+    "wait_for_reconnect",
+    "Wait for the PluginOS Bridge plugin to reconnect after a disconnect. " +
+      "Returns when the bridge reports connected, or when timeoutSec elapses. " +
+      "Use this when a prior tool call returned 'No plugin connected' to gracefully " +
+      "wait for the user to relaunch the plugin instead of immediately failing back to chat.",
+    {
+      timeoutSec: z
+        .number()
+        .int()
+        .min(1)
+        .max(300)
+        .default(60)
+        .describe("Maximum seconds to wait. Default 60, max 300."),
+    },
+    async ({ timeoutSec }) => {
+      const startedAt = Date.now();
+      const deadline = startedAt + timeoutSec * 1000;
+
+      while (Date.now() < deadline) {
+        if (bridge.isConnected()) {
+          const status = bridge.getStatus();
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(
+                  {
+                    connected: true,
+                    waitedMs: Date.now() - startedAt,
+                    fileName: status.fileName,
+                    fileKey: status.fileKey,
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+          };
+        }
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(
+              {
+                connected: false,
+                waitedMs: Date.now() - startedAt,
+                timeoutSec,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+        isError: true,
+      };
+    }
+  );
+
   return server;
 }
