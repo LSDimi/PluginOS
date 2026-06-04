@@ -141,6 +141,19 @@ function wireDxtButton(): void {
   });
 }
 
+function wireMismatchCopyButtons(): void {
+  const copyUpdate = document.getElementById("btn-copy-update");
+  const copyPath = document.getElementById("btn-copy-path");
+  copyUpdate?.addEventListener("click", () => {
+    const cmd = document.getElementById("mismatch-cmd")?.textContent ?? "";
+    navigator.clipboard?.writeText(cmd);
+  });
+  copyPath?.addEventListener("click", () => {
+    const path = document.getElementById("mismatch-path")?.textContent ?? "";
+    navigator.clipboard?.writeText(path);
+  });
+}
+
 function recordHistory(entry: LogEntry): void {
   activityLog.push(entry);
   activityLog.render();
@@ -346,6 +359,7 @@ function bootstrap(): void {
   wireWhyToggle();
   wireRetryButton();
   wireDxtButton();
+  wireMismatchCopyButtons();
   activityLog = new ActivityLog($("activity-log"));
   activityLog.render();
   void scanAndConnect();
