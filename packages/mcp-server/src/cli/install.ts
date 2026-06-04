@@ -2,6 +2,14 @@ import { readFile, writeFile, rename, mkdir, access, chmod } from "node:fs/promi
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
+import { runCursorAgent } from "./agents/cursor.js";
+import { runGenericAgent } from "./agents/generic.js";
+
+const SUPPORTED_AGENTS = new Set(["cursor", "generic"]);
+
+export interface RunInstallOptions {
+  skipBridge?: boolean;
+}
 
 export interface InstallOptions {
   sourceDir?: string;
@@ -80,30 +88,46 @@ export async function installBridge(opts: InstallOptions = {}): Promise<InstallR
   return { ok: true, action, version };
 }
 
-export async function runInstall(args: string[]): Promise<number> {
+export async function runInstall(
+  args: string[],
+  opts: RunInstallOptions = {}
+): Promise<number> {
   const withAgentIdx = args.indexOf("--with-agent");
   const agent = withAgentIdx >= 0 ? args[withAgentIdx + 1] : null;
 
-  const result = await installBridge();
-  if (!result.ok) {
-    console.error(`✗ ${result.error}`);
-    console.error("Try: npm install -g pluginos@latest");
+  if (agent !== null && !SUPPORTED_AGENTS.has(agent)) {
+    console.error(`✗ unknown agent: ${agent}`);
+    console.error("supported agents: cursor, generic");
     return 1;
   }
 
-  const verb = result.action === "updated" ? "✓ updated to" : "✓ PluginOS Bridge";
-  const target = join(homedir(), ".pluginos", "bridge");
-  console.log(`${verb} v${result.version} installed to:`);
-  console.log(`  ${target}`);
-  console.log("");
-  console.log("Next: open Figma → Plugins → Development → Import plugin from manifest…");
-  console.log(`      and select: ${join(target, "manifest.json")}`);
-  console.log("");
-  console.log('Then run "PluginOS Bridge" from the Plugins menu and you\'re connected.');
+  if (!opts.skipBridge) {
+    const result = await installBridge();
+    if (!result.ok) {
+      console.error(`✗ ${result.error}`);
+      console.error("Try: npm install -g pluginos@latest");
+      return 1;
+    }
 
-  if (agent) {
+    const verb = result.action === "updated" ? "✓ updated to" : "✓ PluginOS Bridge";
+    const target = join(homedir(), ".pluginos", "bridge");
+    console.log(`${verb} v${result.version} installed to:`);
+    console.log(`  ${target}`);
     console.log("");
-    console.log(`(--with-agent ${agent}: not yet wired in this task)`);
+    console.log("Next: open Figma → Plugins → Development → Import plugin from manifest…");
+    console.log(`      and select: ${join(target, "manifest.json")}`);
+    console.log("");
+    console.log('Then run "PluginOS Bridge" from the Plugins menu and you\'re connected.');
+  }
+
+  if (agent === "cursor") {
+    console.log("");
+    const code = await runCursorAgent();
+    if (code !== 0) return code;
+  } else if (agent === "generic") {
+    console.log("");
+    const code = await runGenericAgent();
+    if (code !== 0) return code;
   }
 
   return 0;

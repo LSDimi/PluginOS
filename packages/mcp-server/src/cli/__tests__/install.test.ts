@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { installBridge, type InstallOptions } from "../install.js";
+import { installBridge, runInstall, type InstallOptions } from "../install.js";
 
 const FIXTURE_FILES = {
   "manifest.json": '{"name":"PluginOS Bridge","version":"0.4.4"}',
@@ -93,5 +93,36 @@ describe("installBridge", () => {
     expect(first.action).toBe("installed");
     const second = await installBridge({ sourceDir, targetDir });
     expect(second.action).toBe("updated");
+  });
+});
+
+describe("runInstall --with-agent", () => {
+  let log: ReturnType<typeof vi.spyOn>;
+  let err: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    log = vi.spyOn(console, "log").mockImplementation(() => {});
+    err = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    log.mockRestore();
+    err.mockRestore();
+  });
+
+  it("rejects unknown --with-agent value", async () => {
+    const code = await runInstall(["--with-agent", "nonsense"], { skipBridge: true });
+    expect(code).toBe(1);
+    const errOutput = err.mock.calls.map((c) => c.join(" ")).join("\n");
+    expect(errOutput).toMatch(/unknown agent/i);
+    expect(errOutput).toContain("cursor");
+    expect(errOutput).toContain("generic");
+  });
+
+  it("accepts --with-agent generic and prints the snippet", async () => {
+    const code = await runInstall(["--with-agent", "generic"], { skipBridge: true });
+    expect(code).toBe(0);
+    const logOutput = log.mock.calls.map((c) => c.join(" ")).join("\n");
+    expect(logOutput).toContain("mcpServers");
   });
 });

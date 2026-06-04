@@ -38,9 +38,10 @@ export function printVersion(): void {
 export async function runCli(args: string[]): Promise<number> {
   const subcommand = args[0];
   switch (subcommand) {
-    case "install":
-      console.log("install: not yet implemented");
-      return 0;
+    case "install": {
+      const { runInstall } = await import("./install.js");
+      return runInstall(args.slice(1));
+    }
     case "--help":
     case "-h":
       printUsage();
