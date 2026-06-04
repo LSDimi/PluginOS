@@ -3,6 +3,7 @@ import { attachThemeListener, detectInitialTheme, applyTheme } from "./ui/theme"
 import { getLastPort, setLastPort } from "./ui/storage";
 import { ActivityLog, type LogEntry } from "./ui/activity-log";
 import { isCompatible } from "./ui/version-check";
+import { renderUI, formatElapsed, type AppState } from "./ui/render-ui";
 import {
   VERSION,
   DXT_DOWNLOAD_URL,
@@ -27,48 +28,97 @@ let reconnectIndex = 0;
 let reconnectTimer: number | null = null;
 let reconnectStartedAt = 0;
 let activityLog: ActivityLog;
-let runStartedAt = 0;
-let elapsedTimer: number | null = null;
 let cachedFileName = "—";
+let currentState: AppState = { kind: "disconnected" };
+let elapsedTimer: number | null = null;
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
-function setStatus(state: StatusState, text?: string): void {
-  const pill = $("status-pill");
-  pill.dataset.state = state;
-  const textMap: Record<StatusState, string> = {
-    disconnected: "Not connected",
-    connecting: "Connecting…",
-    connected: "Connected",
-    running: "Running",
-    mismatch: "Update needed",
-  };
-  $("status-text").textContent = text ?? textMap[state];
+function setState(next: AppState): void {
+  currentState = next;
+  renderUI(next);
+  if (activityLog) {
+    activityLog.render();
+  }
+
+  if (next.kind === "connected" && next.running) {
+    if (elapsedTimer === null) {
+      elapsedTimer = window.setInterval(() => {
+        if (currentState.kind === "connected" && currentState.running) {
+          const elapsed = document.getElementById("run-elapsed");
+          if (elapsed) {
+            elapsed.textContent = formatElapsed(Date.now() - currentState.running.startedAt);
+          }
+        }
+      }, 100);
+    }
+  } else if (elapsedTimer !== null) {
+    clearInterval(elapsedTimer);
+    elapsedTimer = null;
+  }
 }
 
-function showView(view: "disconnected" | "connected" | "mismatch"): void {
-  $("view-disconnected").hidden = view !== "disconnected";
-  $("view-connected").hidden = view !== "connected";
-  $("view-mismatch").hidden = view !== "mismatch";
+function computeNextStateFromStatus(prev: AppState, status: StatusState): AppState {
+  switch (status) {
+    case "disconnected":
+      return { kind: "disconnected" };
+    case "connecting":
+      return {
+        kind: "connecting",
+        lastKnownPort: prev.kind === "connected" ? prev.port : null,
+      };
+    case "connected":
+      if (prev.kind === "connected") {
+        return { ...prev, running: null };
+      }
+      return {
+        kind: "connected",
+        file: { name: "—", key: "—" },
+        port: 0,
+        running: null,
+      };
+    case "running":
+      // running is set by the op-start code path that has the op info;
+      // a bare setStatus("running") preserves prev state.
+      return prev;
+    case "mismatch":
+      return {
+        kind: "mismatch",
+        reason: "",
+        serverVersion: "—",
+        pluginVersion: "—",
+      };
+  }
+}
+
+function setStatus(state: StatusState, _text?: string): void {
+  // Adapter: maps the old 5-state model onto the new AppState union.
+  // Existing call sites still work; future PR can inline at the call sites.
+  const next = computeNextStateFromStatus(currentState, state);
+  setState(next);
+}
+
+function showView(_view: "disconnected" | "connected" | "mismatch"): void {
+  // Adapter: view switching is now driven by setState/renderUI.
+  // Kept as a no-op so existing call sites compile during the migration.
 }
 
 function showRunning(running: boolean, op?: string, params?: Record<string, unknown>): void {
-  $("running-block").hidden = !running;
-  $("idle-block").hidden = running;
   if (running) {
-    runStartedAt = Date.now();
-    $("run-op").textContent = op ?? "—";
-    $("run-params").textContent = formatParams(params);
-    if (elapsedTimer != null) window.clearInterval(elapsedTimer);
-    elapsedTimer = window.setInterval(() => {
-      const s = ((Date.now() - runStartedAt) / 1000).toFixed(1);
-      $("run-elapsed").textContent = `${s}s elapsed`;
-    }, 100);
-    setStatus("running");
+    if (currentState.kind === "connected") {
+      setState({
+        ...currentState,
+        running: {
+          name: op ?? "—",
+          paramsPreview: formatParams(params),
+          startedAt: Date.now(),
+        },
+      });
+    }
   } else {
-    if (elapsedTimer != null) window.clearInterval(elapsedTimer);
-    elapsedTimer = null;
-    setStatus("connected");
+    if (currentState.kind === "connected") {
+      setState({ ...currentState, running: null });
+    }
   }
 }
 
@@ -155,10 +205,12 @@ function showMismatch(serverVersion: string): void {
         ? `/plugin marketplace update LSDimi/pluginos`
         : `npx pluginos@${VERSION}`;
   $("mismatch-cmd").textContent = cmd;
-  $("mismatch-text").textContent =
-    `Plugin v${VERSION} expects a compatible server. Server reported v${serverVersion}.`;
-  setStatus("mismatch");
-  showView("mismatch");
+  setState({
+    kind: "mismatch",
+    reason: "Reinstall both halves of PluginOS to the same version.",
+    serverVersion: serverVersion ?? "—",
+    pluginVersion: VERSION,
+  });
 }
 
 async function scanAndConnect(): Promise<void> {
@@ -241,11 +293,12 @@ function attachSocketHandlers(socket: WebSocket, port: number): void {
         socket.close();
         return;
       }
-      $("port-url").textContent = `ws://localhost:${port}`;
-      $("file-name").textContent = cachedFileName;
-      setStatus("connected");
-      showView("connected");
-      activityLog.render();
+      setState({
+        kind: "connected",
+        file: { name: cachedFileName, key: "—" },
+        port,
+        running: null,
+      });
       reconnectIndex = 0;
       // Tell code.ts so it can post the initial status (file name, etc.) back through us.
       parent.postMessage({ pluginMessage: { type: "ws-connected" } }, "*");
@@ -328,8 +381,9 @@ function attachPluginMessageListener(): void {
     if (!msg) return;
     if (msg.type === "FILE_NAME") {
       cachedFileName = msg.name ?? "—";
-      const el = document.getElementById("file-name");
-      if (el) el.textContent = cachedFileName;
+      if (currentState.kind === "connected") {
+        setState({ ...currentState, file: { ...currentState.file, name: cachedFileName } });
+      }
     }
     // THEME_CHANGE is handled by theme.ts's own listener.
   });
