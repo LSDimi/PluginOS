@@ -47,7 +47,6 @@ let singletonInfo: SingletonInfo | null = null;
 let currentParentAlive = true;
 let parentLivenessInterval: NodeJS.Timeout | null = null;
 let selfTerminateTimeout: NodeJS.Timeout | null = null;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 let currentState: StateFile | null = null;
 
 const PARENT_LIVENESS_INTERVAL_MS = 10_000;
@@ -129,7 +128,7 @@ async function main(): Promise<void> {
   }
   registerShutdownHandlers();
 
-  const httpServer = createHttpServer(() => loadUiContent());
+  const httpServer = createHttpServer(() => loadUiContent(), () => currentState);
 
   const wsServer = new WebSocketPluginBridge({ httpServer });
   const port = await wsServer.start();
