@@ -59,6 +59,7 @@ If any `pluginos.*` tool returns "No plugin connected" or times out:
 1. Tell the user: "Open the PluginOS Bridge plugin in Figma (Plugins → PluginOS Bridge → Run), then let me know."
 2. Do NOT silently fall back to Figma MCP.
 3. Wait for confirmation before retrying.
+4. If the user relaunches the plugin mid-task, call `pluginos.wait_for_reconnect({ timeoutSec: 60 })` to gracefully block until reconnect, then retry the failed op.
 
 ## Don'ts
 
