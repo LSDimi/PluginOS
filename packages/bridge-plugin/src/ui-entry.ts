@@ -3,6 +3,7 @@ import { attachThemeListener, detectInitialTheme, applyTheme } from "./ui/theme"
 import { getLastPort, setLastPort } from "./ui/storage";
 import { ActivityLog, type LogEntry } from "./ui/activity-log";
 import { isCompatible } from "./ui/version-check";
+import { discoverCandidatePorts } from "./discovery.js";
 import {
   VERSION,
   DXT_DOWNLOAD_URL,
@@ -171,13 +172,29 @@ async function scanAndConnect(): Promise<void> {
     if (lastPort) order.push(lastPort);
     for (let p = PORT_MIN; p <= PORT_MAX; p++) if (p !== lastPort) order.push(p);
 
+    // Phase 1: discovery probe — find live servers via /state.json
+    const ranked = await discoverCandidatePorts(order);
+
+    // Phase 2: try ranked candidates first (parentAlive=true, newest first)
+    for (const candidate of ranked) {
+      const ok = await tryConnect(candidate.port);
+      if (ok) {
+        setLastPort(candidate.port);
+        return;
+      }
+    }
+
+    // Phase 3: fallback — try all ports in original order (preserves existing scan behavior)
+    const triedPorts = new Set(ranked.map((c) => c.port));
     for (const port of order) {
+      if (triedPorts.has(port)) continue;
       const ok = await tryConnect(port);
       if (ok) {
         setLastPort(port);
         return;
       }
     }
+
     setStatus("disconnected");
     scheduleReconnect();
   } finally {
