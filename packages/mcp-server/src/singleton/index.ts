@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { acquireLock, releaseLock } from "./lockfile.js";
 import { readPidFile, writePidFile, removePidFile } from "./pid-file.js";
 import { reapProcess } from "./takeover.js";
-import { writeStateFile, removeStateFile, buildStateFile } from "./state-file.js";
+import { writeStateFile, removeStateFile } from "./state-file.js";
 import type { SingletonInfo, StateFile } from "./types.js";
 
 export { buildStateFile, writeStateFile, readStateFile, removeStateFile } from "./state-file.js";
