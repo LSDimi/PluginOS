@@ -3,7 +3,7 @@ import { attachThemeListener, detectInitialTheme, applyTheme } from "./ui/theme"
 import { getLastPort, setLastPort } from "./ui/storage";
 import { ActivityLog, type LogEntry } from "./ui/activity-log";
 import { isCompatible } from "./ui/version-check";
-import { discoverCandidatePorts } from "./discovery.js";
+import { discoverCandidatePorts } from "./discovery";
 import {
   VERSION,
   DXT_DOWNLOAD_URL,
