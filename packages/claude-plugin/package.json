@@ -5,6 +5,7 @@
   "description": "Claude Code plugin for PluginOS — bundles MCP server registration and the pluginos-figma skill.",
   "scripts": {
     "sync-ops": "tsx scripts/sync-ops.ts",
+    "sync-recipes": "tsx scripts/sync-recipes.ts",
     "build": "npm run sync-ops",
     "test": "vitest run"
   },
