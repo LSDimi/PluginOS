@@ -1,6 +1,6 @@
 import type { LintRule, LintResult } from "../types.js";
 
-const PATTERN = /\bfigma\.notify\s*\(/g;
+const PATTERN = /\bfigma\.notify\s*\(/;
 
 export const noNotifyRule: LintRule = {
   id: "no-notify",
@@ -16,7 +16,6 @@ export const noNotifyRule: LintRule = {
           line: i + 1,
           message: "figma.notify() is forbidden in the plugin sandbox. Remove the call.",
         });
-        PATTERN.lastIndex = 0;
       }
     }
     return out;

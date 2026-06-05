@@ -12,7 +12,13 @@ function readPackageVersion(): string {
   for (const p of candidates) {
     try {
       const pkg = JSON.parse(readFileSync(p, "utf8"));
-      if (pkg.name === "pluginos" && typeof pkg.version === "string") return pkg.version;
+      if (
+        typeof pkg.name === "string" &&
+        (pkg.name === "pluginos" || pkg.name.includes("pluginos")) &&
+        typeof pkg.version === "string"
+      ) {
+        return pkg.version;
+      }
     } catch {
       // try next
     }

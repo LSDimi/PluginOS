@@ -1,7 +1,7 @@
 import type { LintRule, LintResult } from "../types.js";
 
 const FIELDS = ["fillStyleId", "textStyleId", "strokeStyleId", "effectStyleId", "gridStyleId"];
-const PATTERN = new RegExp(`\\.(${FIELDS.join("|")})\\s*=\\s*[^=]`);
+const PATTERN = new RegExp(`\\.(${FIELDS.join("|")})\\s*=(?!=)`);
 
 export const noSyncStyleSettersRule: LintRule = {
   id: "no-sync-style-setters",

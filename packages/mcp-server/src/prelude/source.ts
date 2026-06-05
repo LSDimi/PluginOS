@@ -28,6 +28,7 @@ export const PRELUDE_SOURCE = `// --- PluginOS prelude ---
   };
 
   P.bindSpacing = async function(node, vars) {
+    if (!vars) return;
     if (!node || !('layoutMode' in node) || node.layoutMode === 'NONE') return;
     function pick(specific, axis, all) {
       if (specific) return specific;
@@ -97,6 +98,8 @@ export const PRELUDE_SOURCE = `// --- PluginOS prelude ---
   };
 
   P.layoutSpaceBetween = function(frame, opts) {
+    if (!frame) throw new Error('[PluginOS.layoutSpaceBetween] frame is required');
+    opts = opts || {};
     frame.primaryAxisAlignItems = 'MIN';
     var growChild = opts.growChild;
     if (!growChild && opts.children) {
@@ -105,8 +108,10 @@ export const PRELUDE_SOURCE = `// --- PluginOS prelude ---
       else if (kids.length === 2) growChild = kids[kids.length - 1];
     }
     if (!growChild) throw new Error('[PluginOS.layoutSpaceBetween] no growChild resolvable');
+    var isVertical = frame.layoutMode === 'VERTICAL';
     if (growChild.type === 'TEXT') {
-      growChild.layoutSizingHorizontal = 'FILL';
+      if (isVertical) growChild.layoutSizingVertical = 'FILL';
+      else growChild.layoutSizingHorizontal = 'FILL';
     } else {
       growChild.layoutGrow = 1;
     }

@@ -7,6 +7,9 @@ const PADDING_FIELDS = [
   "paddingRight",
   "itemSpacing",
 ];
+const PADDING_REGEXES: Array<RegExp> = PADDING_FIELDS.map(
+  (field) => new RegExp(`setBoundVariable\\s*\\(\\s*["']${field}["']`)
+);
 
 export const preferHelpersRule: LintRule = {
   id: "prefer-helpers",
@@ -21,7 +24,7 @@ export const preferHelpersRule: LintRule = {
       out.push({
         ruleId: "prefer-helpers",
         severity: "hint",
-        line: idx + 1,
+        line: idx >= 0 ? idx + 1 : 1,
         message:
           "Consider PluginOS.createStyledText({ characters, textStyleId, family, weight, size, fillStyleId, name }) — handles font load + create + style binding in one call.",
       });
@@ -29,8 +32,7 @@ export const preferHelpersRule: LintRule = {
     let paddingCount = 0;
     let firstPaddingLine = -1;
     for (let i = 0; i < lines.length; i++) {
-      for (const field of PADDING_FIELDS) {
-        const pattern = new RegExp(`setBoundVariable\\s*\\(\\s*["']${field}["']`);
+      for (const pattern of PADDING_REGEXES) {
         if (pattern.test(lines[i])) {
           paddingCount++;
           if (firstPaddingLine === -1) firstPaddingLine = i + 1;
