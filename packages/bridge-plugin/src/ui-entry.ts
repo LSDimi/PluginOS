@@ -65,7 +65,12 @@ function computeNextStateFromStatus(prev: AppState, status: StatusState): AppSta
     case "connecting":
       return {
         kind: "connecting",
-        lastKnownPort: prev.kind === "connected" ? prev.port : null,
+        lastKnownPort:
+          prev.kind === "connected"
+            ? prev.port
+            : prev.kind === "connecting"
+              ? prev.lastKnownPort
+              : null,
       };
     case "connected":
       if (prev.kind === "connected") {
@@ -204,12 +209,12 @@ function showMismatch(serverVersion: string): void {
       : agent === "claude-code"
         ? `/plugin marketplace update LSDimi/pluginos`
         : `npx pluginos@${VERSION}`;
-  $("mismatch-cmd").textContent = cmd;
   setState({
     kind: "mismatch",
     reason: "Reinstall both halves of PluginOS to the same version.",
     serverVersion: serverVersion ?? "—",
     pluginVersion: VERSION,
+    command: cmd,
   });
 }
 

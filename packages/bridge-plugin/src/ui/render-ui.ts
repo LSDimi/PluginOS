@@ -15,7 +15,13 @@ export type AppState =
       port: number;
       running: RunningOp | null;
     }
-  | { kind: "mismatch"; reason: string; serverVersion: string; pluginVersion: string };
+  | {
+      kind: "mismatch";
+      reason: string;
+      serverVersion: string;
+      pluginVersion: string;
+      command?: string;
+    };
 
 export function pillStateFor(state: AppState): string {
   if (state.kind === "connected" && state.running) return "running";
@@ -36,7 +42,8 @@ export function pillTextFor(state: AppState): string {
 }
 
 export function formatElapsed(ms: number): string {
-  const s = ms / 1000;
+  const safe = Math.max(0, ms);
+  const s = safe / 1000;
   if (s < 60) return `${s.toFixed(1)}s elapsed`;
   const minutes = Math.floor(s / 60);
   const seconds = Math.floor(s % 60);
@@ -76,9 +83,13 @@ export function renderUI(state: AppState): void {
     el("running-block").hidden = true;
   }
 
-  // 4. Mismatch view text
+  // 4. Mismatch view text + command
   if (state.kind === "mismatch") {
     el("mismatch-text").textContent =
       `Server ${state.serverVersion} doesn't match plugin ${state.pluginVersion}. ${state.reason}`;
+    if (state.command !== undefined) {
+      const cmdEl = document.getElementById("mismatch-cmd");
+      if (cmdEl) cmdEl.textContent = state.command;
+    }
   }
 }

@@ -57,20 +57,20 @@ module.exports = `
   --po-code-bg: var(--figma-color-bg, #1e1e1e);
   --po-btn-primary-bg: var(--figma-color-bg-brand, #ffffff);
   --po-btn-primary-fg: var(--figma-color-text-onbrand, #18181b);
-  --po-btn-secondary-bg: #383838;
-  --po-btn-secondary-fg: #f5f5f5;
-  --po-accent: #818cf8;
+  --po-btn-secondary-bg: var(--figma-color-bg-secondary, #383838);
+  --po-btn-secondary-fg: var(--figma-color-text, #f5f5f5);
+  --po-accent: var(--figma-color-bg-brand, #818cf8);
   --po-accent-soft: #2a2d3d;
-  --po-success: #34d399;
-  --po-success-soft: #053b2d;
-  --po-success-text: #6ee7b7;
-  --po-warn-soft: #3a2a05;
-  --po-warn-text: #fde68a;
-  --po-error: #f87171;
-  --po-error-soft: #3a1414;
-  --po-error-text: #fca5a5;
+  --po-success: var(--figma-color-bg-success, #34d399);
+  --po-success-soft: var(--figma-color-bg-success-secondary, #053b2d);
+  --po-success-text: var(--figma-color-text-success, #6ee7b7);
+  --po-warn-soft: var(--figma-color-bg-warning-secondary, #3a2a05);
+  --po-warn-text: var(--figma-color-text-warning, #fde68a);
+  --po-error: var(--figma-color-bg-danger, #f87171);
+  --po-error-soft: var(--figma-color-bg-danger-secondary, #3a1414);
+  --po-error-text: var(--figma-color-text-danger, #fca5a5);
   --po-running-soft: #1e2a4a;
-  --po-running-text: #93c5fd;
+  --po-running-text: var(--figma-color-text-component, #93c5fd);
   --po-shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.5);
 }
 
