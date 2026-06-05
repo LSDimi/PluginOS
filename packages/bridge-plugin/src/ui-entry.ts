@@ -197,6 +197,30 @@ function wireDxtButton(): void {
   });
 }
 
+function wireMismatchCopyButtons(): void {
+  function copyWithFeedback(btn: HTMLElement, sourceId: string): void {
+    const text = document.getElementById(sourceId)?.textContent ?? "";
+    const original = btn.textContent;
+    void (async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = "✓ Copied";
+      } catch {
+        btn.textContent = "⚠ Copy failed";
+      }
+      window.setTimeout(() => {
+        btn.textContent = original ?? "Copy";
+      }, 1500);
+    })();
+  }
+  document.getElementById("btn-copy-update")?.addEventListener("click", (e) => {
+    copyWithFeedback(e.currentTarget as HTMLElement, "mismatch-cmd");
+  });
+  document.getElementById("btn-copy-path")?.addEventListener("click", (e) => {
+    copyWithFeedback(e.currentTarget as HTMLElement, "mismatch-path");
+  });
+}
+
 function recordHistory(entry: LogEntry): void {
   activityLog.push(entry);
   activityLog.render();
@@ -422,6 +446,7 @@ function bootstrap(): void {
   wireWhyToggle();
   wireRetryButton();
   wireDxtButton();
+  wireMismatchCopyButtons();
   activityLog = new ActivityLog($("activity-log"));
   activityLog.render();
   void scanAndConnect();

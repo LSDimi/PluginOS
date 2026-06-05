@@ -209,14 +209,34 @@
       <div class="lead-sub" id="mismatch-text">
         The MCP server version doesn't match this plugin.
       </div>
+
+      <div class="divider"></div>
+
       <div class="step">
         <div class="step-header">
           <span class="step-num">1</span>
           <span class="step-label">Update command</span>
         </div>
-        <div class="step-action">
-          <div class="code" id="mismatch-cmd">—</div>
-          <button class="btn-icon" data-copy="mismatch">Copy</button>
+        <div class="step-body">
+          <code class="step-code" id="mismatch-cmd">npx pluginos@latest install</code>
+          <button class="btn-secondary" id="btn-copy-update">Copy</button>
+        </div>
+        <div class="step-hint">
+          Run this in a terminal, then restart your agent.
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-header">
+          <span class="step-num">2</span>
+          <span class="step-label">Re-import the plugin in Figma</span>
+        </div>
+        <div class="step-body">
+          <code class="step-code" id="mismatch-path">~/.pluginos/bridge/manifest.json</code>
+          <button class="btn-secondary" id="btn-copy-path">Copy</button>
+        </div>
+        <div class="step-hint">
+          Plugins → Development → Import plugin from manifest…
         </div>
       </div>
     </section>
