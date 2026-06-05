@@ -35,9 +35,9 @@ function defaultSourceDir(): string {
   //   - src/cli        (when running via tsx during development)
   // Try the candidates in order; first existing wins.
   const candidates = [
-    join(here, "bridge"),                              // dist/        → dist/bridge
-    join(here, "..", "bridge"),                        // dist/cli     → dist/bridge
-    join(here, "..", "..", "dist", "bridge"),          // src/cli      → dist/bridge
+    join(here, "bridge"), // dist/        → dist/bridge
+    join(here, "..", "bridge"), // dist/cli     → dist/bridge
+    join(here, "..", "..", "dist", "bridge"), // src/cli      → dist/bridge
   ];
   for (const candidate of candidates) {
     if (existsSync(candidate)) return candidate;
@@ -64,9 +64,9 @@ async function readBridgeVersion(_manifestPath: string): Promise<string | null> 
   // source of truth (same value as `pluginos --version`).
   const here = dirname(fileURLToPath(import.meta.url));
   const candidates = [
-    join(here, "..", "package.json"),                 // dist/        → package.json
-    join(here, "..", "..", "package.json"),           // dist/cli     → package.json
-    join(here, "..", "..", "..", "package.json"),     // src/cli      → package.json
+    join(here, "..", "package.json"), // dist/        → package.json
+    join(here, "..", "..", "package.json"), // dist/cli     → package.json
+    join(here, "..", "..", "..", "package.json"), // src/cli      → package.json
   ];
   for (const candidate of candidates) {
     try {
