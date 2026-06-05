@@ -142,15 +142,26 @@ function wireDxtButton(): void {
 }
 
 function wireMismatchCopyButtons(): void {
-  const copyUpdate = document.getElementById("btn-copy-update");
-  const copyPath = document.getElementById("btn-copy-path");
-  copyUpdate?.addEventListener("click", () => {
-    const cmd = document.getElementById("mismatch-cmd")?.textContent ?? "";
-    navigator.clipboard?.writeText(cmd);
+  function copyWithFeedback(btn: HTMLElement, sourceId: string): void {
+    const text = document.getElementById(sourceId)?.textContent ?? "";
+    const original = btn.textContent;
+    void (async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = "✓ Copied";
+      } catch {
+        btn.textContent = "⚠ Copy failed";
+      }
+      window.setTimeout(() => {
+        btn.textContent = original ?? "Copy";
+      }, 1500);
+    })();
+  }
+  document.getElementById("btn-copy-update")?.addEventListener("click", (e) => {
+    copyWithFeedback(e.currentTarget as HTMLElement, "mismatch-cmd");
   });
-  copyPath?.addEventListener("click", () => {
-    const path = document.getElementById("mismatch-path")?.textContent ?? "";
-    navigator.clipboard?.writeText(path);
+  document.getElementById("btn-copy-path")?.addEventListener("click", (e) => {
+    copyWithFeedback(e.currentTarget as HTMLElement, "mismatch-path");
   });
 }
 

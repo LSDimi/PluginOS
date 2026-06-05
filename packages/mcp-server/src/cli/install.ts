@@ -78,11 +78,20 @@ export async function installBridge(opts: InstallOptions = {}): Promise<InstallR
   const alreadyInstalled = await pathExists(targetManifest);
   const action: "installed" | "updated" = alreadyInstalled ? "updated" : "installed";
 
-  await mkdir(targetDir, { recursive: true });
-  await chmod(targetDir, 0o700).catch(() => {});
+  try {
+    await mkdir(targetDir, { recursive: true });
+    await chmod(targetDir, 0o700).catch(() => {
+      // chmod may fail on Windows/special FS — ignore
+    });
 
-  for (const name of BRIDGE_FILES) {
-    await copyAtomically(join(sourceDir, name), join(targetDir, name));
+    for (const name of BRIDGE_FILES) {
+      await copyAtomically(join(sourceDir, name), join(targetDir, name));
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      error: `filesystem error during install: ${(err as Error).message}`,
+    };
   }
 
   const version = (await readBridgeVersion(join(targetDir, "manifest.json"))) ?? "?";

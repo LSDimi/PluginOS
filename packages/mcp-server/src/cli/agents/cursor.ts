@@ -45,8 +45,9 @@ export async function writeCursorMcpConfig(opts: CursorOptions = {}): Promise<Cu
   let parsed: Record<string, unknown> = {};
   if (await pathExists(configPath)) {
     const raw = await readFile(configPath, "utf-8");
+    let raw_parsed: unknown;
     try {
-      parsed = JSON.parse(raw) as Record<string, unknown>;
+      raw_parsed = JSON.parse(raw);
     } catch {
       return {
         ok: false,
@@ -54,6 +55,14 @@ export async function writeCursorMcpConfig(opts: CursorOptions = {}): Promise<Cu
         error: `${configPath} contains invalid JSON — fix it first, then re-run`,
       };
     }
+    if (typeof raw_parsed !== "object" || raw_parsed === null || Array.isArray(raw_parsed)) {
+      return {
+        ok: false,
+        configPath,
+        error: `${configPath} must be a JSON object at the top level — current contents are ${Array.isArray(raw_parsed) ? "an array" : raw_parsed === null ? "null" : typeof raw_parsed}`,
+      };
+    }
+    parsed = raw_parsed as Record<string, unknown>;
   }
 
   const mcpServers = (parsed.mcpServers as Record<string, unknown> | undefined) ?? {};
