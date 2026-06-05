@@ -1,5 +1,6 @@
 /* eslint-disable no-console -- CLI module emits user-facing stdout messages */
 import { readFile, writeFile, rename, mkdir, access, chmod } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
@@ -28,7 +29,20 @@ const BRIDGE_FILES = ["manifest.json", "code.js", "ui.html", "bootloader.html"] 
 
 function defaultSourceDir(): string {
   const here = dirname(fileURLToPath(import.meta.url));
-  return join(here, "..", "bridge");
+  // tsup chunks the install module; at runtime `here` can be:
+  //   - dist/cli       (when imported directly by cli/index.js)
+  //   - dist/          (when tsup hoists install-XXX.js to dist root)
+  //   - src/cli        (when running via tsx during development)
+  // Try the candidates in order; first existing wins.
+  const candidates = [
+    join(here, "bridge"),                              // dist/        → dist/bridge
+    join(here, "..", "bridge"),                        // dist/cli     → dist/bridge
+    join(here, "..", "..", "dist", "bridge"),          // src/cli      → dist/bridge
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return candidates[0]; // fall back so the error message points to a real path
 }
 
 function defaultTargetDir(): string {
@@ -44,14 +58,32 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
-async function readBridgeVersion(manifestPath: string): Promise<string | null> {
-  try {
-    const text = await readFile(manifestPath, "utf-8");
-    const parsed = JSON.parse(text) as { version?: string };
-    return typeof parsed.version === "string" ? parsed.version : null;
-  } catch {
-    return null;
+async function readBridgeVersion(_manifestPath: string): Promise<string | null> {
+  // Figma plugin manifest has no `version` field — the bridge ships in lockstep
+  // with the mcp-server package, so use the mcp-server package.json as the
+  // source of truth (same value as `pluginos --version`).
+  const here = dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    join(here, "..", "package.json"),                 // dist/        → package.json
+    join(here, "..", "..", "package.json"),           // dist/cli     → package.json
+    join(here, "..", "..", "..", "package.json"),     // src/cli      → package.json
+  ];
+  for (const candidate of candidates) {
+    try {
+      const text = await readFile(candidate, "utf-8");
+      const parsed = JSON.parse(text) as { name?: string; version?: string };
+      if (
+        typeof parsed.name === "string" &&
+        (parsed.name === "pluginos" || parsed.name.includes("pluginos")) &&
+        typeof parsed.version === "string"
+      ) {
+        return parsed.version;
+      }
+    } catch {
+      // try next
+    }
   }
+  return null;
 }
 
 async function copyAtomically(src: string, dest: string): Promise<void> {
