@@ -8,7 +8,7 @@ export interface LogEntry {
 }
 
 const MAX_HISTORY = 50;
-const MAX_VISIBLE = 5;
+const MAX_VISIBLE = 10;
 
 export class ActivityLog {
   private entries: LogEntry[] = [];
@@ -28,7 +28,7 @@ export class ActivityLog {
 
   render(): void {
     if (this.entries.length === 0) {
-      this.host.innerHTML = `<div class="activity-empty">No recent activity</div>`;
+      this.host.innerHTML = `<div class="activity-empty">No operations yet — your agent will populate this as it runs.</div>`;
       return;
     }
     const rows = this.entries.slice(0, MAX_VISIBLE).map(this.row).join("");
