@@ -43,6 +43,11 @@ function loadUiContent(): string {
   return "<html><body><p>PluginOS UI not found. Run: npm run build -w packages/bridge-plugin</p></body></html>";
 }
 
+// Capture the original parent PID at module load. process.ppid returns 1 (init)
+// on Unix after the actual parent dies due to re-parenting — checking against
+// the captured initial PID detects the orphan condition reliably.
+const INITIAL_PARENT_PID = process.ppid;
+
 let singletonInfo: SingletonInfo | null = null;
 let currentParentAlive = true;
 let parentLivenessInterval: NodeJS.Timeout | null = null;
@@ -102,7 +107,7 @@ function registerShutdownHandlers(): void {
 async function startParentLivenessHeartbeat(initialState: StateFile): Promise<void> {
   parentLivenessInterval = setInterval(async () => {
     if (!singletonInfo) return;
-    const alive = isProcessAlive(process.ppid);
+    const alive = isProcessAlive(INITIAL_PARENT_PID);
     if (alive !== currentParentAlive) {
       currentParentAlive = alive;
       const updated: StateFile = { ...initialState, parentAlive: alive };
@@ -145,7 +150,7 @@ async function main(): Promise<void> {
     pid: process.pid,
     port,
     serverVersion: pkg.version,
-    parentPid: process.ppid,
+    parentPid: INITIAL_PARENT_PID,
     parentAlive: true,
   });
   currentState = state;

@@ -21,21 +21,25 @@ export async function fetchStateJson(port: number): Promise<StateFile | null> {
   try {
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    const res = await fetch(`http://127.0.0.1:${port}/state.json`, {
-      signal: controller.signal,
-    });
-    clearTimeout(t);
-    if (!res.ok) return null;
-    const body = (await res.json()) as unknown;
-    if (
-      typeof body === "object" &&
-      body !== null &&
-      typeof (body as { version?: unknown }).version === "number" &&
-      (body as { version: number }).version <= SUPPORTED_VERSION
-    ) {
-      return body as StateFile;
+    let res: Response;
+    try {
+      res = await fetch(`http://127.0.0.1:${port}/state.json`, {
+        signal: controller.signal,
+      });
+      if (!res.ok) return null;
+      const body = (await res.json()) as unknown;
+      if (
+        typeof body === "object" &&
+        body !== null &&
+        typeof (body as { version?: unknown }).version === "number" &&
+        (body as { version: number }).version <= SUPPORTED_VERSION
+      ) {
+        return body as StateFile;
+      }
+      return null;
+    } finally {
+      clearTimeout(t);
     }
-    return null;
   } catch {
     return null;
   }

@@ -41,6 +41,9 @@ async function pollUntilDead(
 }
 
 export async function reapProcess(pid: number, opts: ReapOptions = {}): Promise<ReapResult> {
+  if (pid === process.pid) {
+    return { reaped: false, usedSignal: null };
+  }
   const kill = opts.kill ?? defaultKill;
   const graceMs = opts.graceMs ?? 1000;
   const pollMs = opts.pollMs ?? 100;

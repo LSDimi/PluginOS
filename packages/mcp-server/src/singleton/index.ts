@@ -56,6 +56,11 @@ export async function acquireSingletonLock(opts: AcquireOptions = {}): Promise<S
 
   let takeoverFromPid: number | undefined;
   const oldPid = await readPidFile(pidFilePath);
+  if (oldPid === process.pid) {
+    // The PID file already points to us — nothing to reap.
+    await releaseLock(lockFilePath);
+    return { stateDir, pidFilePath, stateFilePath, lockFilePath };
+  }
   if (oldPid !== null && isProcessAlive(oldPid)) {
     const result = await reapProcess(oldPid);
     if (result.reaped) {

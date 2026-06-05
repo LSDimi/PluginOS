@@ -36,8 +36,11 @@ export async function acquireLock(
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const fh = await open(path, "wx");
-      await fh.write(String(process.pid));
-      await fh.close();
+      try {
+        await fh.write(String(process.pid));
+      } finally {
+        await fh.close();
+      }
       return { acquired: true, oldPid: stalePid };
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;

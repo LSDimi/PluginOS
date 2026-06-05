@@ -223,9 +223,10 @@ export function createPluginOSServer(bridge: IPluginBridge) {
     },
     async ({ timeoutSec }) => {
       const startedAt = Date.now();
-      const deadline = startedAt + timeoutSec * 1000;
+      const startedHrTime = process.hrtime.bigint();
+      const timeoutNs = BigInt(timeoutSec) * 1_000_000_000n;
 
-      while (Date.now() < deadline) {
+      while (process.hrtime.bigint() - startedHrTime < timeoutNs) {
         if (bridge.isConnected()) {
           const status = bridge.getStatus();
           return {
