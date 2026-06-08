@@ -6,7 +6,7 @@
  * Also preserves the legacy dist/ui.html for any existing consumers of
  * that path.
  */
-const { mkdirSync, copyFileSync, existsSync } = require("node:fs");
+const { mkdirSync, copyFileSync, existsSync, readFileSync, writeFileSync } = require("node:fs");
 const { join } = require("node:path");
 
 const here = __dirname;
@@ -43,6 +43,21 @@ for (const name of FILES) {
     process.exit(1);
   }
   copyFileSync(src, join(bridgeDistOut, name));
+}
+
+// The source manifest references `dist/code.js` and `dist/bootloader.html`
+// because importing the bridge-plugin's source manifest directly expects the
+// built files under dist/. In the flat install layout that `pluginos install`
+// produces (all four files side-by-side in ~/.pluginos/bridge/), those paths
+// must be stripped to bare filenames or Figma will fail to import the manifest.
+// Rewrite in place so the bundled manifest matches the bundled layout.
+{
+  const outManifest = join(bridgeDistOut, "manifest.json");
+  const parsed = JSON.parse(readFileSync(outManifest, "utf8"));
+  const stripDist = (p) => (typeof p === "string" ? p.replace(/^dist\//, "") : p);
+  parsed.main = stripDist(parsed.main);
+  parsed.ui = stripDist(parsed.ui);
+  writeFileSync(outManifest, JSON.stringify(parsed, null, 2) + "\n");
 }
 
 // Legacy: keep dist/ui.html for existing HTTP server consumers

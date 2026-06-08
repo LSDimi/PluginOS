@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile, readFile, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { installBridge, runInstall, type InstallOptions } from "../install.js";
@@ -97,6 +97,30 @@ describe("installBridge", () => {
     expect(first.action).toBe("installed");
     const second = await installBridge({ sourceDir, targetDir });
     expect(second.action).toBe("updated");
+  });
+
+  it("produces a manifest whose main/ui paths resolve to files that exist", async () => {
+    // Regression test for the Figma-import failure: if bundle-bridge.cjs ships
+    // a manifest with `main: "dist/code.js"` into a flat layout, the import
+    // breaks. Whichever layer rewrites the paths must keep them in sync with
+    // the files that actually land next to the manifest.
+    const realisticManifest = JSON.stringify({
+      name: "PluginOS Bridge",
+      id: "test",
+      api: "1.0.0",
+      editorType: ["figma"],
+      main: "code.js",
+      ui: "bootloader.html",
+    });
+    await writeFile(join(sourceDir, "manifest.json"), realisticManifest);
+    const result = await installBridge({ sourceDir, targetDir });
+    expect(result.ok).toBe(true);
+    const parsed = JSON.parse(await readFile(join(targetDir, "manifest.json"), "utf-8"));
+    expect(parsed.main).not.toMatch(/^dist\//);
+    expect(parsed.ui).not.toMatch(/^dist\//);
+    // Both referenced files must exist next to the manifest.
+    await expect(access(join(targetDir, parsed.main))).resolves.toBeUndefined();
+    await expect(access(join(targetDir, parsed.ui))).resolves.toBeUndefined();
   });
 });
 
