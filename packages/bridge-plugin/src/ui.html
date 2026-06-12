@@ -81,6 +81,7 @@
         <span class="dot"></span>
         <span id="status-text">Not connected</span>
       </span>
+      <button id="btn-setup" class="btn-icon" type="button" hidden>⚙ Setup</button>
     </div>
 
     <section id="view-disconnected" class="pb">
@@ -163,7 +164,7 @@
             <span class="step-label">Paste rules into .cursorrules</span>
           </div>
           <div class="step-action">
-            <div class="code">Tier 1 PluginOS usage rules</div>
+            <div class="code">Rules snippet: route Figma work through PluginOS</div>
             <button class="btn-icon" data-copy="other-3">Copy</button>
           </div>
           <div style="font-size: 10.5px; opacity: .55; margin-top: 8px; color: var(--po-text-sub);">Ensures your agent prefers PluginOS over generic Figma MCP tools.</div>
@@ -182,6 +183,10 @@
       <div class="meta">
         <div><strong>File</strong> &nbsp; <span id="file-name">—</span></div>
         <div><strong>Port</strong> &nbsp; <span class="mono" id="port-url">—</span></div>
+        <details class="ops-details">
+          <summary><strong>Operations</strong> &nbsp; <span id="ops-count">—</span></summary>
+          <div id="ops-list" class="mono" style="margin-top: 6px; max-height: 180px; overflow-y: auto; font-size: 11px; line-height: 1.7; opacity: 0.8;"></div>
+        </details>
       </div>
 
       <div id="running-block" hidden>
@@ -209,14 +214,34 @@
       <div class="lead-sub" id="mismatch-text">
         The MCP server version doesn't match this plugin.
       </div>
+
+      <div class="divider"></div>
+
       <div class="step">
         <div class="step-header">
           <span class="step-num">1</span>
           <span class="step-label">Update command</span>
         </div>
-        <div class="step-action">
-          <div class="code" id="mismatch-cmd">—</div>
-          <button class="btn-icon" data-copy="mismatch">Copy</button>
+        <div class="step-body">
+          <code class="step-code" id="mismatch-cmd">npx pluginos@latest install</code>
+          <button class="btn-secondary" id="btn-copy-update">Copy</button>
+        </div>
+        <div class="step-hint">
+          Run this in a terminal, then restart your agent.
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-header">
+          <span class="step-num">2</span>
+          <span class="step-label">Re-import the plugin in Figma</span>
+        </div>
+        <div class="step-body">
+          <code class="step-code" id="mismatch-path">~/.pluginos/bridge/manifest.json</code>
+          <button class="btn-secondary" id="btn-copy-path">Copy</button>
+        </div>
+        <div class="step-hint">
+          Plugins → Development → Import plugin from manifest…
         </div>
       </div>
     </section>

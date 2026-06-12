@@ -62,7 +62,8 @@ describe("list_operations tool", () => {
       arguments: {},
     })) as ToolResult;
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed).toEqual(ops);
+    expect(parsed.operations).toEqual(ops);
+    expect(parsed.total).toBe(2);
     expect(result.isError).toBeFalsy();
 
     await clientTransport.close();
@@ -120,6 +121,48 @@ describe("list_operations tool", () => {
 
     await clientTransport.close();
     await serverTransport.close();
+  });
+});
+
+// ─── list_operations total field ────────────────────────────────────
+
+describe("list_operations tool total field", () => {
+  it("wraps the bridge result with operations + total", async () => {
+    const fakeManifests = [
+      { name: "lint_styles", category: "lint", description: "x" },
+      { name: "check_contrast", category: "accessibility", description: "y" },
+      { name: "export_tokens", category: "tokens", description: "z" },
+    ];
+    const bridge = createMockBridge({
+      sendAndWait: vi.fn<IPluginBridge["sendAndWait"]>().mockResolvedValue({
+        id: "test",
+        type: "result",
+        success: true,
+        result: fakeManifests,
+      }),
+    });
+    const { client } = await setupClientServer(bridge);
+    const res = (await client.callTool({ name: "list_operations", arguments: {} })) as ToolResult;
+    expect(res.isError).toBeFalsy();
+    const payload = JSON.parse(res.content[0].text);
+    expect(payload.total).toBe(3);
+    expect(payload.operations).toEqual(fakeManifests);
+  });
+
+  it("preserves total when bridge result is already an empty array", async () => {
+    const bridge = createMockBridge({
+      sendAndWait: vi.fn<IPluginBridge["sendAndWait"]>().mockResolvedValue({
+        id: "test",
+        type: "result",
+        success: true,
+        result: [],
+      }),
+    });
+    const { client } = await setupClientServer(bridge);
+    const res = (await client.callTool({ name: "list_operations", arguments: {} })) as ToolResult;
+    const payload = JSON.parse(res.content[0].text);
+    expect(payload.total).toBe(0);
+    expect(payload.operations).toEqual([]);
   });
 });
 
@@ -263,7 +306,7 @@ describe("execute_figma tool", () => {
     })) as ToolResult;
 
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.nodeCount).toBe(42);
+    expect(parsed.result.nodeCount).toBe(42);
     expect(result.isError).toBeFalsy();
 
     await clientTransport.close();

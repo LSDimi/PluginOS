@@ -94,16 +94,26 @@
         agents.forEach(function (a) {
           a.addEventListener('click', function () { select(a.getAttribute('data-agent')); });
         });
+        // navigator.clipboard is permission-denied on Figma's null-origin
+        // iframe; the textarea + execCommand path still works there.
+        function copyTextCompat(t) {
+          var ta = document.createElement('textarea');
+          ta.value = t;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          var ok = false;
+          try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+          document.body.removeChild(ta);
+          return ok;
+        }
         document.querySelectorAll('[data-copy-text]').forEach(function (btn) {
           btn.addEventListener('click', function () {
             var t = btn.getAttribute('data-copy-text');
             var original = btn.textContent;
-            try {
-              navigator.clipboard.writeText(t);
-              btn.textContent = '✓ Copied';
-            } catch (e) {
-              btn.textContent = '⚠ Copy failed';
-            }
+            btn.textContent = copyTextCompat(t) ? '✓ Copied' : '⚠ Copy failed';
             setTimeout(function () { btn.textContent = original; }, 1500);
           });
         });
@@ -111,16 +121,30 @@
         function tryFetchUI() {
           var attempts = [];
           for (var p = PORT_MIN; p <= PORT_MAX; p++) attempts.push(p);
-          (function next(i) {
-            if (i >= attempts.length) return;
-            var port = attempts[i];
-            fetch('http://localhost:' + port + '/ui.html', { mode: 'cors' })
-              .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
-              .then(function (html) {
-                document.open(); document.write(html); document.close();
-              })
-              .catch(function () { next(i + 1); });
-          })(0);
+          // Legacy (pre-0.5.0) servers serve /ui.html but not /state.json.
+          // Fetching from one would load a stale UI that then "connects" to
+          // the legacy server — so only discovery-capable ports are eligible.
+          // If none answer, keep this bootloader setup screen (it has the
+          // install instructions and a Retry button).
+          Promise.all(attempts.map(function (port) {
+            return fetch('http://localhost:' + port + '/state.json', { mode: 'cors' })
+              .then(function (r) { return r.ok ? port : null; })
+              .catch(function () { return null; });
+          })).then(function (probed) {
+            var ranked = [];
+            for (var i = 0; i < probed.length; i++) if (probed[i] !== null) ranked.push(probed[i]);
+            if (!ranked.length) return;
+            (function next(i) {
+              if (i >= ranked.length) return;
+              var port = ranked[i];
+              fetch('http://localhost:' + port + '/ui.html', { mode: 'cors' })
+                .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
+                .then(function (html) {
+                  document.open(); document.write(html); document.close();
+                })
+                .catch(function () { next(i + 1); });
+            })(0);
+          });
         }
 
         document.getElementById('btn-retry').addEventListener('click', tryFetchUI);

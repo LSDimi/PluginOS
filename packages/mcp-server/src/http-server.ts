@@ -1,6 +1,10 @@
 import { createServer, IncomingMessage, ServerResponse, Server } from "http";
+import type { StateFile } from "./singleton/types.js";
 
-export function createHttpServer(getUiContent: () => string): Server {
+export function createHttpServer(
+  getUiContent: () => string,
+  getStateFile?: () => StateFile | null
+): Server {
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     // CORS for Figma plugin iframe
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -10,6 +14,23 @@ export function createHttpServer(getUiContent: () => string): Server {
     if (req.method === "OPTIONS") {
       res.writeHead(204);
       res.end();
+      return;
+    }
+
+    if (req.url === "/state.json" && req.method === "GET") {
+      if (!getStateFile) {
+        res.writeHead(503, { "Content-Type": "text/plain" });
+        res.end("No state available");
+        return;
+      }
+      const state = getStateFile();
+      if (state === null) {
+        res.writeHead(503, { "Content-Type": "text/plain" });
+        res.end("No state available");
+        return;
+      }
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(state));
       return;
     }
 

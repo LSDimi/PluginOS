@@ -1,6 +1,6 @@
 {
   "name": "pluginos",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Agent-native Figma operations platform — run 28 Figma operations from any LLM agent at ~230 tokens per call",
   "type": "module",
   "main": "dist/index.js",
@@ -12,7 +12,7 @@
     "bin"
   ],
   "scripts": {
-    "build": "tsup && cp ../bridge-plugin/dist/ui.html dist/ui.html",
+    "build": "tsup && node scripts/bundle-bridge.cjs",
     "build:dxt": "node scripts/build-dxt.mjs",
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
@@ -53,11 +53,11 @@
     "@pluginos/shared": "*",
     "@types/adm-zip": "^0.5.8",
     "@types/ws": "^8.5.0",
-    "@vitest/coverage-v8": "^2.1.9",
+    "@vitest/coverage-v8": "^4.1.8",
     "adm-zip": "^0.5.17",
     "tsup": "^8.5.1",
     "tsx": "^4.19.0",
     "typescript": "^5.5.0",
-    "vitest": "^2.1.0"
+    "vitest": "^4.1.8"
   }
 }

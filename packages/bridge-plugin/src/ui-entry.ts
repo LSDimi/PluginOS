@@ -3,6 +3,10 @@ import { attachThemeListener, detectInitialTheme, applyTheme } from "./ui/theme"
 import { getLastPort, setLastPort } from "./ui/storage";
 import { ActivityLog, type LogEntry } from "./ui/activity-log";
 import { isCompatible } from "./ui/version-check";
+import { connectWithHello } from "./ui/connect";
+import { copyText } from "./ui/clipboard";
+import { discoverCandidatePorts } from "./discovery";
+import { renderUI, formatElapsed, type AppState } from "./ui/render-ui";
 import {
   VERSION,
   DXT_DOWNLOAD_URL,
@@ -27,48 +31,104 @@ let reconnectIndex = 0;
 let reconnectTimer: number | null = null;
 let reconnectStartedAt = 0;
 let activityLog: ActivityLog;
-let runStartedAt = 0;
-let elapsedTimer: number | null = null;
 let cachedFileName = "—";
+let cachedOpsCount: number | undefined;
+let cachedOpsNames: string[] | undefined;
+let currentState: AppState = { kind: "disconnected" };
+let elapsedTimer: number | null = null;
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
-function setStatus(state: StatusState, text?: string): void {
-  const pill = $("status-pill");
-  pill.dataset.state = state;
-  const textMap: Record<StatusState, string> = {
-    disconnected: "Not connected",
-    connecting: "Connecting…",
-    connected: "Connected",
-    running: "Running",
-    mismatch: "Update needed",
-  };
-  $("status-text").textContent = text ?? textMap[state];
+function setState(next: AppState): void {
+  currentState = next;
+  renderUI(next);
+  if (activityLog) {
+    activityLog.render();
+  }
+
+  if (next.kind === "connected" && next.running) {
+    if (elapsedTimer === null) {
+      elapsedTimer = window.setInterval(() => {
+        if (currentState.kind === "connected" && currentState.running) {
+          const elapsed = document.getElementById("run-elapsed");
+          if (elapsed) {
+            elapsed.textContent = formatElapsed(Date.now() - currentState.running.startedAt);
+          }
+        }
+      }, 100);
+    }
+  } else if (elapsedTimer !== null) {
+    clearInterval(elapsedTimer);
+    elapsedTimer = null;
+  }
 }
 
-function showView(view: "disconnected" | "connected" | "mismatch"): void {
-  $("view-disconnected").hidden = view !== "disconnected";
-  $("view-connected").hidden = view !== "connected";
-  $("view-mismatch").hidden = view !== "mismatch";
+function computeNextStateFromStatus(prev: AppState, status: StatusState): AppState {
+  switch (status) {
+    case "disconnected":
+      return { kind: "disconnected" };
+    case "connecting":
+      return {
+        kind: "connecting",
+        lastKnownPort:
+          prev.kind === "connected"
+            ? prev.port
+            : prev.kind === "connecting"
+              ? prev.lastKnownPort
+              : null,
+      };
+    case "connected":
+      if (prev.kind === "connected") {
+        return { ...prev, running: null };
+      }
+      return {
+        kind: "connected",
+        file: { name: "—", key: "—" },
+        port: 0,
+        running: null,
+      };
+    case "running":
+      // running is set by the op-start code path that has the op info;
+      // a bare setStatus("running") preserves prev state.
+      return prev;
+    case "mismatch":
+      return {
+        kind: "mismatch",
+        reason: "",
+        serverVersion: "—",
+        pluginVersion: "—",
+      };
+  }
+}
+
+function setStatus(state: StatusState, _text?: string): void {
+  // Adapter: maps the old 5-state model onto the new AppState union.
+  // Existing call sites still work; future PR can inline at the call sites.
+  const next = computeNextStateFromStatus(currentState, state);
+  setState(next);
+}
+
+function showView(_view: "disconnected" | "connected" | "mismatch"): void {
+  // Adapter: view switching is now driven by setState/renderUI.
+  // Kept as a no-op so existing call sites compile during the migration.
 }
 
 function showRunning(running: boolean, op?: string, params?: Record<string, unknown>): void {
-  $("running-block").hidden = !running;
-  $("idle-block").hidden = running;
   if (running) {
-    runStartedAt = Date.now();
-    $("run-op").textContent = op ?? "—";
-    $("run-params").textContent = formatParams(params);
-    if (elapsedTimer != null) window.clearInterval(elapsedTimer);
-    elapsedTimer = window.setInterval(() => {
-      const s = ((Date.now() - runStartedAt) / 1000).toFixed(1);
-      $("run-elapsed").textContent = `${s}s elapsed`;
-    }, 100);
-    setStatus("running");
+    if (currentState.kind === "connected") {
+      setState({
+        ...currentState,
+        running: {
+          name: op ?? "—",
+          paramsPreview: formatParams(params),
+          startedAt: Date.now(),
+        },
+      });
+    }
   } else {
-    if (elapsedTimer != null) window.clearInterval(elapsedTimer);
-    elapsedTimer = null;
-    setStatus("connected");
+    if (currentState.kind === "connected") {
+      setState({ ...currentState, running: null });
+    }
   }
 }
 
@@ -95,11 +155,10 @@ function wireCopyButtons(): void {
       const key = btn.dataset.copy ?? "";
       const text = map[key]?.() ?? "";
       const original = btn.textContent;
-      try {
-        await navigator.clipboard.writeText(text);
+      if (await copyText(text)) {
         btn.classList.add("copied");
         btn.textContent = "✓ Copied";
-      } catch {
+      } else {
         btn.textContent = "⚠ Copy failed";
       }
       window.setTimeout(() => {
@@ -133,11 +192,38 @@ function wireRetryButton(): void {
   });
 }
 
+function wireSetupToggle(): void {
+  $("btn-setup").addEventListener("click", () => {
+    if (currentState.kind === "connected") {
+      setState({ ...currentState, setupOpen: !currentState.setupOpen });
+    }
+  });
+}
+
 function wireDxtButton(): void {
   // Use figma.openExternal via code.ts — clicking an <a href> would navigate
   // the plugin iframe itself and blank the UI (see handlers/open-external.ts).
   $("btn-dxt").addEventListener("click", () => {
     parent.postMessage({ pluginMessage: { type: "open-external", url: DXT_DOWNLOAD_URL } }, "*");
+  });
+}
+
+function wireMismatchCopyButtons(): void {
+  function copyWithFeedback(btn: HTMLElement, sourceId: string): void {
+    const text = document.getElementById(sourceId)?.textContent ?? "";
+    const original = btn.textContent;
+    void (async () => {
+      btn.textContent = (await copyText(text)) ? "✓ Copied" : "⚠ Copy failed";
+      window.setTimeout(() => {
+        btn.textContent = original ?? "Copy";
+      }, 1500);
+    })();
+  }
+  document.getElementById("btn-copy-update")?.addEventListener("click", (e) => {
+    copyWithFeedback(e.currentTarget as HTMLElement, "mismatch-cmd");
+  });
+  document.getElementById("btn-copy-path")?.addEventListener("click", (e) => {
+    copyWithFeedback(e.currentTarget as HTMLElement, "mismatch-path");
   });
 }
 
@@ -154,11 +240,13 @@ function showMismatch(serverVersion: string): void {
       : agent === "claude-code"
         ? `/plugin marketplace update LSDimi/pluginos`
         : `npx pluginos@${VERSION}`;
-  $("mismatch-cmd").textContent = cmd;
-  $("mismatch-text").textContent =
-    `Plugin v${VERSION} expects a compatible server. Server reported v${serverVersion}.`;
-  setStatus("mismatch");
-  showView("mismatch");
+  setState({
+    kind: "mismatch",
+    reason: "Reinstall both halves of PluginOS to the same version.",
+    serverVersion: serverVersion ?? "—",
+    pluginVersion: VERSION,
+    command: cmd,
+  });
 }
 
 async function scanAndConnect(): Promise<void> {
@@ -171,13 +259,29 @@ async function scanAndConnect(): Promise<void> {
     if (lastPort) order.push(lastPort);
     for (let p = PORT_MIN; p <= PORT_MAX; p++) if (p !== lastPort) order.push(p);
 
+    // Phase 1: discovery probe — find live servers via /state.json
+    const ranked = await discoverCandidatePorts(order);
+
+    // Phase 2: try ranked candidates first (parentAlive=true, newest first)
+    for (const candidate of ranked) {
+      const ok = await tryConnect(candidate.port);
+      if (ok) {
+        setLastPort(candidate.port);
+        return;
+      }
+    }
+
+    // Phase 3: fallback — try all ports in original order (preserves existing scan behavior)
+    const triedPorts = new Set(ranked.map((c) => c.port));
     for (const port of order) {
+      if (triedPorts.has(port)) continue;
       const ok = await tryConnect(port);
       if (ok) {
         setLastPort(port);
         return;
       }
     }
+
     setStatus("disconnected");
     scheduleReconnect();
   } finally {
@@ -185,42 +289,51 @@ async function scanAndConnect(): Promise<void> {
   }
 }
 
-function tryConnect(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    let settled = false;
-    let socket: WebSocket | null = null;
-    try {
-      socket = new WebSocket(`ws://localhost:${port}`);
-    } catch {
-      return resolve(false);
-    }
-    const timeout = window.setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        try {
-          socket?.close();
-        } catch {
-          /* ignore */
-        }
-        resolve(false);
-      }
-    }, 1500);
-    socket.addEventListener("open", () => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      activeSocket = socket;
-      attachSocketHandlers(socket!, port);
-      resolve(true);
-    });
-    socket.addEventListener("error", () => {
-      if (!settled) {
-        settled = true;
-        window.clearTimeout(timeout);
-        resolve(false);
-      }
-    });
+async function tryConnect(port: number): Promise<boolean> {
+  // A socket that opens is not a working server: legacy pre-0.5.0 servers
+  // accept connections but never send SERVER_HELLO. Success requires the
+  // hello within the deadline, otherwise we close and try the next port.
+  const result = await connectWithHello(`ws://localhost:${port}`, {
+    openTimeoutMs: 1500,
+    helloTimeoutMs: 2000,
   });
+  if (!result) return false;
+  const socket = result.socket as WebSocket;
+  if (activeSocket && activeSocket !== socket) {
+    try {
+      activeSocket.close();
+    } catch {
+      /* ignore */
+    }
+  }
+  activeSocket = socket;
+  attachSocketHandlers(socket, port);
+  handleHello(socket, port, result.helloVersion);
+  return true;
+}
+
+function handleHello(socket: WebSocket, port: number, serverVersion: string): void {
+  if (!isCompatible(VERSION, serverVersion)) {
+    showMismatch(serverVersion || "unknown");
+    // Stop the relay before tearing down so the close handler sees we
+    // intentionally disconnected (no reconnect scheduling).
+    activeSocket = null;
+    socket.close();
+    return;
+  }
+  setState({
+    kind: "connected",
+    file: { name: cachedFileName, key: "—" },
+    port,
+    running: null,
+    opsCount: cachedOpsCount,
+    opsNames: cachedOpsNames,
+  });
+  reconnectIndex = 0;
+  // Tell code.ts so it can post the initial status (file name, etc.) back through us.
+  parent.postMessage({ pluginMessage: { type: "ws-connected" } }, "*");
+  // Ask code.ts for the registered operations so the count can be shown.
+  parent.postMessage({ pluginMessage: { type: "__ui_list_operations" } }, "*");
 }
 
 function attachSocketHandlers(socket: WebSocket, port: number): void {
@@ -233,22 +346,9 @@ function attachSocketHandlers(socket: WebSocket, port: number): void {
       return;
     }
     if (msg?.type === "SERVER_HELLO") {
-      if (!isCompatible(VERSION, msg.version ?? "")) {
-        showMismatch(msg.version ?? "unknown");
-        // Stop the relay before tearing down so the close handler sees we
-        // intentionally disconnected (no reconnect scheduling).
-        activeSocket = null;
-        socket.close();
-        return;
-      }
-      $("port-url").textContent = `ws://localhost:${port}`;
-      $("file-name").textContent = cachedFileName;
-      setStatus("connected");
-      showView("connected");
-      activityLog.render();
-      reconnectIndex = 0;
-      // Tell code.ts so it can post the initial status (file name, etc.) back through us.
-      parent.postMessage({ pluginMessage: { type: "ws-connected" } }, "*");
+      // First hello is consumed by connectWithHello during tryConnect; this
+      // branch handles any re-hello the server sends on an established socket.
+      handleHello(socket, port, msg.version ?? "");
       return;
     }
     if (msg?.type === "OP_START") {
@@ -328,8 +428,20 @@ function attachPluginMessageListener(): void {
     if (!msg) return;
     if (msg.type === "FILE_NAME") {
       cachedFileName = msg.name ?? "—";
-      const el = document.getElementById("file-name");
-      if (el) el.textContent = cachedFileName;
+      if (currentState.kind === "connected") {
+        setState({ ...currentState, file: { ...currentState.file, name: cachedFileName } });
+      }
+    }
+    if (msg.type === "__ui_list_operations_result") {
+      const ops = Array.isArray(msg.operations) ? msg.operations : undefined;
+      cachedOpsCount = ops?.length;
+      cachedOpsNames = ops
+        ?.map((op: { name?: string }) => op?.name ?? "")
+        .filter((n: string) => n.length > 0)
+        .sort();
+      if (currentState.kind === "connected") {
+        setState({ ...currentState, opsCount: cachedOpsCount, opsNames: cachedOpsNames });
+      }
     }
     // THEME_CHANGE is handled by theme.ts's own listener.
   });
@@ -345,7 +457,9 @@ function bootstrap(): void {
   wireCopyButtons();
   wireWhyToggle();
   wireRetryButton();
+  wireSetupToggle();
   wireDxtButton();
+  wireMismatchCopyButtons();
   activityLog = new ActivityLog($("activity-log"));
   activityLog.render();
   void scanAndConnect();

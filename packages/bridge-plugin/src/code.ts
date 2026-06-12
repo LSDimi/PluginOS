@@ -48,6 +48,13 @@ figma.ui.onmessage = async (msg: any) => {
   }
 
   if (msg.type === "ws-connected") {
+    // The startup sendFileName landed in the bootloader iframe, which
+    // document.write()s itself away when it swaps in the real UI — resend
+    // so the post-swap UI has it. Deliberately NOT resending the theme:
+    // editorPreferences.theme reports "system" when the user follows the
+    // OS theme, which sendTheme coerces to "light" and would clobber the
+    // UI's own (correct) matchMedia detection from bootstrap.
+    sendFileName();
     sendFileStatus();
     return;
   }

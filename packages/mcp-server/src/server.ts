@@ -6,6 +6,8 @@ import {
   CATEGORY_DESCRIPTIONS,
 } from "@pluginos/shared";
 import type { IPluginBridge } from "@pluginos/shared";
+import { wrapScript, PRELUDE_VERSION } from "./prelude/index.js";
+import { runLint } from "./lint/index.js";
 
 export function createPluginOSServer(bridge: IPluginBridge) {
   const server = new McpServer({
@@ -34,11 +36,12 @@ export function createPluginOSServer(bridge: IPluginBridge) {
       try {
         const result = await bridge.sendAndWait(msg, 5000);
         if (result.success) {
+          const ops = Array.isArray(result.result) ? result.result : [];
           return {
             content: [
               {
                 type: "text" as const,
-                text: JSON.stringify(result.result, null, 2),
+                text: JSON.stringify({ operations: ops, total: ops.length }, null, 2),
               },
             ],
           };
@@ -130,16 +133,29 @@ export function createPluginOSServer(bridge: IPluginBridge) {
     },
     async ({ code, timeout, file_key }) => {
       const safeTimeout = Math.min(timeout, 30000);
-      const msg = createExecuteMessage(code, safeTimeout);
+      const lint = runLint(code);
+      const { wrapped } = wrapScript(code);
+      const msg = createExecuteMessage(wrapped, safeTimeout);
+      const startedAt = Date.now();
 
       try {
         const result = await bridge.sendAndWait(msg, safeTimeout + 2000, file_key);
+        const durationMs = Date.now() - startedAt;
         if (result.success) {
           return {
             content: [
               {
                 type: "text" as const,
-                text: JSON.stringify(result.result, null, 2),
+                text: JSON.stringify(
+                  {
+                    result: result.result,
+                    lint,
+                    preludeVersion: PRELUDE_VERSION,
+                    durationMs,
+                  },
+                  null,
+                  2
+                ),
               },
             ],
           };
@@ -202,6 +218,70 @@ export function createPluginOSServer(bridge: IPluginBridge) {
             }),
           },
         ],
+      };
+    }
+  );
+
+  server.tool(
+    "wait_for_reconnect",
+    "Wait for the PluginOS Bridge plugin to reconnect after a disconnect. " +
+      "Returns when the bridge reports connected, or when timeoutSec elapses. " +
+      "Use this when a prior tool call returned 'No plugin connected' to gracefully " +
+      "wait for the user to relaunch the plugin instead of immediately failing back to chat.",
+    {
+      timeoutSec: z
+        .number()
+        .int()
+        .min(1)
+        .max(300)
+        .default(60)
+        .describe("Maximum seconds to wait. Default 60, max 300."),
+    },
+    async ({ timeoutSec }) => {
+      const startedAt = Date.now();
+      const startedHrTime = process.hrtime.bigint();
+      const timeoutNs = BigInt(timeoutSec) * 1_000_000_000n;
+
+      while (process.hrtime.bigint() - startedHrTime < timeoutNs) {
+        if (bridge.isConnected()) {
+          const status = bridge.getStatus();
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify(
+                  {
+                    connected: true,
+                    waitedMs: Date.now() - startedAt,
+                    fileName: status.fileName,
+                    fileKey: status.fileKey,
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+          };
+        }
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(
+              {
+                connected: false,
+                waitedMs: Date.now() - startedAt,
+                timeoutSec,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+        isError: true,
       };
     }
   );

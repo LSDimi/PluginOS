@@ -5,6 +5,15 @@ import { createHttpServer } from "./http-server.js";
 import { readFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import {
+  acquireSingletonLock,
+  writeSingletonState,
+  clearSingletonState,
+  buildStateFile,
+  writeStateFile,
+} from "./singleton/index.js";
+import { unlinkSync } from "node:fs";
+import type { SingletonInfo, StateFile } from "./singleton/index.js";
 
 export { createPluginOSServer } from "./server.js";
 export {
@@ -34,15 +43,119 @@ function loadUiContent(): string {
   return "<html><body><p>PluginOS UI not found. Run: npm run build -w packages/bridge-plugin</p></body></html>";
 }
 
-async function main() {
-  // Re-read on every request so rebuilds land without restarting the server.
-  // ui.html is ~70KB; the tradeoff is worth the smoother dev loop and avoids
-  // stale UIs when users swap between local and published builds.
-  const httpServer = createHttpServer(() => loadUiContent());
+// Capture the original parent PID at module load. process.ppid returns 1 (init)
+// on Unix after the actual parent dies due to re-parenting — checking against
+// the captured initial PID detects the orphan condition reliably.
+const INITIAL_PARENT_PID = process.ppid;
+
+let singletonInfo: SingletonInfo | null = null;
+let currentParentAlive = true;
+let parentLivenessInterval: NodeJS.Timeout | null = null;
+let selfTerminateTimeout: NodeJS.Timeout | null = null;
+let currentState: StateFile | null = null;
+
+const PARENT_LIVENESS_INTERVAL_MS = 10_000;
+const ORPHAN_GRACE_MS = 30_000;
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+function registerShutdownHandlers(): void {
+  const cleanup = async (): Promise<void> => {
+    if (singletonInfo) {
+      await clearSingletonState(singletonInfo);
+    }
+    if (parentLivenessInterval) {
+      clearInterval(parentLivenessInterval);
+      parentLivenessInterval = null;
+    }
+    if (selfTerminateTimeout) {
+      clearTimeout(selfTerminateTimeout);
+      selfTerminateTimeout = null;
+    }
+  };
+  process.on("SIGTERM", async () => {
+    await cleanup();
+    process.exit(0);
+  });
+  process.on("SIGINT", async () => {
+    await cleanup();
+    process.exit(0);
+  });
+  process.on("exit", () => {
+    if (singletonInfo) {
+      try {
+        unlinkSync(singletonInfo.stateFilePath);
+      } catch {
+        // ignored
+      }
+      try {
+        unlinkSync(singletonInfo.pidFilePath);
+      } catch {
+        // ignored
+      }
+    }
+  });
+}
+
+async function startParentLivenessHeartbeat(initialState: StateFile): Promise<void> {
+  parentLivenessInterval = setInterval(async () => {
+    if (!singletonInfo) return;
+    const alive = isProcessAlive(INITIAL_PARENT_PID);
+    if (alive !== currentParentAlive) {
+      currentParentAlive = alive;
+      const updated: StateFile = { ...initialState, parentAlive: alive };
+      currentState = updated;
+      await writeStateFile(singletonInfo.stateFilePath, updated);
+    }
+    if (!alive && selfTerminateTimeout === null) {
+      console.error(
+        `[singleton] Parent PID ${initialState.parentPid} is dead. Self-terminating in ${ORPHAN_GRACE_MS / 1000}s.`
+      );
+      selfTerminateTimeout = setTimeout(() => {
+        console.error("[singleton] Grace period elapsed. Exiting.");
+        process.exit(0);
+      }, ORPHAN_GRACE_MS);
+    }
+  }, PARENT_LIVENESS_INTERVAL_MS);
+}
+
+async function main(): Promise<void> {
+  singletonInfo = await acquireSingletonLock();
+  if (singletonInfo.takeoverFromPid !== undefined) {
+    console.error(`PluginOS server: took over from PID ${singletonInfo.takeoverFromPid}`);
+  }
+  registerShutdownHandlers();
+
+  const httpServer = createHttpServer(
+    () => loadUiContent(),
+    () => currentState
+  );
 
   const wsServer = new WebSocketPluginBridge({ httpServer });
   const port = await wsServer.start();
   console.error(`PluginOS WebSocket + HTTP server on port ${port}`);
+
+  // Read package version for state.json
+  const pkgPath = join(__dirname, "..", "package.json");
+  const pkg = JSON.parse(readFileSync(pkgPath, "utf-8")) as { version: string };
+
+  const state = buildStateFile({
+    pid: process.pid,
+    port,
+    serverVersion: pkg.version,
+    parentPid: INITIAL_PARENT_PID,
+    parentAlive: true,
+  });
+  currentState = state;
+  await writeSingletonState(singletonInfo, state);
+  await startParentLivenessHeartbeat(state);
 
   const mcpServer = createPluginOSServer(wsServer);
   const transport = new StdioServerTransport();
