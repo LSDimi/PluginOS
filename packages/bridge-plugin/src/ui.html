@@ -164,7 +164,7 @@
             <span class="step-label">Paste rules into .cursorrules</span>
           </div>
           <div class="step-action">
-            <div class="code">Tier 1 PluginOS usage rules</div>
+            <div class="code">Rules snippet: route Figma work through PluginOS</div>
             <button class="btn-icon" data-copy="other-3">Copy</button>
           </div>
           <div style="font-size: 10.5px; opacity: .55; margin-top: 8px; color: var(--po-text-sub);">Ensures your agent prefers PluginOS over generic Figma MCP tools.</div>
@@ -183,7 +183,10 @@
       <div class="meta">
         <div><strong>File</strong> &nbsp; <span id="file-name">—</span></div>
         <div><strong>Port</strong> &nbsp; <span class="mono" id="port-url">—</span></div>
-        <div><strong>Operations</strong> &nbsp; <span id="ops-count">—</span></div>
+        <details class="ops-details">
+          <summary><strong>Operations</strong> &nbsp; <span id="ops-count">—</span></summary>
+          <div id="ops-list" class="mono" style="margin-top: 6px; max-height: 180px; overflow-y: auto; font-size: 11px; line-height: 1.7; opacity: 0.8;"></div>
+        </details>
       </div>
 
       <div id="running-block" hidden>

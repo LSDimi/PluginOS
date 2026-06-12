@@ -18,6 +18,8 @@ export type AppState =
       setupOpen?: boolean;
       /** Number of registered operations, reported by code.ts after connect. */
       opsCount?: number;
+      /** Operation names for the expandable list under the count. */
+      opsNames?: string[];
     }
   | {
       kind: "mismatch";
@@ -99,6 +101,16 @@ export function renderUI(state: AppState): void {
     el("port-url").textContent = `localhost:${state.port}`;
     const opsEl = document.getElementById("ops-count");
     if (opsEl) opsEl.textContent = state.opsCount !== undefined ? String(state.opsCount) : "—";
+    const opsList = document.getElementById("ops-list");
+    if (opsList) {
+      opsList.textContent = "";
+      for (const name of state.opsNames ?? []) {
+        const row = document.createElement("div");
+        row.className = "ops-item";
+        row.textContent = name;
+        opsList.appendChild(row);
+      }
+    }
     el("running-block").hidden = state.running === null;
     el("idle-block").hidden = state.running !== null;
     if (state.running) {

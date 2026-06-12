@@ -4,6 +4,7 @@ import { getLastPort, setLastPort } from "./ui/storage";
 import { ActivityLog, type LogEntry } from "./ui/activity-log";
 import { isCompatible } from "./ui/version-check";
 import { connectWithHello } from "./ui/connect";
+import { copyText } from "./ui/clipboard";
 import { discoverCandidatePorts } from "./discovery";
 import { renderUI, formatElapsed, type AppState } from "./ui/render-ui";
 import {
@@ -32,6 +33,7 @@ let reconnectStartedAt = 0;
 let activityLog: ActivityLog;
 let cachedFileName = "—";
 let cachedOpsCount: number | undefined;
+let cachedOpsNames: string[] | undefined;
 let currentState: AppState = { kind: "disconnected" };
 let elapsedTimer: number | null = null;
 
@@ -153,11 +155,10 @@ function wireCopyButtons(): void {
       const key = btn.dataset.copy ?? "";
       const text = map[key]?.() ?? "";
       const original = btn.textContent;
-      try {
-        await navigator.clipboard.writeText(text);
+      if (await copyText(text)) {
         btn.classList.add("copied");
         btn.textContent = "✓ Copied";
-      } catch {
+      } else {
         btn.textContent = "⚠ Copy failed";
       }
       window.setTimeout(() => {
@@ -212,12 +213,7 @@ function wireMismatchCopyButtons(): void {
     const text = document.getElementById(sourceId)?.textContent ?? "";
     const original = btn.textContent;
     void (async () => {
-      try {
-        await navigator.clipboard.writeText(text);
-        btn.textContent = "✓ Copied";
-      } catch {
-        btn.textContent = "⚠ Copy failed";
-      }
+      btn.textContent = (await copyText(text)) ? "✓ Copied" : "⚠ Copy failed";
       window.setTimeout(() => {
         btn.textContent = original ?? "Copy";
       }, 1500);
@@ -331,6 +327,7 @@ function handleHello(socket: WebSocket, port: number, serverVersion: string): vo
     port,
     running: null,
     opsCount: cachedOpsCount,
+    opsNames: cachedOpsNames,
   });
   reconnectIndex = 0;
   // Tell code.ts so it can post the initial status (file name, etc.) back through us.
@@ -436,9 +433,14 @@ function attachPluginMessageListener(): void {
       }
     }
     if (msg.type === "__ui_list_operations_result") {
-      cachedOpsCount = Array.isArray(msg.operations) ? msg.operations.length : undefined;
+      const ops = Array.isArray(msg.operations) ? msg.operations : undefined;
+      cachedOpsCount = ops?.length;
+      cachedOpsNames = ops
+        ?.map((op: { name?: string }) => op?.name ?? "")
+        .filter((n: string) => n.length > 0)
+        .sort();
       if (currentState.kind === "connected") {
-        setState({ ...currentState, opsCount: cachedOpsCount });
+        setState({ ...currentState, opsCount: cachedOpsCount, opsNames: cachedOpsNames });
       }
     }
     // THEME_CHANGE is handled by theme.ts's own listener.

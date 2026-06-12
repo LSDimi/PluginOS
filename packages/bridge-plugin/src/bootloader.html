@@ -94,16 +94,26 @@
         agents.forEach(function (a) {
           a.addEventListener('click', function () { select(a.getAttribute('data-agent')); });
         });
+        // navigator.clipboard is permission-denied on Figma's null-origin
+        // iframe; the textarea + execCommand path still works there.
+        function copyTextCompat(t) {
+          var ta = document.createElement('textarea');
+          ta.value = t;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          var ok = false;
+          try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+          document.body.removeChild(ta);
+          return ok;
+        }
         document.querySelectorAll('[data-copy-text]').forEach(function (btn) {
           btn.addEventListener('click', function () {
             var t = btn.getAttribute('data-copy-text');
             var original = btn.textContent;
-            try {
-              navigator.clipboard.writeText(t);
-              btn.textContent = '✓ Copied';
-            } catch (e) {
-              btn.textContent = '⚠ Copy failed';
-            }
+            btn.textContent = copyTextCompat(t) ? '✓ Copied' : '⚠ Copy failed';
             setTimeout(function () { btn.textContent = original; }, 1500);
           });
         });

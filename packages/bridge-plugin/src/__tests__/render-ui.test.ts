@@ -103,7 +103,7 @@ function setupDom(): void {
     <section id="view-connected" hidden>
       <span id="file-name">—</span>
       <span id="port-url">—</span>
-      <span id="ops-count">—</span>
+      <details><summary><span id="ops-count">—</span></summary><div id="ops-list"></div></details>
       <div id="running-block" hidden>
         <span id="run-op">—</span>
         <span id="run-params">—</span>
@@ -157,9 +157,41 @@ describe("renderUI", () => {
       file: { name: "F", key: "k" },
       port: 9500,
       running: null,
-      opsCount: 37,
+      opsCount: 26,
     });
-    expect(document.getElementById("ops-count")!.textContent).toBe("37");
+    expect(document.getElementById("ops-count")!.textContent).toBe("26");
+  });
+
+  it("renders the operation names into the disclosure list", () => {
+    renderUI({
+      kind: "connected",
+      file: { name: "F", key: "k" },
+      port: 9500,
+      running: null,
+      opsCount: 2,
+      opsNames: ["create_frame", "lint_styles"],
+    });
+    const list = document.getElementById("ops-list")!;
+    expect(list.textContent).toContain("create_frame");
+    expect(list.textContent).toContain("lint_styles");
+  });
+
+  it("clears the disclosure list when names are unknown", () => {
+    renderUI({
+      kind: "connected",
+      file: { name: "F", key: "k" },
+      port: 9500,
+      running: null,
+      opsCount: 2,
+      opsNames: ["create_frame"],
+    });
+    renderUI({
+      kind: "connected",
+      file: { name: "F", key: "k" },
+      port: 9500,
+      running: null,
+    });
+    expect(document.getElementById("ops-list")!.textContent).toBe("");
   });
 
   it("renders an em dash when the operations count is unknown", () => {
