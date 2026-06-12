@@ -14,6 +14,8 @@ export type AppState =
       file: { name: string; key: string };
       port: number;
       running: RunningOp | null;
+      /** When true, the setup/install panel is shown over the connected view. */
+      setupOpen?: boolean;
     }
   | {
       kind: "mismatch";
@@ -62,19 +64,31 @@ export function renderUI(state: AppState): void {
   pill.dataset.state = pillStateFor(state);
   el("status-text").textContent = pillTextFor(state);
 
-  // 2. Top-level views
-  el("view-disconnected").hidden = state.kind !== "disconnected" && state.kind !== "connecting";
-  el("view-connected").hidden = state.kind !== "connected";
+  // 2. Top-level views. The disconnected view doubles as the setup/install
+  // panel, so a connected user can reopen it via the header toggle.
+  const setupOpen = state.kind === "connected" && state.setupOpen === true;
+  el("view-disconnected").hidden =
+    state.kind !== "disconnected" && state.kind !== "connecting" && !setupOpen;
+  el("view-connected").hidden = state.kind !== "connected" || setupOpen;
   el("view-mismatch").hidden = state.kind !== "mismatch";
 
   // 2b. Manual-retry button: a port scan can take several seconds, and a
   // silent button reads as broken. Reflect the in-flight scan on the button
-  // itself. (Null-guarded: the button only exists in the disconnected view.)
+  // itself. Irrelevant while connected (setup panel open), so hide it there.
+  // (Null-guarded: the button only exists in the disconnected view.)
   const checkBtn = document.getElementById("btn-check") as HTMLButtonElement | null;
   if (checkBtn) {
     const scanning = state.kind === "connecting";
     checkBtn.disabled = scanning;
     checkBtn.textContent = scanning ? "Scanning…" : "Check for server";
+    checkBtn.hidden = state.kind === "connected";
+  }
+
+  // 2c. Header setup toggle: only meaningful while connected.
+  const setupBtn = document.getElementById("btn-setup") as HTMLButtonElement | null;
+  if (setupBtn) {
+    setupBtn.hidden = state.kind !== "connected";
+    setupBtn.textContent = setupOpen ? "◀ Done" : "⚙ Setup";
   }
 
   // 3. Connected sub-blocks

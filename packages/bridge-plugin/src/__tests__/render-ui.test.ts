@@ -96,6 +96,7 @@ describe("formatElapsed", () => {
 function setupDom(): void {
   document.body.innerHTML = `
     <div id="status-pill"><span id="status-text">—</span></div>
+    <button id="btn-setup" hidden>⚙ Setup</button>
     <section id="view-disconnected">
       <button id="btn-check">Check for server</button>
     </section>
@@ -147,6 +148,51 @@ describe("renderUI", () => {
     const btn = document.getElementById("btn-check") as HTMLButtonElement;
     expect(btn.disabled).toBe(false);
     expect(btn.textContent).toBe("Check for server");
+  });
+
+  it("shows the setup toggle only when connected, labeled '⚙ Setup'", () => {
+    renderUI({ kind: "disconnected" });
+    expect(document.getElementById("btn-setup")!.hidden).toBe(true);
+
+    renderUI({ kind: "connected", file: { name: "F", key: "k" }, port: 9500, running: null });
+    const btn = document.getElementById("btn-setup")!;
+    expect(btn.hidden).toBe(false);
+    expect(btn.textContent).toBe("⚙ Setup");
+  });
+
+  it("setupOpen shows the setup panel over the connected view and flips the label", () => {
+    renderUI({
+      kind: "connected",
+      file: { name: "F", key: "k" },
+      port: 9500,
+      running: null,
+      setupOpen: true,
+    });
+    expect(document.getElementById("view-disconnected")!.hidden).toBe(false);
+    expect(document.getElementById("view-connected")!.hidden).toBe(true);
+    expect(document.getElementById("btn-setup")!.textContent).toBe("◀ Done");
+    const check = document.getElementById("btn-check") as HTMLButtonElement;
+    expect(check.hidden).toBe(true);
+  });
+
+  it("closing setup restores the connected view", () => {
+    renderUI({
+      kind: "connected",
+      file: { name: "F", key: "k" },
+      port: 9500,
+      running: null,
+      setupOpen: true,
+    });
+    renderUI({
+      kind: "connected",
+      file: { name: "F", key: "k" },
+      port: 9500,
+      running: null,
+      setupOpen: false,
+    });
+    expect(document.getElementById("view-connected")!.hidden).toBe(false);
+    expect(document.getElementById("view-disconnected")!.hidden).toBe(true);
+    expect(document.getElementById("btn-setup")!.textContent).toBe("⚙ Setup");
   });
 
   it("shows connected view with idle-block when running is null", () => {

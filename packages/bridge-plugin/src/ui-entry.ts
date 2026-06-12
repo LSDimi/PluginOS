@@ -190,6 +190,14 @@ function wireRetryButton(): void {
   });
 }
 
+function wireSetupToggle(): void {
+  $("btn-setup").addEventListener("click", () => {
+    if (currentState.kind === "connected") {
+      setState({ ...currentState, setupOpen: !currentState.setupOpen });
+    }
+  });
+}
+
 function wireDxtButton(): void {
   // Use figma.openExternal via code.ts — clicking an <a href> would navigate
   // the plugin iframe itself and blank the UI (see handlers/open-external.ts).
@@ -437,6 +445,7 @@ function bootstrap(): void {
   wireCopyButtons();
   wireWhyToggle();
   wireRetryButton();
+  wireSetupToggle();
   wireDxtButton();
   wireMismatchCopyButtons();
   activityLog = new ActivityLog($("activity-log"));
