@@ -19,11 +19,19 @@ describe("bootloader discovery policy", () => {
     expect(source).toContain("+ '/state.json'");
   });
 
-  it("ranks discovery-capable ports before the blind ui.html scan", () => {
+  it("ranks discovery-capable ports before the ui.html fetch", () => {
     const stateFetchIdx = source.indexOf("+ '/state.json'");
     const uiFetchIdx = source.indexOf("+ '/ui.html'");
     expect(stateFetchIdx).toBeGreaterThan(-1);
     expect(uiFetchIdx).toBeGreaterThan(-1);
     expect(stateFetchIdx).toBeLessThan(uiFetchIdx);
+  });
+
+  it("never falls back to fetching ui.html from non-discovery (legacy) servers", () => {
+    // A legacy server would happily serve its stale ui.html, and that stale
+    // UI then "connects" to the legacy server — the user sees a month-old
+    // interface. If no discovery-capable server is up, the bootloader must
+    // keep its own setup screen (which has instructions and a Retry button).
+    expect(source).toContain("if (!ranked.length) return;");
   });
 });
