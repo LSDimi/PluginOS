@@ -76,19 +76,31 @@ export class WebSocketPluginBridge implements IPluginBridge {
       };
 
       if (this.httpServer) {
-        // Listen first, then attach WebSocket after port is confirmed
-        const onError = (err: Error) => {
+        // Listen first, then attach WebSocket after port is confirmed.
+        // Both listeners must be removed on either outcome: listen(port, cb)
+        // registers cb via once("listening"), and a callback leaked by a
+        // failed EADDRINUSE attempt would fire again on the eventually
+        // successful bind — constructing one WebSocketServer per failed
+        // attempt and crashing ws with "handleUpgrade() was called more
+        // than once" on the first client connection.
+        const cleanup = () => {
           this.httpServer!.removeListener("error", onError);
+          this.httpServer!.removeListener("listening", onListening);
+        };
+        const onError = (err: Error) => {
+          cleanup();
           reject(err);
         };
-        this.httpServer.on("error", onError);
-        this.httpServer.listen(port, process.env.PLUGINOS_HOST || "127.0.0.1", () => {
-          this.httpServer!.removeListener("error", onError);
+        const onListening = () => {
+          cleanup();
           const wss = new WebSocketServer({ server: this.httpServer!, verifyClient });
           this.wss = wss;
           this.setupServer();
           resolve();
-        });
+        };
+        this.httpServer.once("error", onError);
+        this.httpServer.once("listening", onListening);
+        this.httpServer.listen(port, process.env.PLUGINOS_HOST || "127.0.0.1");
       } else {
         // Standalone WebSocket server (tests)
         const wss = new WebSocketServer({
