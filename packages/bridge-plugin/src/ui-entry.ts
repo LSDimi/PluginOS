@@ -3,6 +3,7 @@ import { attachThemeListener, detectInitialTheme, applyTheme } from "./ui/theme"
 import { getLastPort, setLastPort } from "./ui/storage";
 import { ActivityLog, type LogEntry } from "./ui/activity-log";
 import { isCompatible } from "./ui/version-check";
+import { connectWithHello } from "./ui/connect";
 import { discoverCandidatePorts } from "./discovery";
 import { renderUI, formatElapsed, type AppState } from "./ui/render-ui";
 import {
@@ -283,42 +284,47 @@ async function scanAndConnect(): Promise<void> {
   }
 }
 
-function tryConnect(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    let settled = false;
-    let socket: WebSocket | null = null;
-    try {
-      socket = new WebSocket(`ws://localhost:${port}`);
-    } catch {
-      return resolve(false);
-    }
-    const timeout = window.setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        try {
-          socket?.close();
-        } catch {
-          /* ignore */
-        }
-        resolve(false);
-      }
-    }, 1500);
-    socket.addEventListener("open", () => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      activeSocket = socket;
-      attachSocketHandlers(socket!, port);
-      resolve(true);
-    });
-    socket.addEventListener("error", () => {
-      if (!settled) {
-        settled = true;
-        window.clearTimeout(timeout);
-        resolve(false);
-      }
-    });
+async function tryConnect(port: number): Promise<boolean> {
+  // A socket that opens is not a working server: legacy pre-0.5.0 servers
+  // accept connections but never send SERVER_HELLO. Success requires the
+  // hello within the deadline, otherwise we close and try the next port.
+  const result = await connectWithHello(`ws://localhost:${port}`, {
+    openTimeoutMs: 1500,
+    helloTimeoutMs: 2000,
   });
+  if (!result) return false;
+  const socket = result.socket as WebSocket;
+  if (activeSocket && activeSocket !== socket) {
+    try {
+      activeSocket.close();
+    } catch {
+      /* ignore */
+    }
+  }
+  activeSocket = socket;
+  attachSocketHandlers(socket, port);
+  handleHello(socket, port, result.helloVersion);
+  return true;
+}
+
+function handleHello(socket: WebSocket, port: number, serverVersion: string): void {
+  if (!isCompatible(VERSION, serverVersion)) {
+    showMismatch(serverVersion || "unknown");
+    // Stop the relay before tearing down so the close handler sees we
+    // intentionally disconnected (no reconnect scheduling).
+    activeSocket = null;
+    socket.close();
+    return;
+  }
+  setState({
+    kind: "connected",
+    file: { name: cachedFileName, key: "—" },
+    port,
+    running: null,
+  });
+  reconnectIndex = 0;
+  // Tell code.ts so it can post the initial status (file name, etc.) back through us.
+  parent.postMessage({ pluginMessage: { type: "ws-connected" } }, "*");
 }
 
 function attachSocketHandlers(socket: WebSocket, port: number): void {
@@ -331,23 +337,9 @@ function attachSocketHandlers(socket: WebSocket, port: number): void {
       return;
     }
     if (msg?.type === "SERVER_HELLO") {
-      if (!isCompatible(VERSION, msg.version ?? "")) {
-        showMismatch(msg.version ?? "unknown");
-        // Stop the relay before tearing down so the close handler sees we
-        // intentionally disconnected (no reconnect scheduling).
-        activeSocket = null;
-        socket.close();
-        return;
-      }
-      setState({
-        kind: "connected",
-        file: { name: cachedFileName, key: "—" },
-        port,
-        running: null,
-      });
-      reconnectIndex = 0;
-      // Tell code.ts so it can post the initial status (file name, etc.) back through us.
-      parent.postMessage({ pluginMessage: { type: "ws-connected" } }, "*");
+      // First hello is consumed by connectWithHello during tryConnect; this
+      // branch handles any re-hello the server sends on an established socket.
+      handleHello(socket, port, msg.version ?? "");
       return;
     }
     if (msg?.type === "OP_START") {
