@@ -67,6 +67,16 @@ export function renderUI(state: AppState): void {
   el("view-connected").hidden = state.kind !== "connected";
   el("view-mismatch").hidden = state.kind !== "mismatch";
 
+  // 2b. Manual-retry button: a port scan can take several seconds, and a
+  // silent button reads as broken. Reflect the in-flight scan on the button
+  // itself. (Null-guarded: the button only exists in the disconnected view.)
+  const checkBtn = document.getElementById("btn-check") as HTMLButtonElement | null;
+  if (checkBtn) {
+    const scanning = state.kind === "connecting";
+    checkBtn.disabled = scanning;
+    checkBtn.textContent = scanning ? "Scanning…" : "Check for server";
+  }
+
   // 3. Connected sub-blocks
   if (state.kind === "connected") {
     el("file-name").textContent = state.file.name;

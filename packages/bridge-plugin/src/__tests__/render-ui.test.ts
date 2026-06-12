@@ -96,7 +96,9 @@ describe("formatElapsed", () => {
 function setupDom(): void {
   document.body.innerHTML = `
     <div id="status-pill"><span id="status-text">—</span></div>
-    <section id="view-disconnected"></section>
+    <section id="view-disconnected">
+      <button id="btn-check">Check for server</button>
+    </section>
     <section id="view-connected" hidden>
       <span id="file-name">—</span>
       <span id="port-url">—</span>
@@ -130,6 +132,21 @@ describe("renderUI", () => {
     expect(document.getElementById("view-disconnected")!.hidden).toBe(false);
     expect(document.getElementById("status-pill")!.dataset.state).toBe("connecting");
     expect(document.getElementById("status-text")!.textContent).toBe("Connecting…");
+  });
+
+  it("disables btn-check and shows 'Scanning…' while connecting", () => {
+    renderUI({ kind: "connecting", lastKnownPort: null });
+    const btn = document.getElementById("btn-check") as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    expect(btn.textContent).toBe("Scanning…");
+  });
+
+  it("re-enables btn-check with original label when disconnected", () => {
+    renderUI({ kind: "connecting", lastKnownPort: null });
+    renderUI({ kind: "disconnected" });
+    const btn = document.getElementById("btn-check") as HTMLButtonElement;
+    expect(btn.disabled).toBe(false);
+    expect(btn.textContent).toBe("Check for server");
   });
 
   it("shows connected view with idle-block when running is null", () => {
