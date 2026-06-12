@@ -48,6 +48,11 @@ figma.ui.onmessage = async (msg: any) => {
   }
 
   if (msg.type === "ws-connected") {
+    // The startup sendTheme/sendFileName landed in the bootloader iframe,
+    // which document.write()s itself away when it swaps in the real UI —
+    // resend both so the post-swap UI has them.
+    sendTheme();
+    sendFileName();
     sendFileStatus();
     return;
   }

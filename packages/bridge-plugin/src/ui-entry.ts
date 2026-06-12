@@ -31,6 +31,7 @@ let reconnectTimer: number | null = null;
 let reconnectStartedAt = 0;
 let activityLog: ActivityLog;
 let cachedFileName = "—";
+let cachedOpsCount: number | undefined;
 let currentState: AppState = { kind: "disconnected" };
 let elapsedTimer: number | null = null;
 
@@ -329,10 +330,13 @@ function handleHello(socket: WebSocket, port: number, serverVersion: string): vo
     file: { name: cachedFileName, key: "—" },
     port,
     running: null,
+    opsCount: cachedOpsCount,
   });
   reconnectIndex = 0;
   // Tell code.ts so it can post the initial status (file name, etc.) back through us.
   parent.postMessage({ pluginMessage: { type: "ws-connected" } }, "*");
+  // Ask code.ts for the registered operations so the count can be shown.
+  parent.postMessage({ pluginMessage: { type: "__ui_list_operations" } }, "*");
 }
 
 function attachSocketHandlers(socket: WebSocket, port: number): void {
@@ -429,6 +433,12 @@ function attachPluginMessageListener(): void {
       cachedFileName = msg.name ?? "—";
       if (currentState.kind === "connected") {
         setState({ ...currentState, file: { ...currentState.file, name: cachedFileName } });
+      }
+    }
+    if (msg.type === "__ui_list_operations_result") {
+      cachedOpsCount = Array.isArray(msg.operations) ? msg.operations.length : undefined;
+      if (currentState.kind === "connected") {
+        setState({ ...currentState, opsCount: cachedOpsCount });
       }
     }
     // THEME_CHANGE is handled by theme.ts's own listener.

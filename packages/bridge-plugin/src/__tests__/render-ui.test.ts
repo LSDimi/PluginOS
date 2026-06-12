@@ -103,6 +103,7 @@ function setupDom(): void {
     <section id="view-connected" hidden>
       <span id="file-name">—</span>
       <span id="port-url">—</span>
+      <span id="ops-count">—</span>
       <div id="running-block" hidden>
         <span id="run-op">—</span>
         <span id="run-params">—</span>
@@ -148,6 +149,27 @@ describe("renderUI", () => {
     const btn = document.getElementById("btn-check") as HTMLButtonElement;
     expect(btn.disabled).toBe(false);
     expect(btn.textContent).toBe("Check for server");
+  });
+
+  it("renders the operations count when provided", () => {
+    renderUI({
+      kind: "connected",
+      file: { name: "F", key: "k" },
+      port: 9500,
+      running: null,
+      opsCount: 37,
+    });
+    expect(document.getElementById("ops-count")!.textContent).toBe("37");
+  });
+
+  it("renders an em dash when the operations count is unknown", () => {
+    renderUI({
+      kind: "connected",
+      file: { name: "F", key: "k" },
+      port: 9500,
+      running: null,
+    });
+    expect(document.getElementById("ops-count")!.textContent).toBe("—");
   });
 
   it("shows the setup toggle only when connected, labeled '⚙ Setup'", () => {

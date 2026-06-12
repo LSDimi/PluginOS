@@ -16,6 +16,8 @@ export type AppState =
       running: RunningOp | null;
       /** When true, the setup/install panel is shown over the connected view. */
       setupOpen?: boolean;
+      /** Number of registered operations, reported by code.ts after connect. */
+      opsCount?: number;
     }
   | {
       kind: "mismatch";
@@ -95,6 +97,8 @@ export function renderUI(state: AppState): void {
   if (state.kind === "connected") {
     el("file-name").textContent = state.file.name;
     el("port-url").textContent = `localhost:${state.port}`;
+    const opsEl = document.getElementById("ops-count");
+    if (opsEl) opsEl.textContent = state.opsCount !== undefined ? String(state.opsCount) : "—";
     el("running-block").hidden = state.running === null;
     el("idle-block").hidden = state.running !== null;
     if (state.running) {
