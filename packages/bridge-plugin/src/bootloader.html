@@ -111,16 +111,33 @@
         function tryFetchUI() {
           var attempts = [];
           for (var p = PORT_MIN; p <= PORT_MAX; p++) attempts.push(p);
-          (function next(i) {
-            if (i >= attempts.length) return;
-            var port = attempts[i];
-            fetch('http://localhost:' + port + '/ui.html', { mode: 'cors' })
-              .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
-              .then(function (html) {
-                document.open(); document.write(html); document.close();
-              })
-              .catch(function () { next(i + 1); });
-          })(0);
+          // Legacy (pre-0.5.0) servers serve /ui.html but not /state.json.
+          // A blind first-200-wins scan would load a stale UI from a zombie
+          // server squatting on an early port, so probe /state.json first
+          // and prefer ports that answer it; fall back to the blind scan
+          // order only for ports that don't.
+          Promise.all(attempts.map(function (port) {
+            return fetch('http://localhost:' + port + '/state.json', { mode: 'cors' })
+              .then(function (r) { return r.ok ? port : null; })
+              .catch(function () { return null; });
+          })).then(function (probed) {
+            var ranked = [];
+            for (var i = 0; i < probed.length; i++) if (probed[i] !== null) ranked.push(probed[i]);
+            var order = ranked.slice();
+            for (var j = 0; j < attempts.length; j++) {
+              if (ranked.indexOf(attempts[j]) < 0) order.push(attempts[j]);
+            }
+            (function next(i) {
+              if (i >= order.length) return;
+              var port = order[i];
+              fetch('http://localhost:' + port + '/ui.html', { mode: 'cors' })
+                .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
+                .then(function (html) {
+                  document.open(); document.write(html); document.close();
+                })
+                .catch(function () { next(i + 1); });
+            })(0);
+          });
         }
 
         document.getElementById('btn-retry').addEventListener('click', tryFetchUI);
