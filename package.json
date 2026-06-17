@@ -31,10 +31,8 @@
     "vitest": "^4.1.8"
   },
   "overrides": {
-    "vite": {
-      ".": "^6.4.2",
-      "esbuild": "^0.25.10"
-    },
+    "vite": "^6.4.2",
+    "esbuild": "^0.25.10",
     "vitest": "^4.1.8",
     "@vitest/coverage-v8": "^4.1.8",
     "hono": "^4.12.25"
