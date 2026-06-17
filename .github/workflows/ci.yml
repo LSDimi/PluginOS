@@ -31,7 +31,11 @@ jobs:
         run: npm ci
 
       - name: Security audit
-        run: npm audit --audit-level=high
+        # Scope to production dependencies: these are what ship to users via the
+        # npm package. Dev-only build tooling (esbuild/tsup/vite/vitest) is
+        # excluded here and tracked via Dependabot instead, so a dev-tooling
+        # advisory doesn't block releases.
+        run: npm audit --audit-level=high --omit=dev
 
       - name: Build shared package
         run: npm run build:shared
