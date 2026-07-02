@@ -109,12 +109,18 @@ registerOperation({
     }
 
     const total = counts.contrast + counts.style + counts.detached + counts.spacing + counts.naming;
+    const shown =
+      by_severity.P0.length + by_severity.P1.length + by_severity.P2.length + by_severity.P3.length;
     const result = {
       total_nodes: nodes.length,
       counts,
       by_severity,
       summary: `Scanned ${nodes.length} nodes. ${total} findings: ${counts.contrast} contrast (P0), ${counts.style} style (P1), ${counts.detached} detached + ${counts.spacing} spacing (P2), ${counts.naming} naming (P3).`,
     };
-    return withHint(result, undefined, []);
+    const hint =
+      total > shown
+        ? `Showing ${shown} of ${total} findings (capped at ${MAX_RESULTS}, highest severity first). 'counts' holds true totals; lower-severity buckets may be truncated — narrow 'scope' or call a single-category audit op for full detail.`
+        : undefined;
+    return withHint(result, hint, []);
   },
 });
