@@ -27,6 +27,18 @@ describe("resolveBindingState (fill)", () => {
     const node = { ...base, fillStyleId: Symbol("mixed"), fills: [{ type: "SOLID", visible: true, color: { r: 1, g: 0, b: 0 } }] };
     expect(resolveBindingState(node, "fill")).toBe("raw");
   });
+
+  it("returns 'raw' when a node mixes a variable-bound solid and a raw solid", () => {
+    const node = {
+      ...base,
+      fillStyleId: "",
+      fills: [
+        { type: "SOLID", visible: true, color: { r: 0, g: 0, b: 0 }, boundVariables: { color: { id: "V:1" } } },
+        { type: "SOLID", visible: true, color: { r: 1, g: 0, b: 0 } },
+      ],
+    };
+    expect(resolveBindingState(node, "fill")).toBe("raw");
+  });
 });
 
 describe("resolveBindingState (text)", () => {

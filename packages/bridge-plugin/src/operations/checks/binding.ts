@@ -40,7 +40,7 @@ export function resolveBindingState(
   const paints = anyNode[paintsField];
   if (Array.isArray(paints)) {
     const solids = paints.filter((p: any) => p && p.type === "SOLID" && p.visible !== false);
-    if (solids.length > 0 && solids.some((p: any) => p.boundVariables && p.boundVariables.color)) {
+    if (solids.length > 0 && solids.every((p: any) => p.boundVariables && p.boundVariables.color)) {
       return "variable";
     }
   }
