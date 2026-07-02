@@ -2,6 +2,8 @@ import { registerOperation } from "./registry";
 import type { OperationContext } from "./context";
 import { withHint } from "@pluginos/shared";
 import { checkStyleBinding } from "./checks/style";
+import { collectInstanceComponentNames, checkDetached } from "./checks/detached";
+import { checkNaming } from "./checks/naming";
 
 // --- lint_styles ---
 registerOperation({
@@ -86,31 +88,16 @@ registerOperation({
   async execute(ctx: OperationContext) {
     var { nodes, params, MAX_RESULTS } = ctx;
 
-    const detached: Array<{
-      nodeId: string;
-      nodeName: string;
-      parentName: string;
-    }> = [];
-
-    // Collect all component names used in instances on this page
-    const instanceComponentNames = new Set<string>();
-    for (const node of nodes) {
-      if (node.type === "INSTANCE") {
-        instanceComponentNames.add(node.name);
-      }
-    }
+    const instanceNames = collectInstanceComponentNames(nodes);
+    const detached: Array<{ nodeId: string; nodeName: string; parentName: string }> = [];
 
     for (const node of nodes) {
-      if (node.type === "FRAME") {
-        // Heuristic: A frame whose name matches an instance component name
-        // is likely a detached instance
-        if (instanceComponentNames.has(node.name)) {
-          detached.push({
-            nodeId: node.id,
-            nodeName: node.name,
-            parentName: node.parent?.name || "root",
-          });
-        }
+      for (const f of checkDetached(node, instanceNames)) {
+        detached.push({
+          nodeId: f.nodeId,
+          nodeName: f.nodeName,
+          parentName: (f.meta as any).parentName,
+        });
       }
     }
 
@@ -149,21 +136,10 @@ registerOperation({
   async execute(ctx: OperationContext) {
     var { nodes, MAX_RESULTS } = ctx;
 
-    const defaultNamePattern =
-      /^(Frame|Rectangle|Ellipse|Group|Line|Vector|Text|Polygon|Star|Section|Slice|Image|Component|Instance) \d+$/;
-    const unnamed: Array<{
-      nodeId: string;
-      nodeName: string;
-      nodeType: string;
-    }> = [];
-
+    const unnamed: Array<{ nodeId: string; nodeName: string; nodeType: string }> = [];
     for (const node of nodes) {
-      if (defaultNamePattern.test(node.name)) {
-        unnamed.push({
-          nodeId: node.id,
-          nodeName: node.name,
-          nodeType: node.type,
-        });
+      for (const f of checkNaming(node)) {
+        unnamed.push({ nodeId: f.nodeId, nodeName: f.nodeName, nodeType: f.nodeType });
       }
     }
 
