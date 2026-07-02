@@ -24,7 +24,8 @@ registerOperation({
           "Set to true to proceed when page scan exceeds 500 nodes. Required when scope is 'page' on large pages.",
       },
     },
-    returns: "{ total_nodes, issues: Array<{nodeId, nodeName, nodeType, issue}>, summary }",
+    returns:
+      "{ total_nodes, issues: Array<{nodeId, nodeName, nodeType, issue, binding}>, total_issues, summary }",
   },
   async execute(ctx: OperationContext) {
     var { nodes, MAX_RESULTS } = ctx;
