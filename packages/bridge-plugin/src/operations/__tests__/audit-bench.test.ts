@@ -82,7 +82,10 @@ describe("audit benchmark: composite vs five separate", () => {
       separate_calls: perOp,
       separate_total: { bytes: sepBytes, approx_tokens: Math.round(sepBytes / 4), ms: sepMs },
       composite: { bytes: composite.bytes, approx_tokens: Math.round(composite.bytes / 4), ms: composite.ms },
-      byte_reduction_pct: Math.round((1 - composite.bytes / sepBytes) * 100),
+      // Positive = composite payload smaller; NEGATIVE = composite payload larger
+      // (expected here — see `note`). Payload bytes are a secondary metric; the
+      // real saving is round_trips + scan count, not payload size.
+      byte_delta_pct: Math.round((1 - composite.bytes / sepBytes) * 100),
       round_trips: { separate: 5, composite: 1 },
       note:
         "The dominant real-world saving is eliminating 4 of 5 MCP request/response envelopes " +
