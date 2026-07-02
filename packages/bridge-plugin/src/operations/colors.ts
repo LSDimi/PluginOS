@@ -1,6 +1,7 @@
 import { registerOperation } from "./registry";
 import type { OperationContext } from "./context";
 import { withHint } from "@pluginos/shared";
+import { checkStyleBinding } from "./checks/style";
 
 function rgbToHex(r: number, g: number, b: number): string {
   var toHex = function (c: number) {
@@ -82,30 +83,23 @@ registerOperation({
     var violations: { nodeId: string; nodeName: string; hex: string }[] = [];
 
     for (var i = 0; i < nodes.length; i++) {
-      var node = nodes[i];
-      if (!("fills" in node) || !("fillStyleId" in node)) continue;
-      var styleId = (node as any).fillStyleId;
-      if (styleId && styleId !== "" && styleId !== figma.mixed) continue;
-
-      var fills = (node as GeometryMixin).fills;
-      if (!Array.isArray(fills)) continue;
-      for (var j = 0; j < fills.length; j++) {
-        var fill = fills[j];
-        if (fill.type === "SOLID" && fill.visible !== false) {
-          violations.push({
-            nodeId: node.id,
-            nodeName: node.name,
-            hex: rgbToHex(fill.color.r, fill.color.g, fill.color.b),
-          });
-          break;
-        }
+      var fillFindings = checkStyleBinding(nodes[i]).filter(function (f) {
+        return f.meta && f.meta.property === "fill" && f.meta.hex;
+      });
+      if (fillFindings.length > 0) {
+        violations.push({
+          nodeId: fillFindings[0].nodeId,
+          nodeName: fillFindings[0].nodeName,
+          hex: fillFindings[0].meta!.hex as string,
+        });
       }
     }
 
     return {
       violations: violations.slice(0, MAX_RESULTS),
       count: violations.length,
-      summary: "Found " + violations.length + " nodes with hardcoded colors (no style linked).",
+      summary:
+        "Found " + violations.length + " nodes with raw fill colors (not linked to a style or variable).",
     };
   },
 });
