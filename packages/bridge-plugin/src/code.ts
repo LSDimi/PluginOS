@@ -1,5 +1,5 @@
 import { getOperation, listOperations } from "./operations/index";
-import { createOperationContext } from "./operations/context";
+import { createOperationContext, resolvePageTarget } from "./operations/context";
 import { safeSerialize } from "./utils/serializer";
 import { handleOpenExternal } from "./handlers/open-external";
 
@@ -89,16 +89,49 @@ async function handleServerMessage(msg: any): Promise<void> {
         return;
       }
 
+      const opParams = params || {};
+
+      // Resolve an explicit page target (page_name/page_id) without moving the
+      // viewport. Not-found returns a value, not a throw.
+      const pageRes = await resolvePageTarget(opParams, figma);
+      if (pageRes && pageRes.error) {
+        sendResult(id, true, { error: pageRes.error, available_pages: pageRes.available_pages });
+        return;
+      }
+
       const startTime = Date.now();
-      const ctx = createOperationContext(params || {}, handler.manifest.defaultScope ?? "page", {
+      const ctx = createOperationContext(opParams, handler.manifest.defaultScope ?? "page", {
         opName: handler.manifest.name,
+        preResolvedNodes: pageRes ? pageRes.nodes : undefined,
       });
       if (ctx.guard) {
         sendResult(id, true, ctx.guard);
         return;
       }
-      const result = await handler.execute(ctx);
+      let result = await handler.execute(ctx);
       const duration = Date.now() - startTime;
+
+      // Warn-on-empty: a page-scope scan that matches 0 nodes is almost always
+      // the wrong page (e.g. currentPage drifted). Surface a hint instead of a
+      // silent clean pass.
+      const scope =
+        typeof opParams.scope === "string"
+          ? opParams.scope
+          : (handler.manifest.defaultScope ?? "page");
+      const usedPageScope = pageRes != null || scope === "page";
+      if (
+        usedPageScope &&
+        ctx.nodes.length === 0 &&
+        result &&
+        typeof result === "object" &&
+        !(result as any)._hint
+      ) {
+        result = {
+          ...(result as object),
+          _hint: `Page ${pageRes && pageRes.pageName ? `'${pageRes.pageName}' ` : ""}has 0 nodes — likely the wrong page. Pass page_name to target a specific page.`,
+        };
+      }
+
       sendResult(id, true, { ...(safeSerialize(result) as object), _duration_ms: duration });
     } else if (type === "execute") {
       const { code, timeout } = msg;
