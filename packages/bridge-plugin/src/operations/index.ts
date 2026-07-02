@@ -15,3 +15,4 @@ import "./colors";
 import "./typography";
 import "./content";
 import "./export";
+import "./validate";

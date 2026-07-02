@@ -15,6 +15,7 @@ export const GUARDED_OPS = new Set<string>([
   "audit_text_styles",
   "find_non_style_colors",
   "analyze_overrides",
+  "validate_ds_compliance",
 ]);
 
 export interface OperationContext {
