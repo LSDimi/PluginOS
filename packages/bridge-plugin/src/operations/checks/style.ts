@@ -37,27 +37,47 @@ export function checkStyleBinding(node: SceneNode): CheckFinding[] {
 
   if ("strokeStyleId" in node && "strokes" in node) {
     const strokes = anyNode.strokes;
-    if (Array.isArray(strokes) && strokes.length > 0 && resolveBindingState(node, "stroke") === "raw") {
+    if (
+      Array.isArray(strokes) &&
+      strokes.length > 0 &&
+      resolveBindingState(node, "stroke") === "raw"
+    ) {
       out.push({
-        nodeId: node.id, nodeName: node.name, nodeType: node.type,
-        check: "style", detail: "Stroke without style", meta: { property: "stroke" },
+        nodeId: node.id,
+        nodeName: node.name,
+        nodeType: node.type,
+        check: "style",
+        detail: "Stroke without style",
+        meta: { property: "stroke" },
       });
     }
   }
 
   if (node.type === "TEXT" && resolveBindingState(node, "text") === "raw") {
     out.push({
-      nodeId: node.id, nodeName: node.name, nodeType: node.type,
-      check: "style", detail: "Text without style", meta: { property: "text" },
+      nodeId: node.id,
+      nodeName: node.name,
+      nodeType: node.type,
+      check: "style",
+      detail: "Text without style",
+      meta: { property: "text" },
     });
   }
 
   if ("effectStyleId" in node && "effects" in node) {
     const effects = anyNode.effects;
-    if (Array.isArray(effects) && effects.length > 0 && resolveBindingState(node, "effect") === "raw") {
+    if (
+      Array.isArray(effects) &&
+      effects.length > 0 &&
+      resolveBindingState(node, "effect") === "raw"
+    ) {
       out.push({
-        nodeId: node.id, nodeName: node.name, nodeType: node.type,
-        check: "style", detail: "Effect without style", meta: { property: "effect" },
+        nodeId: node.id,
+        nodeName: node.name,
+        nodeType: node.type,
+        check: "style",
+        detail: "Effect without style",
+        meta: { property: "effect" },
       });
     }
   }

@@ -32,8 +32,11 @@ export function checkSpacing(node: SceneNode, baseUnit: number): SpacingResult {
     entries.push({ property, value });
     if (baseUnit > 0 && value % baseUnit !== 0) {
       violations.push({
-        nodeId: frame.id, nodeName: frame.name, nodeType: frame.type,
-        check: "spacing", detail: `${property}=${value} is not a multiple of ${baseUnit}`,
+        nodeId: frame.id,
+        nodeName: frame.name,
+        nodeType: frame.type,
+        check: "spacing",
+        detail: `${property}=${value} is not a multiple of ${baseUnit}`,
         meta: { property, value, base_unit: baseUnit },
       });
     }

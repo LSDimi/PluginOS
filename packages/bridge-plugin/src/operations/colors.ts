@@ -99,7 +99,9 @@ registerOperation({
       violations: violations.slice(0, MAX_RESULTS),
       count: violations.length,
       summary:
-        "Found " + violations.length + " nodes with raw fill colors (not linked to a style or variable).",
+        "Found " +
+        violations.length +
+        " nodes with raw fill colors (not linked to a style or variable).",
     };
   },
 });

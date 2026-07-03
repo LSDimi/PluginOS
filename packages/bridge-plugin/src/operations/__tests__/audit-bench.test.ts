@@ -5,7 +5,9 @@ import { getOperation } from "../index";
 import { safeSerialize } from "../../utils/serializer";
 
 const mockFigma = { mixed: Symbol("figma.mixed") };
-beforeEach(() => { (globalThis as any).figma = mockFigma; });
+beforeEach(() => {
+  (globalThis as any).figma = mockFigma;
+});
 
 // Deterministic synthetic node set (mix of raw fill, default name, off-grid
 // spacing, failing contrast) repeated to a realistic page size.
@@ -14,13 +16,43 @@ function buildNodes(n: number) {
   for (let i = 0; i < n; i++) {
     const kind = i % 4;
     if (kind === 0) {
-      nodes.push({ id: `r${i}`, name: "raw", type: "RECTANGLE", fillStyleId: "", fills: [{ type: "SOLID", visible: true, color: { r: 1, g: 0, b: 0 } }] });
+      nodes.push({
+        id: `r${i}`,
+        name: "raw",
+        type: "RECTANGLE",
+        fillStyleId: "",
+        fills: [{ type: "SOLID", visible: true, color: { r: 1, g: 0, b: 0 } }],
+      });
     } else if (kind === 1) {
       nodes.push({ id: `f${i}`, name: "Frame 1", type: "FRAME", layoutMode: "NONE" });
     } else if (kind === 2) {
-      nodes.push({ id: `a${i}`, name: "Row", type: "FRAME", layoutMode: "HORIZONTAL", itemSpacing: 9, paddingLeft: 0, paddingRight: 0, paddingTop: 0, paddingBottom: 0, counterAxisSpacing: null });
+      nodes.push({
+        id: `a${i}`,
+        name: "Row",
+        type: "FRAME",
+        layoutMode: "HORIZONTAL",
+        itemSpacing: 9,
+        paddingLeft: 0,
+        paddingRight: 0,
+        paddingTop: 0,
+        paddingBottom: 0,
+        counterAxisSpacing: null,
+      });
     } else {
-      nodes.push({ id: `t${i}`, name: "T", type: "TEXT", characters: "Hi", opacity: 1, fontSize: 12, fontWeight: 400, fills: [{ type: "SOLID", visible: true, color: { r: 0, g: 0, b: 0 } }], parent: { fills: [{ type: "SOLID", visible: true, color: { r: 0, g: 0, b: 0 } }], parent: null } });
+      nodes.push({
+        id: `t${i}`,
+        name: "T",
+        type: "TEXT",
+        characters: "Hi",
+        opacity: 1,
+        fontSize: 12,
+        fontWeight: 400,
+        fills: [{ type: "SOLID", visible: true, color: { r: 0, g: 0, b: 0 } }],
+        parent: {
+          fills: [{ type: "SOLID", visible: true, color: { r: 0, g: 0, b: 0 } }],
+          parent: null,
+        },
+      });
     }
   }
   return nodes;
@@ -32,7 +64,12 @@ function bytesOf(result: unknown): number {
 
 async function runOp(name: string, nodes: any[]) {
   const start = Date.now();
-  const result = await getOperation(name)!.execute({ nodes, params: {}, MAX_RESULTS: 200, figma: mockFigma } as any);
+  const result = await getOperation(name)!.execute({
+    nodes,
+    params: {},
+    MAX_RESULTS: 200,
+    figma: mockFigma,
+  } as any);
   return { bytes: bytesOf(result), ms: Date.now() - start };
 }
 
@@ -44,7 +81,13 @@ describe("audit benchmark: composite vs five separate", () => {
     // 200-item budget) rather than an artifact of dropped findings.
     const nodes = buildNodes(160);
 
-    const separate = ["lint_styles", "lint_detached", "lint_naming", "check_contrast", "audit_spacing"];
+    const separate = [
+      "lint_styles",
+      "lint_detached",
+      "lint_naming",
+      "check_contrast",
+      "audit_spacing",
+    ];
     let sepBytes = 0;
     let sepMs = 0;
     const perOp: Record<string, { bytes: number; ms: number }> = {};
@@ -81,7 +124,11 @@ describe("audit benchmark: composite vs five separate", () => {
       node_count: nodes.length,
       separate_calls: perOp,
       separate_total: { bytes: sepBytes, approx_tokens: Math.round(sepBytes / 4), ms: sepMs },
-      composite: { bytes: composite.bytes, approx_tokens: Math.round(composite.bytes / 4), ms: composite.ms },
+      composite: {
+        bytes: composite.bytes,
+        approx_tokens: Math.round(composite.bytes / 4),
+        ms: composite.ms,
+      },
       // Positive = composite payload smaller; NEGATIVE = composite payload larger
       // (expected here — see `note`). Payload bytes are a secondary metric; the
       // real saving is round_trips + scan count, not payload size.
@@ -97,6 +144,9 @@ describe("audit benchmark: composite vs five separate", () => {
 
     // eslint-disable-next-line no-console
     console.log("\n=== PluginOS audit benchmark ===\n" + JSON.stringify(report, null, 2) + "\n");
-    writeFileSync(resolve(__dirname, "../../../bench-results.json"), JSON.stringify(report, null, 2));
+    writeFileSync(
+      resolve(__dirname, "../../../bench-results.json"),
+      JSON.stringify(report, null, 2)
+    );
   });
 });

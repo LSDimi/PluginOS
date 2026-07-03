@@ -27,9 +27,14 @@ registerOperation({
       page_name: {
         type: "string",
         required: false,
-        description: "With scope 'page': target a page by name; reads it without moving your viewport.",
+        description:
+          "With scope 'page': target a page by name; reads it without moving your viewport.",
       },
-      page_id: { type: "string", required: false, description: "With scope 'page': target a page by id." },
+      page_id: {
+        type: "string",
+        required: false,
+        description: "With scope 'page': target a page by id.",
+      },
       confirm: {
         type: "boolean",
         required: false,

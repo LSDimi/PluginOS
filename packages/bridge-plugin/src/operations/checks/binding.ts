@@ -31,7 +31,8 @@ export function resolveBindingState(
 
   if (property === "effect") {
     const effects = anyNode.effects;
-    if (Array.isArray(effects) && effects.some((e: any) => e && e.boundVariables)) return "variable";
+    if (Array.isArray(effects) && effects.some((e: any) => e && e.boundVariables))
+      return "variable";
     return "raw";
   }
 

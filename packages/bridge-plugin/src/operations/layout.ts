@@ -19,7 +19,8 @@ registerOperation({
       base_unit: {
         type: "number",
         required: false,
-        description: "Grid base unit; values not multiples of it are flagged (default: 8). Ignored if allowed_values is given.",
+        description:
+          "Grid base unit; values not multiples of it are flagged (default: 8). Ignored if allowed_values is given.",
       },
       scope: {
         type: "string",
@@ -56,7 +57,12 @@ registerOperation({
       for (const e of r.entries) {
         allValues.add(e.value);
         if (allowed && !allowed.includes(e.value)) {
-          violations.push({ nodeId: node.id, nodeName: node.name, property: e.property, value: e.value });
+          violations.push({
+            nodeId: node.id,
+            nodeName: node.name,
+            property: e.property,
+            value: e.value,
+          });
         }
       }
       if (!allowed) {
