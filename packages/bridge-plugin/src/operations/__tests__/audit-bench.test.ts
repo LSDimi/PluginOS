@@ -74,7 +74,7 @@ async function runOp(name: string, nodes: any[]) {
 }
 
 describe("audit benchmark: composite vs five separate", () => {
-  it("composite payload is smaller than the sum of five separate calls", async () => {
+  it("composite runs in one round-trip/scan; payload delta is reported, not required to shrink", async () => {
     // 160 nodes (40 per kind, ~160 findings pooled) keeps the composite's
     // shared 200-item budget from truncating, so this is an apples-to-apples
     // comparison against the five standalone ops (each with their own full
