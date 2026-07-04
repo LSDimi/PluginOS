@@ -71,6 +71,21 @@ describe("validate_ds_compliance", () => {
     expect(result.by_severity.P1).toHaveLength(1);
     expect(result.by_severity.P2).toHaveLength(1);
     expect(result.by_severity.P3).toHaveLength(1);
+
+    // compact finding shape: no detail / nodeType; meta only when present
+    const p1 = result.by_severity.P1[0];
+    expect(Object.keys(p1).sort()).toEqual(["check", "meta", "nodeId", "nodeName"]);
+    expect(p1).not.toHaveProperty("detail");
+    expect(p1).not.toHaveProperty("nodeType");
+    // naming finding carries no meta
+    const p3 = result.by_severity.P3[0];
+    expect(Object.keys(p3).sort()).toEqual(["check", "nodeId", "nodeName"]);
+    expect(p3).not.toHaveProperty("meta");
+    // legend present for all five check kinds
+    expect(Object.keys(result.legend).sort()).toEqual(
+      ["contrast", "detached", "naming", "spacing", "style"]
+    );
+    expect(typeof result.legend.contrast).toBe("string");
   });
 
   it("caps findings at MAX_RESULTS, P0 first", async () => {

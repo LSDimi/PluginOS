@@ -10,6 +10,29 @@ import { checkSpacing } from "./checks/spacing";
 
 const SEVERITY_ORDER: Severity[] = ["P0", "P1", "P2", "P3"];
 
+interface CompactFinding {
+  nodeId: string;
+  nodeName: string;
+  check: CheckFinding["check"];
+  meta?: Record<string, unknown>;
+}
+
+/** Project a full CheckFinding to the compact output shape: drop the redundant
+ *  human `detail` string and the unconsumed `nodeType`; keep `meta` only when set. */
+function toCompactFinding(f: CheckFinding): CompactFinding {
+  const c: CompactFinding = { nodeId: f.nodeId, nodeName: f.nodeName, check: f.check };
+  if (f.meta !== undefined) c.meta = f.meta;
+  return c;
+}
+
+const LEGEND: Record<CheckFinding["check"], string> = {
+  contrast: "text contrast below WCAG AA",
+  style: "raw fill/stroke/text/effect (no style or variable)",
+  detached: "frame likely a detached instance",
+  spacing: "auto-layout value off the base-unit grid",
+  naming: "default layer name",
+};
+
 registerOperation({
   manifest: {
     name: "validate_ds_compliance",
@@ -42,7 +65,7 @@ registerOperation({
       },
     },
     returns:
-      "{ total_nodes, counts:{contrast,style,detached,spacing,naming}, by_severity:{P0,P1,P2,P3}, summary }",
+      "{ total_nodes, counts:{contrast,style,detached,spacing,naming}, by_severity:{P0,P1,P2,P3} each Array<{nodeId,nodeName,check,meta?}>, legend:{check->meaning}, summary }",
   },
   async execute(ctx: OperationContext) {
     const { nodes, params, MAX_RESULTS } = ctx;
@@ -104,12 +127,13 @@ registerOperation({
       }
     }
 
-    // Cap total findings across buckets, P0 first.
+    // Cap total findings across buckets, P0 first, then project to the compact
+    // output shape (drop detail/nodeType; keep meta only when present).
     let budget = MAX_RESULTS;
-    const by_severity: Record<Severity, CheckFinding[]> = { P0: [], P1: [], P2: [], P3: [] };
+    const by_severity: Record<Severity, CompactFinding[]> = { P0: [], P1: [], P2: [], P3: [] };
     for (const sev of SEVERITY_ORDER) {
       if (budget <= 0) break;
-      by_severity[sev] = buckets[sev].slice(0, budget);
+      by_severity[sev] = buckets[sev].slice(0, budget).map(toCompactFinding);
       budget -= by_severity[sev].length;
     }
 
@@ -120,6 +144,7 @@ registerOperation({
       total_nodes: nodes.length,
       counts,
       by_severity,
+      legend: LEGEND,
       summary: `Scanned ${nodes.length} nodes. ${total} findings: ${counts.contrast} contrast (P0), ${counts.style} style (P1), ${counts.detached} detached + ${counts.spacing} spacing (P2), ${counts.naming} naming (P3).`,
     };
     const hint =
