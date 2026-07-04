@@ -82,9 +82,13 @@ describe("validate_ds_compliance", () => {
     expect(Object.keys(p3).sort()).toEqual(["check", "nodeId", "nodeName"]);
     expect(p3).not.toHaveProperty("meta");
     // legend present for all five check kinds
-    expect(Object.keys(result.legend).sort()).toEqual(
-      ["contrast", "detached", "naming", "spacing", "style"]
-    );
+    expect(Object.keys(result.legend).sort()).toEqual([
+      "contrast",
+      "detached",
+      "naming",
+      "spacing",
+      "style",
+    ]);
     expect(typeof result.legend.contrast).toBe("string");
   });
 

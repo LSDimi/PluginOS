@@ -124,8 +124,7 @@ describe("audit benchmark: composite vs five separate", () => {
     // the five separate calls (and still one round-trip / one scan instead of five).
     expect(composite.bytes).toBeLessThanOrEqual(sepBytes);
 
-    // The composite must still surface all five categories worth of counts,
-    // even though the byte-size comparison below may not favor it.
+    // The composite must surface all five categories worth of counts.
     expect(compositeResult.counts.contrast).toBeGreaterThan(0);
     expect(compositeResult.counts.style).toBeGreaterThan(0);
     expect(compositeResult.counts.detached).toBeGreaterThan(0);
@@ -141,17 +140,18 @@ describe("audit benchmark: composite vs five separate", () => {
         approx_tokens: Math.round(composite.bytes / 4),
         ms: composite.ms,
       },
-      // Positive = composite payload smaller; NEGATIVE = composite payload larger
-      // (expected here — see `note`). Payload bytes are a secondary metric; the
-      // real saving is round_trips + scan count, not payload size.
+      // Positive = composite payload smaller than the five separate calls;
+      // negative = larger. After the finding-shape compaction the composite is at
+      // parity or marginally smaller. Payload bytes are a secondary metric; the
+      // durable saving is round_trips + scan count.
       byte_delta_pct: Math.round((1 - composite.bytes / sepBytes) * 100),
       round_trips: { separate: 5, composite: 1 },
       note:
         "The dominant real-world saving is eliminating 4 of 5 MCP request/response envelopes " +
         "plus 4 of 5 page scans (one figma.currentPage.findAll() walk instead of five). " +
-        "The payload-byte delta below is a secondary, conservative measure and may be small " +
-        "(or even negative) since the composite's per-item CheckFinding shape carries more " +
-        "per-finding metadata than some of the single-purpose op payloads.",
+        "Payload bytes are a secondary, conservative measure not captured by this comparison; " +
+        "after compacting the composite's per-finding shape it is at parity with (or slightly " +
+        "below) the sum of the single-purpose op payloads.",
     };
 
     // eslint-disable-next-line no-console
