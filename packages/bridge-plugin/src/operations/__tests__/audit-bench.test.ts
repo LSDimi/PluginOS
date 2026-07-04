@@ -75,11 +75,19 @@ async function runOp(name: string, nodes: any[]) {
 
 describe("audit benchmark: composite vs five separate", () => {
   it("composite runs in one round-trip/scan; payload delta is reported, not required to shrink", async () => {
-    // 160 nodes (40 per kind, ~160 findings pooled) keeps the composite's
-    // shared 200-item budget from truncating, so this is an apples-to-apples
-    // comparison against the five standalone ops (each with their own full
-    // 200-item budget) rather than an artifact of dropped findings.
-    const nodes = buildNodes(160);
+    // 156 nodes (39 per kind) + 1 INSTANCE + 1 detached-lookalike FRAME.
+    // Text nodes trip both a style and a contrast finding, so ~195 base findings
+    // + 1 detached = ~196, which stays under the composite's shared 200-item
+    // budget — an apples-to-apples comparison with no truncation on either path.
+    const nodes = buildNodes(156);
+
+    // buildNodes never creates INSTANCE nodes, so detached is always 0. Add a
+    // component instance plus a detached-look-alike frame with the same name so
+    // the detached check contributes to both paths.
+    nodes.push(
+      { id: "inst0", name: "Card", type: "INSTANCE" },
+      { id: "det0", name: "Card", type: "FRAME", layoutMode: "NONE" }
+    );
 
     const separate = [
       "lint_styles",
@@ -112,11 +120,15 @@ describe("audit benchmark: composite vs five separate", () => {
     // measuring dropped data, not real structural savings.
     expect(compositeResult._hint).toBeUndefined();
 
+    // With the compact finding shape, the composite payload is no larger than
+    // the five separate calls (and still one round-trip / one scan instead of five).
+    expect(composite.bytes).toBeLessThanOrEqual(sepBytes);
+
     // The composite must still surface all five categories worth of counts,
     // even though the byte-size comparison below may not favor it.
     expect(compositeResult.counts.contrast).toBeGreaterThan(0);
     expect(compositeResult.counts.style).toBeGreaterThan(0);
-    expect(compositeResult.counts.detached).toBeGreaterThanOrEqual(0);
+    expect(compositeResult.counts.detached).toBeGreaterThan(0);
     expect(compositeResult.counts.spacing).toBeGreaterThan(0);
     expect(compositeResult.counts.naming).toBeGreaterThan(0);
 
