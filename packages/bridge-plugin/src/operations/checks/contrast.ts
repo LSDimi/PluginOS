@@ -2,9 +2,10 @@ function computeColor(
   fills: readonly Paint[],
   opacity: number = 1
 ): [number, number, number, number] | null {
+  if (!Array.isArray(fills)) return null;
   for (let i = fills.length - 1; i >= 0; i--) {
     const fill = fills[i];
-    if (fill.type === "SOLID" && fill.visible !== false) {
+    if (fill && fill.type === "SOLID" && fill.visible !== false) {
       const a = (fill.opacity ?? 1) * opacity;
       return [fill.color.r * 255, fill.color.g * 255, fill.color.b * 255, a];
     }

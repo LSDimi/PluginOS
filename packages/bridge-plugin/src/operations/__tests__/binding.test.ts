@@ -75,3 +75,38 @@ describe("resolveBindingState (text)", () => {
     );
   });
 });
+
+describe("resolveBindingState (effect)", () => {
+  it("returns 'variable' when every effect is variable-bound", () => {
+    const node = {
+      ...base,
+      effectStyleId: "",
+      effects: [{ type: "DROP_SHADOW", boundVariables: { radius: { id: "V:1" } } }],
+    };
+    expect(resolveBindingState(node, "effect")).toBe("variable");
+  });
+
+  it("returns 'raw' when a node mixes a bound effect and a raw effect", () => {
+    const node = {
+      ...base,
+      effectStyleId: "",
+      effects: [
+        { type: "DROP_SHADOW", boundVariables: { radius: { id: "V:1" } } },
+        { type: "DROP_SHADOW" },
+      ],
+    };
+    expect(resolveBindingState(node, "effect")).toBe("raw");
+  });
+
+  it("returns 'raw' when there are no effects or none are bound", () => {
+    expect(resolveBindingState({ ...base, effectStyleId: "", effects: [] } as any, "effect")).toBe(
+      "raw"
+    );
+    expect(
+      resolveBindingState(
+        { ...base, effectStyleId: "", effects: [{ type: "DROP_SHADOW" }] } as any,
+        "effect"
+      )
+    ).toBe("raw");
+  });
+});

@@ -53,4 +53,40 @@ describe("checkContrast", () => {
   it("returns null for non-text nodes", () => {
     expect(checkContrast({ id: "r", name: "R", type: "RECTANGLE" } as any)).toBeNull();
   });
+  it("does not throw when fills is figma.mixed (a Symbol) — returns null", () => {
+    const node = {
+      id: "t",
+      name: "T",
+      type: "TEXT",
+      characters: "Hi",
+      opacity: 1,
+      fontSize: 16,
+      fontWeight: 400,
+      fills: Symbol("figma.mixed"),
+      parent: {
+        fills: [{ type: "SOLID", visible: true, color: { r: 1, g: 1, b: 1 } }],
+        parent: null,
+      },
+    } as any;
+    expect(() => checkContrast(node)).not.toThrow();
+    expect(checkContrast(node)).toBeNull();
+  });
+  it("does not throw when a fills array contains a null element", () => {
+    const node = {
+      id: "t",
+      name: "T",
+      type: "TEXT",
+      characters: "Hi",
+      opacity: 1,
+      fontSize: 16,
+      fontWeight: 400,
+      fills: [null, { type: "SOLID", visible: true, color: { r: 0, g: 0, b: 0 } }],
+      parent: {
+        fills: [{ type: "SOLID", visible: true, color: { r: 1, g: 1, b: 1 } }],
+        parent: null,
+      },
+    } as any;
+    expect(() => checkContrast(node)).not.toThrow();
+    expect(checkContrast(node)!.aa_pass).toBe(true);
+  });
 });

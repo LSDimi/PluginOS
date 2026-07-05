@@ -31,7 +31,13 @@ export function resolveBindingState(
 
   if (property === "effect") {
     const effects = anyNode.effects;
-    if (Array.isArray(effects) && effects.some((e: any) => e && e.boundVariables))
+    // Match the fill/stroke rule: only "variable" when EVERY effect is bound,
+    // so a raw effect alongside a bound one is still surfaced as drift.
+    if (
+      Array.isArray(effects) &&
+      effects.length > 0 &&
+      effects.every((e: any) => e && e.boundVariables)
+    )
       return "variable";
     return "raw";
   }
