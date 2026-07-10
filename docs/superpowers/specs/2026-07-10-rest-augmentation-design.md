@@ -134,6 +134,37 @@ because no plugin is connected.
 Reuses the v0.4 `requires_confirm` pattern. Replies post publicly as
 the user's Figma account — the gate is non-negotiable.
 
+## User Experience
+
+**Opt-in is configuration-presence, not a toggle — and the Figma
+plugin UI is untouched.** The bridge plugin cannot hold the secret, so
+setup happens entirely on the MCP-client side. No token configured →
+nothing changes: `get_status` reports `rest: "not_configured"` and
+collab ops return setup instructions instead of running.
+
+One-time setup:
+
+1. In Figma account settings (Settings → Security → Personal access
+   tokens), generate a token with only the `file_comments` read/write
+   scopes.
+2. Provide it to the server:
+   - **Claude Desktop (DXT):** optional "Figma Personal Access Token"
+     field in the extension settings (`user_config`, `sensitive: true`
+     → OS keychain).
+   - **Claude Code / npx:** `FIGMA_PAT` in the `env` block of the
+     pluginos MCP config entry.
+
+Day-to-day:
+
+- "Any unresolved comments on this file?" → `list_comments` returns
+  threads joined to live node names/paths when the bridge is open;
+  raw node IDs plus an explicit degraded-mode note when Figma is
+  closed.
+- "Reply that it's fixed" → the agent surfaces the exact text and
+  target comment for approval (`requires_confirm`), then the reply
+  appears in Figma from the user's own account.
+- Resolving remains a manual step in Figma (no API support).
+
 ## Security
 
 - **Token:** `FIGMA_PAT` env var, read lazily on first REST call.
