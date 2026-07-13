@@ -4,11 +4,13 @@ export function safeSerialize(value: unknown, maxDepth = 5): unknown {
   const seen = new WeakSet();
 
   function walk(val: unknown, depth: number): unknown {
-    if (depth > maxDepth) return "[max depth]";
     if (val === null || val === undefined) return val;
     if (typeof val === "symbol") return val.toString();
     if (typeof val === "function") return "[function]";
     if (typeof val !== "object") return val;
+    // Only containers truncate — primitives must survive at any depth
+    // or color channels etc. silently corrupt to "[max depth]" (F1).
+    if (depth > maxDepth) return "[max depth]";
 
     if (seen.has(val as object)) return "[circular]";
     seen.add(val as object);
