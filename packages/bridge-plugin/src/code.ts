@@ -2,6 +2,7 @@ import { getOperation, listOperations } from "./operations/index";
 import { createOperationContext, resolvePageTarget } from "./operations/context";
 import { safeSerialize } from "./utils/serializer";
 import { handleOpenExternal } from "./handlers/open-external";
+import { resolveFileId } from "./utils/file-identity";
 
 // Show the UI (which handles WebSocket)
 figma.showUI(__html__, { width: 360, height: 600, themeColors: true });
@@ -21,7 +22,7 @@ sendFileName();
 
 // Send file status to MCP server on connection
 function sendFileStatus(): void {
-  const fileKey = figma.fileKey;
+  const fileKey = resolveFileId(figma);
   const fileName = figma.root.name;
   const currentPage = figma.currentPage.name;
 
@@ -29,7 +30,7 @@ function sendFileStatus(): void {
     type: "ws-send",
     payload: {
       type: "status",
-      fileKey: fileKey || "unknown",
+      fileKey,
       fileName,
       currentPage,
     },
