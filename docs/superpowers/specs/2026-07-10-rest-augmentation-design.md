@@ -38,7 +38,8 @@ only, as server-side operations behind the existing tool surface.
   bridge is connected ("full review loop": read → act in file → reply).
 - Reply to comments as the user, gated behind explicit confirmation.
 - Work in degraded mode when Figma is closed (raw node IDs, explicit
-  `live_join: false`).
+  `live_join: false`) — available when a token is present via env var
+  or was received from the plugin earlier in the server's lifetime.
 - Zero-to-minimal cost against the SKILL.md 1150-token budget.
 
 ## Non-Goals (deferred, with reasons)
@@ -83,7 +84,36 @@ a server-side registry and are invoked through the existing
   when connected) with server ops (always). When the bridge is
   disconnected it **no longer errors** — it returns server ops plus a
   hint that plugin ops require the bridge.
-- `get_status`: gains `rest: "configured" | "not_configured"`.
+- `get_status`: gains `rest: "configured" | "not_configured"` plus a
+  `rest_source: "plugin" | "env"` field when configured.
+
+### Token provisioning
+
+The PAT is entered in the **bridge plugin's Setup tab** (primary path)
+or via the `FIGMA_PAT` env var (power-user override for headless and
+always-offline use; env wins when both exist).
+
+Plugin path: the Setup tab stores the token with `figma.clientStorage`
+and sends it to the server over the localhost WebSocket (new
+plugin→server message `{ type: "config", pat }`, sent on connect and
+whenever the user saves/clears it). The server holds it **in memory
+only** — never written to `~/.pluginos`, never logged. REST calls are
+still made by the server, so the approved routing, error taxonomy, and
+hybrid join are unchanged. If the server restarts while Figma is
+closed, REST ops report `not_configured` until the plugin reconnects
+(or `FIGMA_PAT` is set).
+
+Honest threat framing: `figma.clientStorage` is plaintext on disk in
+Figma's local data, readable by anyone with machine access — the same
+class of exposure as an env var in a plaintext MCP config JSON. Neither
+is a keychain; the minimal `file_comments` scopes are the real
+mitigation. The token transits only the loopback WebSocket.
+
+Rejected sub-option: having the plugin call the REST API itself. It
+would require changing the published manifest's `networkAccess` from
+`"none"` to include `api.figma.com` (re-review, trust-optics
+downgrade), duplicate the HTTP/error stack inside the sandbox, and
+make comments die whenever Figma closes.
 
 ### Rejected alternatives
 
@@ -136,23 +166,25 @@ the user's Figma account — the gate is non-negotiable.
 
 ## User Experience
 
-**Opt-in is configuration-presence, not a toggle — and the Figma
-plugin UI is untouched.** The bridge plugin cannot hold the secret, so
-setup happens entirely on the MCP-client side. No token configured →
-nothing changes: `get_status` reports `rest: "not_configured"` and
-collab ops return setup instructions instead of running.
+**Opt-in is lazy — nothing is asked at install time.** Users see zero
+new friction until the first time they (or the agent) try a comments
+op. At that point the op returns a setup hint the agent relays: "Add a
+Figma personal access token in the PluginOS Bridge plugin's Setup tab."
+`get_status` reports `rest: "not_configured"` until then.
 
-One-time setup:
+One-time setup (~30 seconds, all inside Figma):
 
 1. In Figma account settings (Settings → Security → Personal access
    tokens), generate a token with only the `file_comments` read/write
-   scopes.
-2. Provide it to the server:
-   - **Claude Desktop (DXT):** optional "Figma Personal Access Token"
-     field in the extension settings (`user_config`, `sensitive: true`
-     → OS keychain).
-   - **Claude Code / npx:** `FIGMA_PAT` in the `env` block of the
-     pluginos MCP config entry.
+   scopes. The Setup tab links there and names the scopes.
+2. Paste it into the **Setup tab of the PluginOS Bridge plugin**
+   (masked field, configured/not indicator, Clear button). The user
+   can change or revoke it there at any time.
+
+Power-user alternative: `FIGMA_PAT` env var in the MCP config (npx) or
+a DXT `user_config` sensitive field — the only paths that enable REST
+ops with Figma fully closed, e.g. headless triage. Env overrides the
+plugin-provided token.
 
 Day-to-day:
 
@@ -167,14 +199,16 @@ Day-to-day:
 
 ## Security
 
-- **Token:** `FIGMA_PAT` env var, read lazily on first REST call.
-  - npx channel: `env` block in the MCP client config.
-  - DXT channel: `user_config` field with `sensitive: true` (Claude
-    Desktop stores it in the OS keychain, injects as the env var).
-- **Scopes:** setup docs instruct creating a PAT with only
+- **Token:** entered in the plugin Setup tab (`figma.clientStorage`,
+  handed to the server over the loopback WebSocket, held in server
+  memory only), or `FIGMA_PAT` env var (env wins). See "Token
+  provisioning" for the full model and threat framing.
+- **Scopes:** setup UI and docs instruct creating a PAT with only
   `file_comments:read` + `file_comments:write`.
 - **Hygiene:** the token is never logged, never written to
-  `~/.pluginos` state files, never echoed in error messages.
+  `~/.pluginos` state files, never echoed in error messages, never
+  included in `get_status`/`state.json` output (only the boolean
+  configured state and source).
 - **Prompt injection:** comments are the first third-party-authored
   content PluginOS feeds to a model. Every `list_comments` result
   carries the standing untrusted-content `_hint`; SKILL.md gets one
@@ -186,7 +220,7 @@ Day-to-day:
 
 | Condition | Behavior |
 |---|---|
-| `FIGMA_PAT` unset | actionable setup hint (where to create the PAT, which scopes, where to put it) — not a crash |
+| no token available | actionable setup hint (create PAT with comment scopes → paste in plugin Setup tab; or set `FIGMA_PAT`) — not a crash |
 | 401 | "PAT invalid or expired — regenerate and update FIGMA_PAT" |
 | 403 | "PAT lacks file_comments scope" |
 | 404 | "File not found, or PAT's account lacks access" |
@@ -207,6 +241,62 @@ Day-to-day:
   merge server-op manifests from `shared`), SKILL.md 1150-token budget
   (check headroom before adding the two lines), version lockstep.
 
+## Bundled v0.7 Fixes
+
+Three findings from a field session, verified against the code on
+2026-07-13. Two confirmed, one refuted.
+
+### F1 — serializer silently corrupts deep scalars (CONFIRMED — top priority)
+
+`packages/bridge-plugin/src/utils/serializer.ts:7` applies the depth
+cutoff **before** the primitive checks, so any scalar deeper than
+`maxDepth` (5) is replaced by the string `"[max depth]"` — e.g. color
+channel values inside operation envelopes return as plausible-looking
+structures with corrupted leaves. Silent wrong data, worse than an
+error.
+
+Fix: move the depth check below the primitive branches. Primitives
+always serialize regardless of depth; only objects/arrays past
+`maxDepth` truncate to the marker. Regression test: deeply nested
+fixture asserting leaf scalars survive at depth `maxDepth + 1` while
+containers there truncate.
+
+### F2 — `fileKey` is always `"unknown"` (CONFIRMED)
+
+`packages/bridge-plugin/src/code.ts:24` reads `figma.fileKey`, which
+is `undefined` unless the manifest sets `enablePrivatePluginApi` — an
+option unavailable to community plugins, and absent from
+`manifest.json`. Every connection therefore registers as `"unknown"`.
+Consequences: key-based targeting always fails (`File "…" not
+connected` while the file is visibly connected), and **two open files
+collide** in the server's `Map<fileKey>` (second connection overwrites
+the first).
+
+Fix (the real key is unobtainable in-sandbox):
+
+- The plugin generates a stable synthetic file id once per file
+  (persisted via root `pluginData`) and reports it alongside
+  `fileName`; `get_status`/`list_files` report it as a synthetic id
+  instead of pretending with `"unknown"`.
+- Server targeting resolves in order: exact key → synthetic id →
+  `fileName` (case-insensitive) → if exactly one file is connected,
+  route to it with a `_hint` naming the assumption; otherwise error
+  listing the connected files.
+- Optional enhancement once REST is configured: alias a real URL key
+  to a connection by matching REST file-name metadata against the live
+  root name (requires `file_metadata:read`; deferred unless cheap).
+
+### F3 — `execute_figma` timeout ignored (REFUTED — hardening only)
+
+The chain is correct: `server.ts:135-142` clamps and forwards the
+requested timeout, the message factory embeds it, and the plugin races
+against `msg.timeout`, echoing the **actual value used** in its error
+(`code.ts:137-141`). There is exactly one "timed out after" site in
+the codebase. An error reading `5000ms` means the plugin received the
+schema default — i.e. the client never sent `3000`. Hardening so this
+cannot mislead again: include `requestedTimeout` in `execute_figma`'s
+error and success payloads.
+
 ## Decision Log
 
 1. **Approach A** (server ops via `run_operation`) over a dedicated
@@ -218,3 +308,15 @@ Day-to-day:
    cost of an explicit degraded-output contract.
 4. **PAT over OAuth** even though the package is publicly distributed —
    per-user env tokens are the established local-MCP norm.
+5. **Token entry moved to the plugin Setup tab** after spec review.
+   Original design demanded MCP-config/env setup before first use —
+   friction that kills adoption before the value is visible. The
+   security objection to plugin-side storage collapsed on inspection:
+   env vars in plaintext MCP config JSON are the same exposure class
+   as `figma.clientStorage`; minimal scopes are the real mitigation.
+   REST execution stays server-side (loopback WS handoff, memory
+   only), so the approved architecture is unchanged.
+6. **v0.7 bundles field-session fixes:** serializer scalar corruption
+   and fileKey targeting confirmed against the code; the timeout
+   report was refuted by inspection (requested value is forwarded and
+   echoed) and yields only a `requestedTimeout` transparency field.
