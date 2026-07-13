@@ -15,6 +15,7 @@ export const GUARDED_OPS = new Set<string>([
   "audit_text_styles",
   "find_non_style_colors",
   "analyze_overrides",
+  "validate_ds_compliance",
 ]);
 
 export interface OperationContext {
@@ -40,8 +41,10 @@ export interface OperationContext {
 }
 
 export interface CreateOperationContextOptions {
-  /** Optional operation name for diagnostic use (reserved for Task 5+). */
+  /** Optional operation name used for the massive-scan guard. */
   opName?: string;
+  /** Nodes already resolved by the dispatcher (e.g. page targeting). */
+  preResolvedNodes?: readonly SceneNode[];
 }
 
 export function createOperationContext(
@@ -61,7 +64,27 @@ export function createOperationContext(
 
   let guard: OperationContext["guard"];
 
-  if (!explicitScope && scope === "selection" && figmaApi.currentPage.selection.length === 0) {
+  // Page-targeted scans arrive with nodes already resolved; skip the
+  // selection/currentPage guards but still enforce the massive-scan cap.
+  if (options?.preResolvedNodes) {
+    _nodes = options.preResolvedNodes;
+    if (
+      options.opName &&
+      GUARDED_OPS.has(options.opName) &&
+      params.confirm !== true &&
+      _nodes.length > PAGE_SCAN_CONFIRM_THRESHOLD
+    ) {
+      guard = {
+        requires_confirm: true,
+        estimated_nodes: _nodes.length,
+        _hint: `Target page has ${_nodes.length} nodes. Re-call with confirm: true to proceed.`,
+      };
+    }
+  } else if (
+    !explicitScope &&
+    scope === "selection" &&
+    figmaApi.currentPage.selection.length === 0
+  ) {
     // Guard: no_selection fires when the resolved scope is "selection" (from the
     // defaultScope, not an explicit caller param) and nothing is selected.
     guard = {
@@ -103,4 +126,38 @@ export function createOperationContext(
     figma: figmaApi,
     guard,
   };
+}
+
+export interface PageResolution {
+  nodes?: readonly SceneNode[];
+  pageName?: string;
+  error?: string;
+  available_pages?: string[];
+}
+
+/**
+ * When params carry page_name/page_id, load all pages and return the target
+ * page's nodes WITHOUT changing figma.currentPage (viewport stays put).
+ * Returns null when no page targeting was requested.
+ */
+export async function resolvePageTarget(
+  params: Record<string, unknown>,
+  figmaApi: PluginAPI
+): Promise<PageResolution | null> {
+  const pageName = typeof params.page_name === "string" ? params.page_name : undefined;
+  const pageId = typeof params.page_id === "string" ? params.page_id : undefined;
+  if (!pageName && !pageId) return null;
+
+  await figmaApi.loadAllPagesAsync();
+  const pages = figmaApi.root.children.filter((c) => c.type === "PAGE") as PageNode[];
+  const target = pages.find(
+    (p) => (pageId && p.id === pageId) || (pageName && p.name === pageName)
+  );
+  if (!target) {
+    return {
+      error: `Page '${pageId || pageName}' not found`,
+      available_pages: pages.map((p) => p.name),
+    };
+  }
+  return { nodes: target.findAll() as readonly SceneNode[], pageName: target.name };
 }

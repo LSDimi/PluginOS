@@ -44,3 +44,6 @@ docs/
 # Stray local assets
 /PluginOS - Cover.png
 /packages/bridge-plugin/matteo.png
+
+# Benchmark artifacts
+/packages/bridge-plugin/bench-results.json

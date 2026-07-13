@@ -1,6 +1,9 @@
 import { registerOperation } from "./registry";
 import type { OperationContext } from "./context";
 import { withHint } from "@pluginos/shared";
+import { checkStyleBinding } from "./checks/style";
+import { collectInstanceComponentNames, checkDetached } from "./checks/detached";
+import { checkNaming } from "./checks/naming";
 
 // --- lint_styles ---
 registerOperation({
@@ -23,7 +26,8 @@ registerOperation({
           "Set to true to proceed when page scan exceeds 500 nodes. Required when scope is 'page' on large pages.",
       },
     },
-    returns: "{ total_nodes, issues: Array<{nodeId, nodeName, nodeType, issue}>, summary }",
+    returns:
+      "{ total_nodes, issues: Array<{nodeId, nodeName, nodeType, issue, binding}>, total_issues, summary }",
   },
   async execute(ctx: OperationContext) {
     var { nodes, MAX_RESULTS } = ctx;
@@ -33,64 +37,18 @@ registerOperation({
       nodeName: string;
       nodeType: string;
       issue: string;
+      binding: "raw";
     }> = [];
 
     for (const node of nodes) {
-      if ("fillStyleId" in node) {
-        const fillStyleId = (node as any).fillStyleId;
-        if (fillStyleId === "" && "fills" in node) {
-          const fills = (node as any).fills;
-          if (Array.isArray(fills) && fills.length > 0) {
-            issues.push({
-              nodeId: node.id,
-              nodeName: node.name,
-              nodeType: node.type,
-              issue: "Fill without style",
-            });
-          }
-        }
-      }
-
-      if ("strokeStyleId" in node) {
-        const strokeStyleId = (node as any).strokeStyleId;
-        if (strokeStyleId === "" && "strokes" in node) {
-          const strokes = (node as any).strokes;
-          if (Array.isArray(strokes) && strokes.length > 0) {
-            issues.push({
-              nodeId: node.id,
-              nodeName: node.name,
-              nodeType: node.type,
-              issue: "Stroke without style",
-            });
-          }
-        }
-      }
-
-      if (node.type === "TEXT") {
-        const textNode = node as TextNode;
-        if (textNode.textStyleId === "" || textNode.textStyleId === figma.mixed) {
-          issues.push({
-            nodeId: node.id,
-            nodeName: node.name,
-            nodeType: node.type,
-            issue: "Text without style",
-          });
-        }
-      }
-
-      if ("effectStyleId" in node) {
-        const effectStyleId = (node as any).effectStyleId;
-        if (effectStyleId === "" && "effects" in node) {
-          const effects = (node as any).effects;
-          if (Array.isArray(effects) && effects.length > 0) {
-            issues.push({
-              nodeId: node.id,
-              nodeName: node.name,
-              nodeType: node.type,
-              issue: "Effect without style",
-            });
-          }
-        }
+      for (const f of checkStyleBinding(node)) {
+        issues.push({
+          nodeId: f.nodeId,
+          nodeName: f.nodeName,
+          nodeType: f.nodeType,
+          issue: f.detail,
+          binding: "raw",
+        });
       }
     }
 
@@ -98,7 +56,7 @@ registerOperation({
       total_nodes: nodes.length,
       issues: issues.slice(0, MAX_RESULTS),
       total_issues: issues.length,
-      summary: `Scanned ${nodes.length} nodes. Found ${issues.length} style issues.`,
+      summary: `Scanned ${nodes.length} nodes. Found ${issues.length} style issues (raw fills/strokes/text/effects; variable- and style-bound properties are not flagged).`,
     };
     return withHint(result, undefined, ["lint_detached", "check_contrast"]);
   },
@@ -130,31 +88,16 @@ registerOperation({
   async execute(ctx: OperationContext) {
     var { nodes, params, MAX_RESULTS } = ctx;
 
-    const detached: Array<{
-      nodeId: string;
-      nodeName: string;
-      parentName: string;
-    }> = [];
-
-    // Collect all component names used in instances on this page
-    const instanceComponentNames = new Set<string>();
-    for (const node of nodes) {
-      if (node.type === "INSTANCE") {
-        instanceComponentNames.add(node.name);
-      }
-    }
+    const instanceNames = collectInstanceComponentNames(nodes);
+    const detached: Array<{ nodeId: string; nodeName: string; parentName: string }> = [];
 
     for (const node of nodes) {
-      if (node.type === "FRAME") {
-        // Heuristic: A frame whose name matches an instance component name
-        // is likely a detached instance
-        if (instanceComponentNames.has(node.name)) {
-          detached.push({
-            nodeId: node.id,
-            nodeName: node.name,
-            parentName: node.parent?.name || "root",
-          });
-        }
+      for (const f of checkDetached(node, instanceNames)) {
+        detached.push({
+          nodeId: f.nodeId,
+          nodeName: f.nodeName,
+          parentName: (f.meta as any).parentName,
+        });
       }
     }
 
@@ -193,21 +136,10 @@ registerOperation({
   async execute(ctx: OperationContext) {
     var { nodes, MAX_RESULTS } = ctx;
 
-    const defaultNamePattern =
-      /^(Frame|Rectangle|Ellipse|Group|Line|Vector|Text|Polygon|Star|Section|Slice|Image|Component|Instance) \d+$/;
-    const unnamed: Array<{
-      nodeId: string;
-      nodeName: string;
-      nodeType: string;
-    }> = [];
-
+    const unnamed: Array<{ nodeId: string; nodeName: string; nodeType: string }> = [];
     for (const node of nodes) {
-      if (defaultNamePattern.test(node.name)) {
-        unnamed.push({
-          nodeId: node.id,
-          nodeName: node.name,
-          nodeType: node.type,
-        });
+      for (const f of checkNaming(node)) {
+        unnamed.push({ nodeId: f.nodeId, nodeName: f.nodeName, nodeType: f.nodeType });
       }
     }
 
