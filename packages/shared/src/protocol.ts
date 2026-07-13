@@ -31,6 +31,7 @@ export interface StatusMessage {
   fileKey: string;
   fileName: string;
   currentPage: string;
+  rest_configured?: boolean;
 }
 
 export type ServerToPluginMessage = RunOperationMessage | ExecuteMessage;
@@ -74,9 +75,10 @@ export function createResultMessage(
 export function createStatusMessage(
   fileKey: string,
   fileName: string,
-  currentPage: string
+  currentPage: string,
+  restConfigured?: boolean
 ): StatusMessage {
-  return { type: "status", fileKey, fileName, currentPage };
+  return { type: "status", fileKey, fileName, currentPage, rest_configured: restConfigured };
 }
 
 export function parseMessage(raw: string): ProtocolMessage | null {

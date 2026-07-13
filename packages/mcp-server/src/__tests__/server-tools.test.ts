@@ -21,6 +21,7 @@ function createMockBridge(overrides?: Partial<IPluginBridge>): IPluginBridge {
       currentPage: "Page 1",
       port: 9500,
       connectedFiles: 1,
+      rest: "not_configured",
     }),
     listFiles: vi
       .fn<IPluginBridge["listFiles"]>()
@@ -441,6 +442,7 @@ describe("get_status tool", () => {
         currentPage: null,
         port: 9500,
         connectedFiles: 0,
+        rest: null,
       }),
     });
     const { client, clientTransport, serverTransport } = await setupClientServer(bridge);
@@ -485,6 +487,7 @@ describe("list_files tool", () => {
         currentPage: null,
         port: 9500,
         connectedFiles: 0,
+        rest: null,
       }),
     });
     const { client, clientTransport, serverTransport } = await setupClientServer(bridge);
@@ -515,6 +518,7 @@ describe("list_files tool", () => {
         currentPage: "Page 2",
         port: 9500,
         connectedFiles: 3,
+        rest: null,
       }),
     });
     const { client, clientTransport, serverTransport } = await setupClientServer(bridge);

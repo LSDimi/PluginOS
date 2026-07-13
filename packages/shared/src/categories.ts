@@ -15,4 +15,5 @@ export const CATEGORY_DESCRIPTIONS: Record<OperationCategory, string> = {
   cleanup: "Cleanup & organization — remove hidden, rename, round values, dedup",
   data: "Data visualization — charts, tables, JSON population",
   custom: "Custom operations — user-defined via execute_figma fallback",
+  collab: "Collaboration — file comments via Figma REST API (requires PAT in plugin Setup)",
 };

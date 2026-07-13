@@ -20,6 +20,7 @@ interface ConnectedFile {
   fileName: string;
   currentPage: string;
   lastActivity: number;
+  restConfigured: boolean;
 }
 
 interface PendingRequest {
@@ -152,6 +153,7 @@ export class WebSocketPluginBridge implements IPluginBridge {
             fileName: status.fileName,
             currentPage: status.currentPage,
             lastActivity: Date.now(),
+            restConfigured: status.rest_configured === true,
           });
           this.activeFileKey = key;
         }
@@ -210,6 +212,7 @@ export class WebSocketPluginBridge implements IPluginBridge {
       currentPage: active?.currentPage ?? null,
       port: this.port,
       connectedFiles: this.files.size,
+      rest: active ? (active.restConfigured ? "configured" : "not_configured") : null,
     };
   }
 
