@@ -152,6 +152,7 @@ export function createPluginOSServer(bridge: IPluginBridge) {
                     lint,
                     preludeVersion: PRELUDE_VERSION,
                     durationMs,
+                    requestedTimeout: safeTimeout,
                   },
                   null,
                   2
@@ -164,7 +165,7 @@ export function createPluginOSServer(bridge: IPluginBridge) {
           content: [
             {
               type: "text" as const,
-              text: `Execution failed: ${result.error}`,
+              text: `Execution failed: ${result.error} (requestedTimeout: ${safeTimeout}ms)`,
             },
           ],
           isError: true,
