@@ -9,6 +9,7 @@ import type {
   FileInfo,
 } from "@pluginos/shared";
 import { parseMessage } from "@pluginos/shared";
+import { resolveFileTarget } from "./targeting.js";
 import pkg from "../package.json" with { type: "json" };
 
 const SERVER_VERSION = pkg.version;
@@ -218,17 +219,13 @@ export class WebSocketPluginBridge implements IPluginBridge {
     fileKey?: string
   ): Promise<ResultMessage> {
     return new Promise((resolve, reject) => {
-      const targetKey = fileKey || this.activeFileKey;
-      if (!targetKey || !this.files.has(targetKey)) {
-        reject(
-          new Error(
-            fileKey
-              ? `File "${fileKey}" not connected.`
-              : "No plugin connected. Open PluginOS Bridge in Figma."
-          )
-        );
+      const resolution = resolveFileTarget(this.files, fileKey, this.activeFileKey);
+      if ("error" in resolution) {
+        reject(new Error(resolution.error));
         return;
       }
+      const targetKey = resolution.key;
+      const note = resolution.note;
       const file = this.files.get(targetKey)!;
       if (file.ws.readyState !== WebSocket.OPEN) {
         reject(new Error(`Connection to "${file.fileName}" is not open.`));
@@ -243,7 +240,13 @@ export class WebSocketPluginBridge implements IPluginBridge {
         reject(new Error(`Operation timed out after ${timeout}ms`));
       }, timeout);
 
-      this.pending.set(message.id, { resolve, reject, timer, fileKey: targetKey });
+      const resolveWithNote = (r: ResultMessage) => {
+        if (note && r.result && typeof r.result === "object" && !Array.isArray(r.result)) {
+          r = { ...r, result: { ...(r.result as object), _target_note: note } };
+        }
+        resolve(r);
+      };
+      this.pending.set(message.id, { resolve: resolveWithNote, reject, timer, fileKey: targetKey });
       file.ws.send(JSON.stringify(message));
     });
   }

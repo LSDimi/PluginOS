@@ -140,7 +140,7 @@ describe("WebSocketPluginBridge edge cases", () => {
     );
   });
 
-  it("rejects with file-specific message for non-existent fileKey", async () => {
+  it("falls back to the only connected file for a non-existent fileKey, surfacing a note", async () => {
     server = new WebSocketPluginBridge({ portRange: [9549, 9549] });
     await server.start();
 
@@ -152,12 +152,53 @@ describe("WebSocketPluginBridge edge cases", () => {
     );
     await new Promise((r) => setTimeout(r, 50));
 
+    client.on("message", (data) => {
+      const msg = JSON.parse(data.toString());
+      if (msg.type === "run_operation") {
+        client.send(JSON.stringify({ id: msg.id, type: "result", success: true, result: {} }));
+      }
+    });
+
     const { createRunOperationMessage } = await import("@pluginos/shared");
     const msg = createRunOperationMessage("test_op", {});
 
-    await expect(server.sendAndWait(msg, 1000, "ghost")).rejects.toThrow(/"ghost" not connected/);
+    const result = await server.sendAndWait(msg, 1000, "ghost");
+    expect(result.success).toBe(true);
+    expect((result.result as { _target_note?: string })._target_note).toContain(
+      "only connected file"
+    );
 
     client.close();
+    await new Promise((r) => setTimeout(r, 50));
+  });
+
+  it("rejects with file-specific message listing connected files when multiple files are connected and none match", async () => {
+    server = new WebSocketPluginBridge({ portRange: [9563, 9563] });
+    await server.start();
+
+    const client1 = new WebSocket("ws://localhost:9563");
+    await new Promise<void>((r) => client1.on("open", r));
+    client1.send(
+      JSON.stringify({ type: "status", fileKey: "real1", fileName: "Real 1", currentPage: "P1" })
+    );
+    await new Promise((r) => setTimeout(r, 50));
+
+    const client2 = new WebSocket("ws://localhost:9563");
+    await new Promise<void>((r) => client2.on("open", r));
+    client2.send(
+      JSON.stringify({ type: "status", fileKey: "real2", fileName: "Real 2", currentPage: "P1" })
+    );
+    await new Promise((r) => setTimeout(r, 50));
+
+    const { createRunOperationMessage } = await import("@pluginos/shared");
+    const msg = createRunOperationMessage("test_op", {});
+
+    await expect(server.sendAndWait(msg, 1000, "ghost")).rejects.toThrow(
+      /"ghost" not connected.*Real 1.*Real 2/s
+    );
+
+    client1.close();
+    client2.close();
     await new Promise((r) => setTimeout(r, 50));
   });
 
