@@ -1,5 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { resolveFileId, SYNTHETIC_ID_PLUGINDATA, VERIFIED_KEY_PLUGINDATA } from "../utils/file-identity";
+import { describe, it, expect } from "vitest";
+import {
+  resolveFileId,
+  SYNTHETIC_ID_PLUGINDATA,
+  VERIFIED_KEY_PLUGINDATA,
+} from "../utils/file-identity";
 
 function mockFigma(fileKey?: string) {
   const store: Record<string, string> = {};
@@ -7,7 +11,9 @@ function mockFigma(fileKey?: string) {
     fileKey,
     root: {
       getPluginData: (k: string) => store[k] ?? "",
-      setPluginData: (k: string, v: string) => { store[k] = v; },
+      setPluginData: (k: string, v: string) => {
+        store[k] = v;
+      },
     },
     _store: store,
   } as any;

@@ -57,7 +57,10 @@ describe("execute_figma timeout transparency (F3)", () => {
   it("names the requested timeout in failure text", async () => {
     const bridge = createMockBridge({
       sendAndWait: vi.fn().mockResolvedValue({
-        id: "t", type: "result", success: false, error: "Execution timed out after 3000ms",
+        id: "t",
+        type: "result",
+        success: false,
+        error: "Execution timed out after 3000ms",
       }),
     });
     const { client, clientTransport, serverTransport } = await setupClientServer(bridge);
