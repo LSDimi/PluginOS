@@ -32,11 +32,14 @@ async function resolveVerifiedKey(
   }
   const key = parseFileKey(param);
   const meta = await figmaRest(`/v1/files/${key}/meta`, token);
-  if (!meta.ok) return { error: meta.error };
+  if (!meta.ok) {
+    return { error: meta.error, _hint: "See the PluginOS Setup tab if this is a token problem." };
+  }
   const restName: string = meta.data?.file?.name ?? meta.data?.name ?? "";
   if (restName.trim().toLowerCase() !== ctx.figma.root.name.trim().toLowerCase()) {
     return {
       error: `Key "${key}" belongs to "${restName}" but this file is "${ctx.figma.root.name}" — key not persisted.`,
+      _hint: "Pass the URL or key of THIS file (the one open in Figma).",
     };
   }
   ctx.figma.root.setPluginData(VERIFIED_KEY_PLUGINDATA, key);
@@ -63,7 +66,7 @@ interface RestComment {
   parent_id: string;
   message: string;
   resolved_at: string | null;
-  user: { handle: string };
+  user: { handle: string } | null;
   created_at: string;
   client_meta?: { node_id?: string } | null;
 }
@@ -101,7 +104,9 @@ registerOperation({
     const { key } = resolved;
 
     const res = await figmaRest(`/v1/files/${key}/comments`, token);
-    if (!res.ok) return { error: res.error };
+    if (!res.ok) {
+      return { error: res.error, _hint: "See the PluginOS Setup tab if this is a token problem." };
+    }
 
     const allComments: RestComment[] = res.data?.comments ?? [];
     const onlyUnresolved = ctx.params.only_unresolved !== false;
@@ -126,13 +131,13 @@ registerOperation({
         : { node_name: null, node_path: null };
       const replies = (repliesByParent.get(root.id) ?? []).map((r) => ({
         id: r.id,
-        author: r.user.handle,
+        author: r.user?.handle ?? "unknown",
         created_at: r.created_at,
         text: r.message,
       }));
       comments.push({
         id: root.id,
-        author: root.user.handle,
+        author: root.user?.handle ?? "unknown",
         created_at: root.created_at,
         resolved: root.resolved_at !== null,
         text: root.message,
@@ -194,7 +199,10 @@ registerOperation({
     const commentId = ctx.params.comment_id;
     const message = ctx.params.message;
     if (typeof commentId !== "string" || typeof message !== "string") {
-      return { error: "comment_id and message (strings) are required." };
+      return {
+        error: "comment_id and message (strings) are required.",
+        _hint: "Pass comment_id (the root comment's ID) and message (the reply text) as strings.",
+      };
     }
 
     if (ctx.params.confirm !== true) {
@@ -209,7 +217,9 @@ registerOperation({
       method: "POST",
       body: { message, comment_id: commentId },
     });
-    if (!res.ok) return { error: res.error };
+    if (!res.ok) {
+      return { error: res.error, _hint: "See the PluginOS Setup tab if this is a token problem." };
+    }
 
     return {
       posted: true,

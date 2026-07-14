@@ -127,6 +127,7 @@ describe("list_comments", () => {
     const r: any = await getOperation("list_comments")!.execute(ctx(figma, { file_key: "KEY123" }));
     expect(r.error).toContain("Different File");
     expect(r.error).toContain("Design System");
+    expect(r._hint).toContain("THIS file");
     expect(figma._pluginData["pluginos_verified_file_key"]).toBeUndefined();
   });
 
@@ -138,6 +139,31 @@ describe("list_comments", () => {
     );
     const deleted = r.comments.find((c: any) => c.id === "c3");
     expect(deleted.node_name).toBeNull();
+  });
+
+  it("falls back to 'unknown' author when the comment's user is null", async () => {
+    const figma = mockFigma({ pat: "t", verifiedKey: "KEY123" });
+    stubFetchRoutes({
+      "/comments": {
+        status: 200,
+        body: {
+          comments: [
+            {
+              id: "c4",
+              parent_id: "",
+              message: "left by a deleted account",
+              resolved_at: null,
+              user: null,
+              created_at: NOW,
+              client_meta: null,
+            },
+          ],
+        },
+      },
+    });
+    const r: any = await getOperation("list_comments")!.execute(ctx(figma, {}));
+    expect(r.comments).toHaveLength(1);
+    expect(r.comments[0]).toMatchObject({ id: "c4", author: "unknown" });
   });
 });
 
