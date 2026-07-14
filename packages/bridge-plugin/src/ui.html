@@ -67,6 +67,16 @@
       .running-op { font-family: var(--po-font-mono); font-size: 13px; font-weight: 500; margin-bottom: 4px; color: var(--po-accent); }
       .running-params { font-family: var(--po-font-mono); font-size: 11px; margin-bottom: 12px; opacity: .7; color: var(--po-text); }
       .running-time { font-size: 11px; opacity: .7; font-family: var(--po-font-mono); color: var(--po-text); }
+
+      .pat-section { border: 1px solid var(--po-border); background: var(--po-step-bg); border-radius: var(--po-radius); padding: 12px; margin-top: 14px; }
+      .pat-title { font-size: 11px; font-weight: 600; margin-bottom: 8px; color: var(--po-text); }
+      .pat-row { display: flex; gap: 6px; margin-bottom: 8px; }
+      .pat-input { flex: 1; min-width: 0; font-family: var(--po-font-mono); font-size: 11px; padding: 6px 8px; border-radius: 6px; background: var(--po-code-bg); border: 1px solid var(--po-border); color: var(--po-text); }
+      .pat-actions { display: flex; gap: 6px; }
+      .pat-actions button { flex: 1; }
+      .pat-status { font-size: 11px; color: var(--po-text-sub); }
+      .pat-hint { font-size: 10.5px; line-height: 1.5; margin-top: 8px; color: var(--po-text-sub); }
+      .pat-hint a { color: inherit; }
     </style>
   </head>
   <body data-theme="light">
@@ -176,6 +186,32 @@
       <div class="why" aria-expanded="false">
         <div class="why-title" id="why-toggle">ⓘ Why this setup?</div>
         <div class="why-text" id="why-text"></div>
+      </div>
+
+      <div class="pat-section">
+        <div class="pat-title">Figma REST access (optional)</div>
+        <div class="pat-row">
+          <input
+            type="password"
+            id="pat-input"
+            class="pat-input"
+            placeholder="figd_..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <div class="pat-actions">
+          <button id="btn-pat-save" class="btn-icon" type="button">Save</button>
+          <button id="btn-pat-clear" class="btn-icon" type="button">Clear</button>
+        </div>
+        <div class="pat-status">Status: <span id="pat-status">Not configured</span></div>
+        <div class="pat-hint">
+          Needed for comment operations. Create a token with
+          <code>file_comments:read</code>, <code>file_comments:write</code>, and
+          <code>file_metadata:read</code> scopes, then paste it above:
+          <a href="#" id="pat-docs-link">figma.com/developers/api#access-tokens</a>.
+          The token is stored only on this device and never leaves the plugin.
+        </div>
       </div>
     </section>
 

@@ -3,6 +3,7 @@ import { createOperationContext, resolvePageTarget } from "./operations/context"
 import { safeSerialize } from "./utils/serializer";
 import { handleOpenExternal } from "./handlers/open-external";
 import { resolveFileId } from "./utils/file-identity";
+import { getPat, setPat, clearPat } from "./utils/pat";
 
 // Show the UI (which handles WebSocket)
 figma.showUI(__html__, { width: 360, height: 600, themeColors: true });
@@ -21,10 +22,11 @@ sendTheme();
 sendFileName();
 
 // Send file status to MCP server on connection
-function sendFileStatus(): void {
+async function sendFileStatus(): Promise<void> {
   const fileKey = resolveFileId(figma);
   const fileName = figma.root.name;
   const currentPage = figma.currentPage.name;
+  const restConfigured = (await getPat(figma)) !== null;
 
   figma.ui.postMessage({
     type: "ws-send",
@@ -33,6 +35,7 @@ function sendFileStatus(): void {
       fileKey,
       fileName,
       currentPage,
+      rest_configured: restConfigured,
     },
   });
 }
@@ -48,6 +51,23 @@ figma.ui.onmessage = async (msg: any) => {
     return;
   }
 
+  if (msg.type === "SET_PAT") {
+    await setPat(figma, String(msg.token ?? ""));
+    figma.ui.postMessage({ type: "PAT_STATUS", configured: (await getPat(figma)) !== null });
+    await sendFileStatus();
+    return;
+  }
+  if (msg.type === "CLEAR_PAT") {
+    await clearPat(figma);
+    figma.ui.postMessage({ type: "PAT_STATUS", configured: false });
+    await sendFileStatus();
+    return;
+  }
+  if (msg.type === "GET_PAT_STATUS") {
+    figma.ui.postMessage({ type: "PAT_STATUS", configured: (await getPat(figma)) !== null });
+    return;
+  }
+
   if (msg.type === "ws-connected") {
     // The startup sendFileName landed in the bootloader iframe, which
     // document.write()s itself away when it swaps in the real UI — resend
@@ -56,7 +76,7 @@ figma.ui.onmessage = async (msg: any) => {
     // OS theme, which sendTheme coerces to "light" and would clobber the
     // UI's own (correct) matchMedia detection from bootstrap.
     sendFileName();
-    sendFileStatus();
+    void sendFileStatus();
     return;
   }
 
@@ -167,7 +187,7 @@ if (typeof self !== "undefined" && "addEventListener" in self) {
 }
 
 // Update status when page changes
-figma.on("currentpagechange", sendFileStatus);
+figma.on("currentpagechange", () => void sendFileStatus());
 
 // NOTE: figma.on("documentchange", ...) requires figma.loadAllPagesAsync() first
 // when the manifest uses documentAccess: "dynamic-page" (which we do). The filename
