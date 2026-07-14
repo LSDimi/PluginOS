@@ -142,10 +142,10 @@ async function handleServerMessage(msg: any): Promise<void> {
       const usedPageScope = pageRes != null || scope === "page";
       if (
         usedPageScope &&
-        ctx.nodes.length === 0 &&
         result &&
         typeof result === "object" &&
-        !(result as any)._hint
+        !(result as any)._hint &&
+        ctx.nodes.length === 0
       ) {
         result = {
           ...(result as object),
