@@ -202,6 +202,44 @@ describe("WebSocketPluginBridge edge cases", () => {
     await new Promise((r) => setTimeout(r, 50));
   });
 
+  // ─── fileKey identity upgrade (synthetic -> verified) ──────────
+
+  it("drops the stale entry when a connection upgrades its fileKey mid-session", async () => {
+    server = new WebSocketPluginBridge({ portRange: [9564, 9564] });
+    await server.start();
+
+    const client = new WebSocket("ws://localhost:9564");
+    await new Promise<void>((r) => client.on("open", r));
+
+    // Synthetic id reported first (e.g. before list_comments validates a real key)
+    client.send(
+      JSON.stringify({
+        type: "status",
+        fileKey: "syn_abc12345",
+        fileName: "F1",
+        currentPage: "P1",
+      })
+    );
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Same socket later reports the verified real key
+    client.send(
+      JSON.stringify({ type: "status", fileKey: "KEY123", fileName: "F1", currentPage: "P1" })
+    );
+    await new Promise((r) => setTimeout(r, 50));
+
+    const files = server.listFiles();
+    expect(files).toHaveLength(1);
+    expect(files[0].fileKey).toBe("KEY123");
+    expect(server.getStatus().connectedFiles).toBe(1);
+
+    client.close();
+    await new Promise((r) => setTimeout(r, 100));
+
+    expect(server.isConnected()).toBe(false);
+    expect(server.getStatus().connected).toBe(false);
+  });
+
   // ─── Malformed messages ────────────────────────────────────────
 
   it("ignores malformed JSON from plugin without crashing", async () => {

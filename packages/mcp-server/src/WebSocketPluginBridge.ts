@@ -146,6 +146,21 @@ export class WebSocketPluginBridge implements IPluginBridge {
         } else if (msg.type === "status") {
           const status = msg as StatusMessage;
           const key = status.fileKey || "unknown";
+          const previousKey = fileKey;
+          // Identity upgrade: the plugin can legitimately change its reported
+          // fileKey mid-connection (e.g. synthetic id -> verified real key
+          // once list_comments validates one). If it does, drop the stale
+          // entry for the old key on this same socket so we don't end up
+          // double-counting one connection as two files, and re-key any
+          // in-flight pending requests so their close-cleanup still matches.
+          if (previousKey && previousKey !== key) {
+            this.files.delete(previousKey);
+            for (const p of this.pending.values()) {
+              if (p.fileKey === previousKey) {
+                p.fileKey = key;
+              }
+            }
+          }
           fileKey = key;
           this.files.set(key, {
             ws,
@@ -155,6 +170,9 @@ export class WebSocketPluginBridge implements IPluginBridge {
             lastActivity: Date.now(),
             restConfigured: status.rest_configured === true,
           });
+          // Always point activeFileKey at the latest reported key for this
+          // connection — this already covers the case where activeFileKey
+          // was pointing at the stale previousKey.
           this.activeFileKey = key;
         }
       });
