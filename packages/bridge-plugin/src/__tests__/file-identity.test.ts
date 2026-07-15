@@ -35,4 +35,12 @@ describe("resolveFileId (F2a)", () => {
     expect(resolveFileId(f)).toBe(first);
     expect(f._store[SYNTHETIC_ID_PLUGINDATA]).toBe(first);
   });
+  it("still returns a synthetic id when setPluginData throws (read-only file)", () => {
+    const f = mockFigma(undefined);
+    f.root.setPluginData = () => {
+      throw new Error("read-only file");
+    };
+    expect(() => resolveFileId(f)).not.toThrow();
+    expect(resolveFileId(f)).toMatch(/^syn_[a-z0-9]{8}$/);
+  });
 });

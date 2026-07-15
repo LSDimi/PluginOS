@@ -14,7 +14,11 @@ export function resolveFileId(figmaApi: PluginAPI): string {
   let synthetic = figmaApi.root.getPluginData(SYNTHETIC_ID_PLUGINDATA);
   if (!synthetic) {
     synthetic = `syn_${Math.random().toString(36).slice(2, 10).padEnd(8, "0")}`;
-    figmaApi.root.setPluginData(SYNTHETIC_ID_PLUGINDATA, synthetic);
+    try {
+      figmaApi.root.setPluginData(SYNTHETIC_ID_PLUGINDATA, synthetic);
+    } catch {
+      console.warn("[PluginOS] Could not persist synthetic id (file may be read-only)");
+    }
   }
   return synthetic;
 }

@@ -177,6 +177,16 @@ describe("reply_comment", () => {
     expect(r.preview).toMatchObject({ comment_id: "c1", message: "Done ✓ — please resolve" });
   });
 
+  it("rejects an empty/whitespace-only message without calling fetch", async () => {
+    const figma = mockFigma({ pat: "t", verifiedKey: "KEY123" });
+    stubFetchRoutes({ "/comments": { status: 200, body: { id: "c9" } } });
+    const r: any = await getOperation("reply_comment")!.execute(
+      ctx(figma, { comment_id: "c1", message: "   ", confirm: true })
+    );
+    expect(r.error).toBe("comment_id and a non-empty message (strings) are required.");
+    expect(vi.mocked(fetch).mock.calls.length).toBe(0);
+  });
+
   it("posts the reply when confirmed", async () => {
     const figma = mockFigma({ pat: "t", verifiedKey: "KEY123" });
     stubFetchRoutes({ "/comments": { status: 200, body: { id: "c9" } } });

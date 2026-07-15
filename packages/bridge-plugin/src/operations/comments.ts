@@ -42,7 +42,11 @@ async function resolveVerifiedKey(
       _hint: "Pass the URL or key of THIS file (the one open in Figma).",
     };
   }
-  ctx.figma.root.setPluginData(VERIFIED_KEY_PLUGINDATA, key);
+  try {
+    ctx.figma.root.setPluginData(VERIFIED_KEY_PLUGINDATA, key);
+  } catch {
+    console.warn("[PluginOS] Could not persist verified key (file may be read-only)");
+  }
   return { key };
 }
 
@@ -123,30 +127,31 @@ registerOperation({
 
     const filteredRoots = onlyUnresolved ? roots.filter((c) => c.resolved_at === null) : roots;
 
-    const comments = [];
-    for (const root of filteredRoots.slice(0, ctx.MAX_RESULTS)) {
-      const nodeId = root.client_meta?.node_id ?? null;
-      const { node_name, node_path } = nodeId
-        ? await nodePath(ctx.figma, nodeId)
-        : { node_name: null, node_path: null };
-      const replies = (repliesByParent.get(root.id) ?? []).map((r) => ({
-        id: r.id,
-        author: r.user?.handle ?? "unknown",
-        created_at: r.created_at,
-        text: r.message,
-      }));
-      comments.push({
-        id: root.id,
-        author: root.user?.handle ?? "unknown",
-        created_at: root.created_at,
-        resolved: root.resolved_at !== null,
-        text: root.message,
-        node_id: nodeId,
-        node_name,
-        node_path,
-        replies,
-      });
-    }
+    const comments = await Promise.all(
+      filteredRoots.slice(0, ctx.MAX_RESULTS).map(async (root) => {
+        const nodeId = root.client_meta?.node_id ?? null;
+        const { node_name, node_path } = nodeId
+          ? await nodePath(ctx.figma, nodeId)
+          : { node_name: null, node_path: null };
+        const replies = (repliesByParent.get(root.id) ?? []).map((r) => ({
+          id: r.id,
+          author: r.user?.handle ?? "unknown",
+          created_at: r.created_at,
+          text: r.message,
+        }));
+        return {
+          id: root.id,
+          author: root.user?.handle ?? "unknown",
+          created_at: root.created_at,
+          resolved: root.resolved_at !== null,
+          text: root.message,
+          node_id: nodeId,
+          node_name,
+          node_path,
+          replies,
+        };
+      })
+    );
 
     return {
       comments,
@@ -198,9 +203,9 @@ registerOperation({
 
     const commentId = ctx.params.comment_id;
     const message = ctx.params.message;
-    if (typeof commentId !== "string" || typeof message !== "string") {
+    if (typeof commentId !== "string" || typeof message !== "string" || !message.trim()) {
       return {
-        error: "comment_id and message (strings) are required.",
+        error: "comment_id and a non-empty message (strings) are required.",
         _hint: "Pass comment_id (the root comment's ID) and message (the reply text) as strings.",
       };
     }

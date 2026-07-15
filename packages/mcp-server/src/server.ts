@@ -165,7 +165,7 @@ export function createPluginOSServer(bridge: IPluginBridge) {
           content: [
             {
               type: "text" as const,
-              text: `Execution failed: ${result.error} (requestedTimeout: ${safeTimeout}ms)`,
+              text: `Execution failed: ${result.error || "Unknown error"} (requestedTimeout: ${safeTimeout}ms)`,
             },
           ],
           isError: true,
