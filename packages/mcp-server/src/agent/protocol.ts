@@ -52,9 +52,29 @@ export function parseAgentMessage(raw: string): AgentMessage | null {
     return null;
   }
   if (typeof parsed !== "object" || parsed === null) return null;
-  const msg = parsed as { type?: unknown; payload?: unknown };
-  if (msg.type === "AGENT_HELLO" || msg.type === "DAEMON_HELLO") {
-    return parsed as AgentMessage;
+  const msg = parsed as {
+    type?: unknown;
+    payload?: unknown;
+    agentProtocol?: unknown;
+    shimVersion?: unknown;
+    serverVersion?: unknown;
+    sessionLabel?: unknown;
+  };
+  if (msg.type === "AGENT_HELLO") {
+    if (
+      typeof msg.agentProtocol === "number" &&
+      typeof msg.shimVersion === "string" &&
+      (msg.sessionLabel === undefined || typeof msg.sessionLabel === "string")
+    ) {
+      return parsed as AgentHello;
+    }
+    return null;
+  }
+  if (msg.type === "DAEMON_HELLO") {
+    if (typeof msg.agentProtocol === "number" && typeof msg.serverVersion === "string") {
+      return parsed as DaemonHello;
+    }
+    return null;
   }
   if (msg.type === "mcp" && msg.payload !== undefined) {
     return parsed as McpFrame;

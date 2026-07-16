@@ -49,4 +49,25 @@ describe("agent protocol", () => {
     expect(parseAgentMessage('{"type":"SOMETHING_ELSE"}')).toBeNull();
     expect(parseAgentMessage('{"type":"mcp"}')).toBeNull(); // mcp frame requires payload
   });
+
+  it("returns null for hello messages with missing or wrong-typed fields", () => {
+    expect(parseAgentMessage('{"type":"AGENT_HELLO"}')).toBeNull();
+    expect(
+      parseAgentMessage('{"type":"AGENT_HELLO","agentProtocol":1,"shimVersion":42}')
+    ).toBeNull();
+    expect(
+      parseAgentMessage(
+        '{"type":"AGENT_HELLO","agentProtocol":1,"shimVersion":"0.6.0","sessionLabel":7}'
+      )
+    ).toBeNull();
+    expect(parseAgentMessage('{"type":"DAEMON_HELLO"}')).toBeNull();
+    expect(
+      parseAgentMessage('{"type":"DAEMON_HELLO","agentProtocol":"1","serverVersion":"0.7.0"}')
+    ).toBeNull();
+  });
+
+  it("round-trips a valid DAEMON_HELLO", () => {
+    const hello = createDaemonHello("0.7.0");
+    expect(parseAgentMessage(JSON.stringify(hello))).toEqual(hello);
+  });
 });
