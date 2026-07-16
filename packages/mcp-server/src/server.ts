@@ -9,7 +9,11 @@ import type { IPluginBridge } from "@pluginos/shared";
 import { wrapScript, PRELUDE_VERSION } from "./prelude/index.js";
 import { runLint } from "./lint/index.js";
 
-export function createPluginOSServer(bridge: IPluginBridge) {
+export interface ServerOptions {
+  getAgentCount?: () => number;
+}
+
+export function createPluginOSServer(bridge: IPluginBridge, opts: ServerOptions = {}) {
   const server = new McpServer({
     name: "pluginos",
     version: "0.1.0",
@@ -189,7 +193,10 @@ export function createPluginOSServer(bridge: IPluginBridge) {
     "Check if the PluginOS Bridge plugin is connected and which Figma file is active.",
     {},
     async () => {
-      const status = bridge.getStatus();
+      const status = {
+        ...bridge.getStatus(),
+        ...(opts.getAgentCount ? { attachedAgents: opts.getAgentCount() } : {}),
+      };
       return {
         content: [
           {

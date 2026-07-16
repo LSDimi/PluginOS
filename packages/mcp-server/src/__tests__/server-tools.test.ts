@@ -40,6 +40,18 @@ async function setupClientServer(bridge: IPluginBridge) {
   return { client, clientTransport, serverTransport };
 }
 
+async function setupClientServerWithOpts(
+  bridge: IPluginBridge,
+  opts: { getAgentCount?: () => number }
+) {
+  const server = createPluginOSServer(bridge, opts);
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await server.connect(serverTransport);
+  const client = new Client({ name: "test-client", version: "1.0.0" });
+  await client.connect(clientTransport);
+  return { client };
+}
+
 // ─── list_operations ────────────────────────────────────────────────
 
 describe("list_operations tool", () => {
@@ -454,6 +466,29 @@ describe("get_status tool", () => {
     expect(parsed.fileKey).toBeNull();
     expect(parsed.connectedFiles).toBe(0);
 
+    await clientTransport.close();
+    await serverTransport.close();
+  });
+});
+
+// ─── get_status attachedAgents ─────────────────────────────────────
+
+describe("get_status attachedAgents", () => {
+  it("includes attachedAgents when a counter is provided", async () => {
+    const bridge = createMockBridge();
+    const { client } = await setupClientServerWithOpts(bridge, { getAgentCount: () => 3 });
+    const result = (await client.callTool({ name: "get_status", arguments: {} })) as ToolResult;
+    const status = JSON.parse(result.content[0].text);
+    expect(status.attachedAgents).toBe(3);
+    expect(status.connected).toBe(true);
+  });
+
+  it("omits attachedAgents without a counter (back-compat)", async () => {
+    const bridge = createMockBridge();
+    const { client, clientTransport, serverTransport } = await setupClientServer(bridge);
+    const result = (await client.callTool({ name: "get_status", arguments: {} })) as ToolResult;
+    const status = JSON.parse(result.content[0].text);
+    expect(status).not.toHaveProperty("attachedAgents");
     await clientTransport.close();
     await serverTransport.close();
   });
