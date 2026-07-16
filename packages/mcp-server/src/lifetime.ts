@@ -25,7 +25,10 @@ export class DaemonLifetime {
       return;
     }
     if (!this.timer) {
-      this.timer = setTimeout(() => this.opts.onExpire(), this.graceMs);
+      this.timer = setTimeout(() => {
+        this.timer = null;
+        this.opts.onExpire();
+      }, this.graceMs);
     }
   }
 

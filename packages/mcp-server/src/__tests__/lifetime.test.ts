@@ -47,6 +47,17 @@ describe("DaemonLifetime", () => {
     expect(onExpire).toHaveBeenCalledTimes(1); // original timer, not reset
   });
 
+  it("re-arms after a natural expiry", () => {
+    const onExpire = vi.fn();
+    const lt = new DaemonLifetime({ graceMs: 30_000, onExpire });
+    lt.update(0);
+    vi.advanceTimersByTime(30_000);
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    lt.update(0); // must schedule a fresh timer, not see a stale ref
+    vi.advanceTimersByTime(30_000);
+    expect(onExpire).toHaveBeenCalledTimes(2);
+  });
+
   it("dispose cancels everything", () => {
     const onExpire = vi.fn();
     const lt = new DaemonLifetime({ graceMs: 30_000, onExpire });
