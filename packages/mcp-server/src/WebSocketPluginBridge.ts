@@ -10,6 +10,7 @@ import type {
 } from "@pluginos/shared";
 import { parseMessage } from "@pluginos/shared";
 import { resolveFileTarget } from "./targeting.js";
+import { UpgradeRouter } from "./agent/upgrade-router.js";
 import pkg from "../package.json" with { type: "json" };
 
 const SERVER_VERSION = pkg.version;
@@ -38,6 +39,7 @@ interface WebSocketServerOptions {
 export class WebSocketPluginBridge implements IPluginBridge {
   private wss: WebSocketServer | null = null;
   private httpServer: Server | null = null;
+  private router: UpgradeRouter | null = null;
   private files = new Map<string, ConnectedFile>();
   private activeFileKey: string | null = null;
   private port: number | null = null;
@@ -49,6 +51,13 @@ export class WebSocketPluginBridge implements IPluginBridge {
       portRange: options?.portRange ?? [9500, 9510],
     };
     this.httpServer = options?.httpServer ?? null;
+    if (this.httpServer) {
+      this.router = new UpgradeRouter(this.httpServer);
+    }
+  }
+
+  getRouter(): UpgradeRouter | null {
+    return this.router;
   }
 
   async start(): Promise<number> {
@@ -95,7 +104,8 @@ export class WebSocketPluginBridge implements IPluginBridge {
         };
         const onListening = () => {
           cleanup();
-          const wss = new WebSocketServer({ server: this.httpServer!, verifyClient });
+          const wss = new WebSocketServer({ noServer: true });
+          this.router!.register("/", wss);
           this.wss = wss;
           this.setupServer();
           resolve();
