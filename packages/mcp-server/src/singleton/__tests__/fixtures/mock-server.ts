@@ -19,6 +19,8 @@ async function main(): Promise<void> {
     serverVersion: "test",
     parentPid: process.ppid,
     parentAlive: true,
+    agentProtocol: 1,
+    attachedAgents: 0,
   });
   await writeSingletonState(info, state);
 

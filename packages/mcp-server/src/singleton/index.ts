@@ -13,9 +13,18 @@ export type { StateFile, SingletonInfo } from "./types.js";
 
 export interface AcquireOptions {
   stateDir?: string;
+  /** Keep the lock held on return; caller must call releaseSingletonLock. */
+  holdLock?: boolean;
+  /**
+   * Run under the lock BEFORE any reap. Returning a port aborts the
+   * acquisition (lock released, attachInsteadPort set) — this closes the
+   * race where two processes decide to bind simultaneously and the loser
+   * would otherwise reap the winner.
+   */
+  recheckAttachable?: () => Promise<{ port: number } | null>;
 }
 
-function defaultStateDir(): string {
+export function defaultStateDir(): string {
   return process.env.PLUGINOS_STATE_DIR ?? join(homedir(), ".pluginos");
 }
 
@@ -54,6 +63,20 @@ export async function acquireSingletonLock(opts: AcquireOptions = {}): Promise<S
     return { stateDir, pidFilePath, stateFilePath, lockFilePath };
   }
 
+  if (opts.recheckAttachable) {
+    const attachable = await opts.recheckAttachable();
+    if (attachable) {
+      await releaseLock(lockFilePath);
+      return {
+        stateDir,
+        pidFilePath,
+        stateFilePath,
+        lockFilePath,
+        attachInsteadPort: attachable.port,
+      };
+    }
+  }
+
   let takeoverFromPid: number | undefined;
   const oldPid = await readPidFile(pidFilePath);
   if (oldPid === process.pid) {
@@ -76,8 +99,18 @@ export async function acquireSingletonLock(opts: AcquireOptions = {}): Promise<S
     console.error(`[singleton] Found stale PID file (${oldPid} not alive). Took over.`);
   }
 
-  await releaseLock(lockFilePath);
-  return { takeoverFromPid, stateDir, pidFilePath, stateFilePath, lockFilePath };
+  if (!opts.holdLock) {
+    await releaseLock(lockFilePath);
+    return { takeoverFromPid, stateDir, pidFilePath, stateFilePath, lockFilePath };
+  }
+  return { takeoverFromPid, stateDir, pidFilePath, stateFilePath, lockFilePath, holdingLock: true };
+}
+
+export async function releaseSingletonLock(info: SingletonInfo): Promise<void> {
+  if (info.holdingLock) {
+    await releaseLock(info.lockFilePath);
+    info.holdingLock = false;
+  }
 }
 
 export async function writeSingletonState(info: SingletonInfo, state: StateFile): Promise<void> {

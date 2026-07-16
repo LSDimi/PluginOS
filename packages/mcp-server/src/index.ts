@@ -14,6 +14,7 @@ import {
 } from "./singleton/index.js";
 import { unlinkSync } from "node:fs";
 import type { SingletonInfo, StateFile } from "./singleton/index.js";
+import { AGENT_PROTOCOL_VERSION } from "./agent/protocol.js";
 
 export { createPluginOSServer } from "./server.js";
 export {
@@ -152,6 +153,8 @@ async function main(): Promise<void> {
     serverVersion: pkg.version,
     parentPid: INITIAL_PARENT_PID,
     parentAlive: true,
+    agentProtocol: AGENT_PROTOCOL_VERSION,
+    attachedAgents: 0,
   });
   currentState = state;
   await writeSingletonState(singletonInfo, state);

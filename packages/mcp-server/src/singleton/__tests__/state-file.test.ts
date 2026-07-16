@@ -23,6 +23,8 @@ describe("state-file", () => {
       serverVersion: "0.4.3",
       parentPid: 99,
       parentAlive: true,
+      agentProtocol: 1,
+      attachedAgents: 0,
     });
     expect(state.version).toBe(1);
     expect(state.pid).toBe(1234);
@@ -42,6 +44,8 @@ describe("state-file", () => {
       serverVersion: "0.4.3",
       parentPid: 99,
       parentAlive: true,
+      agentProtocol: 1,
+      attachedAgents: 0,
     });
     await writeStateFile(path, state);
     const read = await readStateFile(path);
@@ -72,9 +76,28 @@ describe("state-file", () => {
       serverVersion: "0.4.3",
       parentPid: 99,
       parentAlive: true,
+      agentProtocol: 1,
+      attachedAgents: 0,
     });
     await writeStateFile(path, state);
     await removeStateFile(path);
     expect(await readStateFile(path)).toBeNull();
+  });
+});
+
+describe("state file v1 additive fields", () => {
+  it("includes agentProtocol and attachedAgents", () => {
+    const state = buildStateFile({
+      pid: 1,
+      port: 9500,
+      serverVersion: "0.7.0",
+      parentPid: 2,
+      parentAlive: true,
+      agentProtocol: 1,
+      attachedAgents: 0,
+    });
+    expect(state.agentProtocol).toBe(1);
+    expect(state.attachedAgents).toBe(0);
+    expect(state.version).toBe(1);
   });
 });
