@@ -9,6 +9,7 @@ import type {
   FileInfo,
 } from "@pluginos/shared";
 import { parseMessage } from "@pluginos/shared";
+import { resolveFileTarget } from "./targeting.js";
 import pkg from "../package.json" with { type: "json" };
 
 const SERVER_VERSION = pkg.version;
@@ -19,6 +20,7 @@ interface ConnectedFile {
   fileName: string;
   currentPage: string;
   lastActivity: number;
+  restConfigured: boolean;
 }
 
 interface PendingRequest {
@@ -144,6 +146,21 @@ export class WebSocketPluginBridge implements IPluginBridge {
         } else if (msg.type === "status") {
           const status = msg as StatusMessage;
           const key = status.fileKey || "unknown";
+          const previousKey = fileKey;
+          // Identity upgrade: the plugin can legitimately change its reported
+          // fileKey mid-connection (e.g. synthetic id -> verified real key
+          // once list_comments validates one). If it does, drop the stale
+          // entry for the old key on this same socket so we don't end up
+          // double-counting one connection as two files, and re-key any
+          // in-flight pending requests so their close-cleanup still matches.
+          if (previousKey && previousKey !== key) {
+            this.files.delete(previousKey);
+            for (const p of this.pending.values()) {
+              if (p.fileKey === previousKey) {
+                p.fileKey = key;
+              }
+            }
+          }
           fileKey = key;
           this.files.set(key, {
             ws,
@@ -151,7 +168,11 @@ export class WebSocketPluginBridge implements IPluginBridge {
             fileName: status.fileName,
             currentPage: status.currentPage,
             lastActivity: Date.now(),
+            restConfigured: status.rest_configured === true,
           });
+          // Always point activeFileKey at the latest reported key for this
+          // connection — this already covers the case where activeFileKey
+          // was pointing at the stale previousKey.
           this.activeFileKey = key;
         }
       });
@@ -209,6 +230,7 @@ export class WebSocketPluginBridge implements IPluginBridge {
       currentPage: active?.currentPage ?? null,
       port: this.port,
       connectedFiles: this.files.size,
+      rest: active ? (active.restConfigured ? "configured" : "not_configured") : null,
     };
   }
 
@@ -218,17 +240,13 @@ export class WebSocketPluginBridge implements IPluginBridge {
     fileKey?: string
   ): Promise<ResultMessage> {
     return new Promise((resolve, reject) => {
-      const targetKey = fileKey || this.activeFileKey;
-      if (!targetKey || !this.files.has(targetKey)) {
-        reject(
-          new Error(
-            fileKey
-              ? `File "${fileKey}" not connected.`
-              : "No plugin connected. Open PluginOS Bridge in Figma."
-          )
-        );
+      const resolution = resolveFileTarget(this.files, fileKey, this.activeFileKey);
+      if ("error" in resolution) {
+        reject(new Error(resolution.error));
         return;
       }
+      const targetKey = resolution.key;
+      const note = resolution.note;
       const file = this.files.get(targetKey)!;
       if (file.ws.readyState !== WebSocket.OPEN) {
         reject(new Error(`Connection to "${file.fileName}" is not open.`));
@@ -243,7 +261,13 @@ export class WebSocketPluginBridge implements IPluginBridge {
         reject(new Error(`Operation timed out after ${timeout}ms`));
       }, timeout);
 
-      this.pending.set(message.id, { resolve, reject, timer, fileKey: targetKey });
+      const resolveWithNote = (r: ResultMessage) => {
+        if (note && r.result && typeof r.result === "object" && !Array.isArray(r.result)) {
+          r = { ...r, result: { ...(r.result as object), _target_note: note } };
+        }
+        resolve(r);
+      };
+      this.pending.set(message.id, { resolve: resolveWithNote, reject, timer, fileKey: targetKey });
       file.ws.send(JSON.stringify(message));
     });
   }

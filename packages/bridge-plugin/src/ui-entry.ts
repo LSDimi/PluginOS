@@ -208,6 +208,41 @@ function wireDxtButton(): void {
   });
 }
 
+const FIGMA_PAT_DOCS_URL = "https://www.figma.com/developers/api#access-tokens";
+
+function setPatStatusText(configured: boolean): void {
+  const el = document.getElementById("pat-status");
+  if (el) el.textContent = configured ? "Configured ✓" : "Not configured";
+}
+
+function wirePatSection(): void {
+  const input = document.getElementById("pat-input") as HTMLInputElement | null;
+  const saveBtn = document.getElementById("btn-pat-save");
+  const clearBtn = document.getElementById("btn-pat-clear");
+  const docsLink = document.getElementById("pat-docs-link");
+
+  saveBtn?.addEventListener("click", () => {
+    const token = input?.value ?? "";
+    if (!token.trim()) return;
+    parent.postMessage({ pluginMessage: { type: "SET_PAT", token } }, "*");
+    // Never leave the token sitting in the DOM after submit.
+    if (input) input.value = "";
+  });
+
+  clearBtn?.addEventListener("click", () => {
+    parent.postMessage({ pluginMessage: { type: "CLEAR_PAT" } }, "*");
+    if (input) input.value = "";
+  });
+
+  docsLink?.addEventListener("click", (e) => {
+    e.preventDefault();
+    parent.postMessage({ pluginMessage: { type: "open-external", url: FIGMA_PAT_DOCS_URL } }, "*");
+  });
+
+  // Ask code.ts for the current configured state on init.
+  parent.postMessage({ pluginMessage: { type: "GET_PAT_STATUS" } }, "*");
+}
+
 function wireMismatchCopyButtons(): void {
   function copyWithFeedback(btn: HTMLElement, sourceId: string): void {
     const text = document.getElementById(sourceId)?.textContent ?? "";
@@ -432,6 +467,9 @@ function attachPluginMessageListener(): void {
         setState({ ...currentState, file: { ...currentState.file, name: cachedFileName } });
       }
     }
+    if (msg.type === "PAT_STATUS") {
+      setPatStatusText(Boolean(msg.configured));
+    }
     if (msg.type === "__ui_list_operations_result") {
       const ops = Array.isArray(msg.operations) ? msg.operations : undefined;
       cachedOpsCount = ops?.length;
@@ -459,6 +497,7 @@ function bootstrap(): void {
   wireRetryButton();
   wireSetupToggle();
   wireDxtButton();
+  wirePatSection();
   wireMismatchCopyButtons();
   activityLog = new ActivityLog($("activity-log"));
   activityLog.render();

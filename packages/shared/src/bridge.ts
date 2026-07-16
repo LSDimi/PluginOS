@@ -13,6 +13,7 @@ export interface BridgeStatus {
   currentPage: string | null;
   port: number | null;
   connectedFiles: number;
+  rest: "configured" | "not_configured" | null;
 }
 
 export interface IPluginBridge {

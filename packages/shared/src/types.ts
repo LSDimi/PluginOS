@@ -12,7 +12,8 @@ export type OperationCategory =
   | "typography"
   | "cleanup"
   | "data"
-  | "custom";
+  | "custom"
+  | "collab";
 
 export interface ParamDef {
   type: "string" | "number" | "boolean" | "string[]";

@@ -7,7 +7,7 @@
   "ui": "dist/bootloader.html",
   "documentAccess": "dynamic-page",
   "networkAccess": {
-    "allowedDomains": ["none"],
+    "allowedDomains": ["https://api.figma.com"],
     "devAllowedDomains": [
       "ws://localhost:9500",
       "ws://localhost:9501",
@@ -32,7 +32,7 @@
       "http://localhost:9509",
       "http://localhost:9510"
     ],
-    "reasoning": "Connects to local PluginOS MCP server via WebSocket for operations and HTTP for bootloader UI updates"
+    "reasoning": "Connects to local PluginOS MCP server via WebSocket for operations and HTTP for bootloader UI updates. REST comments ops call api.figma.com directly with a user-provided PAT."
   },
   "permissions": ["teamlibrary"]
 }

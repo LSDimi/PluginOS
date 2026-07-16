@@ -21,6 +21,7 @@ function createMockBridge(): IPluginBridge {
       currentPage: "Page 1",
       port: 9500,
       connectedFiles: 1,
+      rest: "not_configured",
     }),
     listFiles: vi.fn<IPluginBridge["listFiles"]>().mockReturnValue([]),
     isConnected: vi.fn<IPluginBridge["isConnected"]>().mockReturnValue(true),

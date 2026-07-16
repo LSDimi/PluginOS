@@ -28,7 +28,7 @@ Agent ──[MCP stdio]──→ MCP Server ──[WebSocket localhost:9500-9510
 
 **Operation Registry** (`bridge-plugin/src/operations/registry.ts`): Operations self-register via `registerOperation()` and are imported in `operations/index.ts`. Each operation has a manifest (name, category, params, returns) and an async `execute` function with full `figma.*` access.
 
-**Two Execution Paths**: `run_operation` dispatches to pre-built operations (26 registered). `execute_figma` runs arbitrary JS in the plugin sandbox (fallback for custom logic, 5s default / 30s max timeout).
+**Two Execution Paths**: `run_operation` dispatches to pre-built operations (29 registered). `execute_figma` runs arbitrary JS in the plugin sandbox (fallback for custom logic, 5s default / 30s max timeout).
 
 **Request Correlation**: Each WebSocket message gets a unique ID (`req_${++counter}_${Date.now()}`). Responses are matched back via a `Map<id, resolve/reject>` with timeout handling.
 
