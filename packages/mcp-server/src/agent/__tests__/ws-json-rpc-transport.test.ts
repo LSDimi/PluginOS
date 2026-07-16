@@ -64,6 +64,36 @@ describe("WsJsonRpcTransport", () => {
     expect(socket.close).toHaveBeenCalled();
   });
 
+  it("fires onclose exactly once when close() triggers the socket close event", async () => {
+    const emitter = new EventEmitter();
+    const socket = {
+      on: emitter.on.bind(emitter),
+      send: vi.fn(),
+      // Mimic a real ws socket: close() eventually emits "close".
+      close: vi.fn(() => emitter.emit("close")),
+    } as unknown as WebSocket;
+    const transport = new WsJsonRpcTransport(socket);
+    const onclose = vi.fn();
+    transport.onclose = onclose;
+    await transport.start();
+
+    await transport.close();
+    expect(onclose).toHaveBeenCalledTimes(1);
+  });
+
+  it("fires onclose exactly once on peer-initiated close", async () => {
+    const { socket, emitter } = fakeSocket();
+    const transport = new WsJsonRpcTransport(socket);
+    const onclose = vi.fn();
+    transport.onclose = onclose;
+    await transport.start();
+
+    emitter.emit("close");
+    emitter.emit("close");
+    await transport.close();
+    expect(onclose).toHaveBeenCalledTimes(1);
+  });
+
   it("routes socket errors to onerror", async () => {
     const { socket, emitter } = fakeSocket();
     const transport = new WsJsonRpcTransport(socket);

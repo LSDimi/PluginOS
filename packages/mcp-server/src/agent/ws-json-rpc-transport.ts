@@ -14,7 +14,15 @@ export class WsJsonRpcTransport implements Transport {
   onerror?: (error: Error) => void;
   onmessage?: (message: JSONRPCMessage) => void;
 
+  private closed = false;
+
   constructor(private socket: WebSocket) {}
+
+  private fireClose(): void {
+    if (this.closed) return;
+    this.closed = true;
+    this.onclose?.();
+  }
 
   async start(): Promise<void> {
     this.socket.on("message", (data: Buffer | string) => {
@@ -23,7 +31,7 @@ export class WsJsonRpcTransport implements Transport {
         this.onmessage?.(msg.payload as JSONRPCMessage);
       }
     });
-    this.socket.on("close", () => this.onclose?.());
+    this.socket.on("close", () => this.fireClose());
     this.socket.on("error", (err: Error) => this.onerror?.(err));
   }
 
@@ -37,6 +45,6 @@ export class WsJsonRpcTransport implements Transport {
     } catch {
       // socket may already be closed
     }
-    this.onclose?.();
+    this.fireClose();
   }
 }
