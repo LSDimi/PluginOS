@@ -113,36 +113,51 @@ Agent ── MCP (stdio) ──> PluginOS Server ── WebSocket ──> Bridge
 | **Fast**     | Built-in operation exists   | ~230 tokens | `run_operation("check_contrast", {scope: "page"})`           |
 | **Fallback** | Custom/one-off logic needed | ~700 tokens | `execute_figma("return figma.currentPage.findAll().length")` |
 
-## Available Operations (26)
+## Available Operations (29)
 
-| Operation               | Category      | Description                         |
-| ----------------------- | ------------- | ----------------------------------- |
-| `lint_styles`           | lint          | Find layers without styles          |
-| `lint_detached`         | lint          | Find detached instances             |
-| `lint_naming`           | lint          | Find default-named layers           |
-| `check_contrast`        | accessibility | WCAG contrast audit                 |
-| `check_touch_targets`   | accessibility | Touch target size check             |
-| `find_instances`        | components    | Find component instances            |
-| `analyze_overrides`     | components    | Report instance overrides           |
-| `create_frame`          | components    | Create frames with auto-layout      |
-| `clone_node`            | components    | Clone and reposition nodes          |
-| `rename_layers`         | cleanup       | Batch rename layers                 |
-| `remove_hidden`         | cleanup       | Remove hidden layers                |
-| `round_values`          | cleanup       | Round fractional values             |
-| `delete_node`           | cleanup       | Delete nodes by ID                  |
-| `list_variables`        | tokens        | List all variables                  |
-| `export_tokens`         | tokens        | Export tokens as JSON               |
-| `audit_spacing`         | layout        | Audit spacing values                |
-| `move_node`             | layout        | Move nodes to new positions         |
-| `resize_node`           | layout        | Resize nodes                        |
-| `set_fills`             | colors        | Set fill colors on nodes            |
-| `extract_palette`       | colors        | Extract unique colors with counts   |
-| `find_non_style_colors` | colors        | Find hardcoded (unstyled) colors    |
-| `audit_text_styles`     | typography    | Audit font/size/weight consistency  |
-| `list_fonts`            | typography    | List all fonts with usage counts    |
-| `set_text`              | content       | Set text content on nodes           |
-| `populate_text`         | content       | Fill text with lorem or custom text |
-| `extract_css`           | export        | Extract CSS properties from nodes   |
+| Operation                | Category      | Description                                                            |
+| ------------------------ | ------------- | ---------------------------------------------------------------------- |
+| `lint_styles`            | lint          | Find layers without styles                                             |
+| `lint_detached`          | lint          | Find detached instances                                                |
+| `lint_naming`            | lint          | Find default-named layers                                              |
+| `validate_ds_compliance` | lint          | Full DS audit in one pass (style, detached, naming, contrast, spacing) |
+| `check_contrast`         | accessibility | WCAG contrast audit                                                    |
+| `check_touch_targets`    | accessibility | Touch target size check                                                |
+| `find_instances`         | components    | Find component instances                                               |
+| `analyze_overrides`      | components    | Report instance overrides                                              |
+| `create_frame`           | components    | Create frames with auto-layout                                         |
+| `clone_node`             | components    | Clone and reposition nodes                                             |
+| `rename_layers`          | cleanup       | Batch rename layers                                                    |
+| `remove_hidden`          | cleanup       | Remove hidden layers                                                   |
+| `round_values`           | cleanup       | Round fractional values                                                |
+| `delete_node`            | cleanup       | Delete nodes by ID                                                     |
+| `list_variables`         | tokens        | List all variables                                                     |
+| `export_tokens`          | tokens        | Export tokens as JSON                                                  |
+| `audit_spacing`          | layout        | Audit spacing values                                                   |
+| `move_node`              | layout        | Move nodes to new positions                                            |
+| `resize_node`            | layout        | Resize nodes                                                           |
+| `set_fills`              | colors        | Set fill colors on nodes                                               |
+| `extract_palette`        | colors        | Extract unique colors with counts                                      |
+| `find_non_style_colors`  | colors        | Find hardcoded (unstyled) colors                                       |
+| `audit_text_styles`      | typography    | Audit font/size/weight consistency                                     |
+| `list_fonts`             | typography    | List all fonts with usage counts                                       |
+| `set_text`               | content       | Set text content on nodes                                              |
+| `populate_text`          | content       | Fill text with lorem or custom text                                    |
+| `extract_css`            | export        | Extract CSS properties from nodes                                      |
+| `list_comments`          | collab        | List threaded file comments via REST (unresolved by default)           |
+| `reply_comment`          | collab        | Reply to a file comment via REST (confirm-gated)                       |
+
+## Comments (REST)
+
+`list_comments` and `reply_comment` read and reply to Figma file comments by calling the Figma REST API directly from the bridge plugin's sandbox (`api.figma.com` is allowlisted in the plugin manifest) — no MCP server round-trip involved.
+
+**One-time setup:** paste a Figma Personal Access Token into the Bridge plugin's ⚙ Setup panel, "Figma REST access" section. Required scopes: `file_comments:read`, `file_comments:write`, `file_metadata:read`. The token is stored only in `figma.clientStorage`, never sent to the MCP server.
+
+- `list_comments` returns threaded, unresolved-by-default comments joined to live node names/paths. The first call needs the file URL or key; it's then verified and remembered in the file for later calls.
+- `reply_comment` posts publicly as the user and requires `confirm: true` — the agent shows a preview first.
+- Resolving comments is manual in Figma; the REST API has no resolve endpoint.
+
+**Also in 0.7:** fixed a serializer bug where deep scalar values corrupted to `"[max depth]"`; file identity is now stable (synthetic IDs replace `"unknown"` fileKeys) with resilient server targeting (name match, single-file fallback); `execute_figma` now echoes back the `requestedTimeout` it used.
 
 ## Token Economics
 
