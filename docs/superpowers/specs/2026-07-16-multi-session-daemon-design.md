@@ -202,7 +202,7 @@ Single spec, two PRs to keep review tractable:
 1. **PR-B1 — daemon multiplexing:** `/agent` path + attach handshake + per-agent `McpServer` instances + `attachedAgents`/`hasClients` state + shim session layer + election loop (attach/bind only; upgrades still reap). Ships multi-session for equal versions — the dominant case (two Claude Code sessions from the same npx cache).
 2. **PR-B2 — handover & skew:** strict-semver policy, `DEMOTE_REQUEST`/`DEMOTE_ACK`, crash-failover election jitter + promotion, `tools/list_changed` on daemon change, version-override test hook, multi-file `_hint`.
 
-Version bump: 0.7.0 (0.x minor = breaking per house convention; the plugin mismatch UI will correctly prompt a plugin update).
+Version bump: 0.8.0 — 0.7.0 was taken by the comments-via-PAT release (PR #39) that shipped mid-design (0.x minor = breaking per house convention; the plugin mismatch UI will correctly prompt a plugin update).
 
 ## Open questions (deliberately deferred)
 

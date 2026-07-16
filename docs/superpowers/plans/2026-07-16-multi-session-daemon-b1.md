@@ -2714,7 +2714,7 @@ Invoke Skill(commit) — message intent: `test(mcp-server): multi-session share,
 
 ---
 
-### Task 13: Docs, changelog, version bump 0.7.0
+### Task 13: Docs, changelog, version bump 0.8.0
 
 **Files:**
 - Modify: `.claude/rules/architecture.md` (this repo's copy)
@@ -2754,16 +2754,16 @@ Follow each CHANGELOG's existing format; content: multi-session daemon (B1) — 
 cd "<repo-root>" && npm version minor -w packages/mcp-server && node scripts/bump-lockstep.cjs
 ```
 
-Expected: mcp-server at 0.7.0; lockstep propagates to all package.json manifests, DXT manifest, plugin.json. Verify: `node scripts/check-version-lockstep.cjs` (or whatever CI invokes — see `.github/workflows`).
+Expected: mcp-server at 0.8.0 (0.7.0 was taken by the comments-via-PAT release, PR #39); lockstep propagates to all package.json manifests, DXT manifest, plugin.json. Verify: `node scripts/check-version-lockstep.cjs` (or whatever CI invokes — see `.github/workflows`).
 
-Note: 0.6→0.7 is a breaking bump under the 0.x convention — the Figma plugin will show its mismatch UI against 0.6 plugins, which is intended (plugin must be updated together).
+Note: 0.7→0.8 is a breaking bump under the 0.x convention — the Figma plugin will show its mismatch UI against 0.7 plugins, which is intended (plugin must be updated together).
 
 - [ ] **Step 4: Full pipeline + commit**
 
 Run: `npm run check`
 Expected: PASS, including the claude-plugin ops-reference drift check (should be clean — no operations changed) and skill token budget.
 
-Invoke Skill(commit) — message intent: `chore(release): multi-session daemon B1, bump lockstep to 0.7.0`
+Invoke Skill(commit) — message intent: `chore(release): multi-session daemon B1, bump lockstep to 0.8.0`
 
 - [ ] **Step 5: Manual smoke checklist (record results in the PR description)**
 
