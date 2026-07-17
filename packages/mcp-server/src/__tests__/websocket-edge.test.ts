@@ -141,11 +141,11 @@ describe("WebSocketPluginBridge edge cases", () => {
   });
 
   it("falls back to the only connected file for a non-existent fileKey, surfacing a note", async () => {
-    server = new WebSocketPluginBridge({ portRange: [9549, 9549] });
+    server = new WebSocketPluginBridge({ portRange: [9536, 9536] });
     await server.start();
 
     // Connect one file so there IS a connection, but target a different one
-    const client = new WebSocket("ws://localhost:9549");
+    const client = new WebSocket("ws://localhost:9536");
     await new Promise<void>((r) => client.on("open", r));
     client.send(
       JSON.stringify({ type: "status", fileKey: "real", fileName: "Real", currentPage: "P1" })

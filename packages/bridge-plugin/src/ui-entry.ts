@@ -7,6 +7,7 @@ import { connectWithHello } from "./ui/connect";
 import { copyText } from "./ui/clipboard";
 import { discoverCandidatePorts } from "./discovery";
 import { renderUI, formatElapsed, type AppState } from "./ui/render-ui";
+import { nextReconnectDelay, shouldShowConnecting, BACKOFF_WINDOW_MS } from "./ui/reconnect-policy";
 import {
   VERSION,
   DXT_DOWNLOAD_URL,
@@ -20,8 +21,6 @@ import {
 
 const PORT_MIN = 9500;
 const PORT_MAX = 9510;
-const RECONNECT_BACKOFF_MS = [1000, 3000, 5000, 10000];
-const RECONNECT_GIVEUP_MS = 30_000;
 
 type StatusState = "disconnected" | "connecting" | "connected" | "running" | "mismatch";
 
@@ -106,11 +105,6 @@ function setStatus(state: StatusState, _text?: string): void {
   // Existing call sites still work; future PR can inline at the call sites.
   const next = computeNextStateFromStatus(currentState, state);
   setState(next);
-}
-
-function showView(_view: "disconnected" | "connected" | "mismatch"): void {
-  // Adapter: view switching is now driven by setState/renderUI.
-  // Kept as a no-op so existing call sites compile during the migration.
 }
 
 function showRunning(running: boolean, op?: string, params?: Record<string, unknown>): void {
@@ -284,11 +278,11 @@ function showMismatch(serverVersion: string): void {
   });
 }
 
-async function scanAndConnect(): Promise<void> {
+async function scanAndConnect(opts: { quiet?: boolean } = {}): Promise<void> {
   if (isScanning) return;
   isScanning = true;
   try {
-    setStatus("connecting");
+    if (!opts.quiet) setStatus("connecting");
     const lastPort = getLastPort();
     const order: number[] = [];
     if (lastPort) order.push(lastPort);
@@ -317,7 +311,7 @@ async function scanAndConnect(): Promise<void> {
       }
     }
 
-    setStatus("disconnected");
+    if (!opts.quiet) setStatus("disconnected");
     scheduleReconnect();
   } finally {
     isScanning = false;
@@ -350,8 +344,11 @@ async function tryConnect(port: number): Promise<boolean> {
 function handleHello(socket: WebSocket, port: number, serverVersion: string): void {
   if (!isCompatible(VERSION, serverVersion)) {
     showMismatch(serverVersion || "unknown");
-    // Stop the relay before tearing down so the close handler sees we
-    // intentionally disconnected (no reconnect scheduling).
+    // Stop the relay before tearing down. The close handler still fires and
+    // schedules a reconnect, but we push it straight into slow-poll so the
+    // mismatch view isn't repeatedly stomped by fast, noisy retries.
+    reconnectStartedAt = Date.now() - BACKOFF_WINDOW_MS - 1;
+    reconnectIndex = Math.max(reconnectIndex, 1);
     activeSocket = null;
     socket.close();
     return;
@@ -409,7 +406,7 @@ function attachSocketHandlers(socket: WebSocket, port: number): void {
   socket.addEventListener("close", () => {
     if (activeSocket === socket) activeSocket = null;
     parent.postMessage({ pluginMessage: { type: "ws-disconnected" } }, "*");
-    setStatus("connecting", "Reconnecting…");
+    if (currentState.kind !== "mismatch") setStatus("connecting", "Reconnecting…");
     scheduleReconnect();
   });
 }
@@ -436,17 +433,18 @@ function attachOutboundRelay(): void {
 
 function scheduleReconnect(): void {
   if (reconnectIndex === 0) reconnectStartedAt = Date.now();
-  const delay = RECONNECT_BACKOFF_MS[Math.min(reconnectIndex, RECONNECT_BACKOFF_MS.length - 1)];
+  const decision = nextReconnectDelay(reconnectIndex, Date.now() - reconnectStartedAt);
   reconnectIndex += 1;
+  const quiet = !shouldShowConnecting(currentState.kind, decision.phase);
+  if (decision.phase === "slow-poll" && currentState.kind === "connecting") {
+    // First transition into slow poll: settle the UI on the disconnected view
+    // (with its setup instructions) instead of an eternal spinner. Mismatch
+    // stays mismatch — it carries the version guidance.
+    setStatus("disconnected");
+  }
   reconnectTimer = window.setTimeout(() => {
-    if (Date.now() - reconnectStartedAt > RECONNECT_GIVEUP_MS) {
-      reconnectIndex = 0;
-      setStatus("disconnected");
-      showView("disconnected");
-      return;
-    }
-    void scanAndConnect();
-  }, delay);
+    void scanAndConnect({ quiet });
+  }, decision.delayMs);
 }
 
 function cancelReconnect(): void {

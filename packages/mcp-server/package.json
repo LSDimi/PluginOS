@@ -1,6 +1,6 @@
 {
   "name": "pluginos",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Agent-native Figma operations platform. Run 29 Figma operations from any LLM agent at ~230 tokens per call.",
   "type": "module",
   "main": "dist/index.js",

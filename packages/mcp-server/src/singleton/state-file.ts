@@ -7,6 +7,8 @@ export interface BuildStateInput {
   serverVersion: string;
   parentPid: number;
   parentAlive: boolean;
+  agentProtocol: number;
+  attachedAgents: number;
 }
 
 export function buildStateFile(input: BuildStateInput): StateFile {
@@ -19,6 +21,8 @@ export function buildStateFile(input: BuildStateInput): StateFile {
     parentPid: input.parentPid,
     parentAlive: input.parentAlive,
     socketPath: null,
+    agentProtocol: input.agentProtocol,
+    attachedAgents: input.attachedAgents,
   };
 }
 

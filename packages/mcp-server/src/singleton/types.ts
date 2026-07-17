@@ -7,8 +7,13 @@ export interface StateFile {
   serverVersion: string;
   startedAt: number;
   parentPid: number;
+  /** Since B1 this means "has clients": own session open OR >=1 agent attached. */
   parentAlive: boolean;
   socketPath: string | null;
+  /** Attach-protocol version served on /agent. Absent on pre-B1 servers. */
+  agentProtocol?: number;
+  /** Diagnostics only. */
+  attachedAgents?: number;
 }
 
 export interface SingletonInfo {
@@ -17,6 +22,10 @@ export interface SingletonInfo {
   pidFilePath: string;
   stateFilePath: string;
   lockFilePath: string;
+  /** Set when recheckAttachable found a live daemon — caller should attach to this port. */
+  attachInsteadPort?: number;
+  /** Set when holdLock was requested and the lock is still held. */
+  holdingLock?: boolean;
 }
 
 export interface LockAcquisition {
