@@ -18,31 +18,42 @@ export interface DaemonLink {
 
 function awaitOpen(socket: WebSocket, timeoutMs: number): Promise<void> {
   return new Promise((resolve, reject) => {
+    const onOpen = (): void => {
+      clearTimeout(timer);
+      socket.off("error", onError);
+      resolve();
+    };
+    const onError = (err: Error): void => {
+      clearTimeout(timer);
+      socket.off("open", onOpen);
+      reject(err);
+    };
     const timer = setTimeout(() => {
+      socket.off("open", onOpen);
+      socket.off("error", onError);
       socket.terminate();
       reject(new Error("agent socket open timeout"));
     }, timeoutMs);
-    socket.once("open", () => {
-      clearTimeout(timer);
-      resolve();
-    });
-    socket.once("error", (err) => {
-      clearTimeout(timer);
-      reject(err);
-    });
+    socket.once("open", onOpen);
+    socket.once("error", onError);
   });
 }
 
-function awaitDaemonHello(socket: WebSocket, timeoutMs: number): Promise<DaemonHello> {
+// Exported for testing: this phase owns its own message/error listeners and
+// removes them on every settle path so a later error (e.g. the daemon
+// dropping the socket right after open) rejects immediately instead of
+// waiting out the full handshake timeout.
+export function awaitDaemonHello(socket: WebSocket, timeoutMs: number): Promise<DaemonHello> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      socket.close();
-      reject(new Error("DAEMON_HELLO timeout"));
-    }, timeoutMs);
+    const settle = (): void => {
+      clearTimeout(timer);
+      socket.off("message", onMessage);
+      socket.off("error", onError);
+    };
     // once(): the hello listener must be consumed before the transport
     // attaches its own message listener.
-    socket.once("message", (data: Buffer | string) => {
-      clearTimeout(timer);
+    const onMessage = (data: Buffer | string): void => {
+      settle();
       const msg = parseAgentMessage(data.toString());
       if (msg?.type === "DAEMON_HELLO") {
         resolve(msg);
@@ -50,7 +61,18 @@ function awaitDaemonHello(socket: WebSocket, timeoutMs: number): Promise<DaemonH
         socket.close();
         reject(new Error("expected DAEMON_HELLO"));
       }
-    });
+    };
+    const onError = (err: Error): void => {
+      settle();
+      reject(err);
+    };
+    const timer = setTimeout(() => {
+      settle();
+      socket.close();
+      reject(new Error("DAEMON_HELLO timeout"));
+    }, timeoutMs);
+    socket.once("message", onMessage);
+    socket.once("error", onError);
   });
 }
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { LinkManager, type LinkManagerDeps } from "../link-manager.js";
 import type { DaemonLink } from "../daemon-link.js";
 import type { DaemonHandle } from "../../daemon.js";
@@ -39,6 +39,16 @@ function deps(overrides: Partial<LinkManagerDeps>): LinkManagerDeps {
 }
 
 describe("LinkManager", () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
   it("attaches when decideRole says attach", async () => {
     const link = fakeLink();
     const d = deps({

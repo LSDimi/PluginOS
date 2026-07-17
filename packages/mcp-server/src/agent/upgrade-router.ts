@@ -12,6 +12,11 @@ export function isAllowedOrigin(origin: string | undefined): boolean {
   );
 }
 
+/** Pathname without URL parsing — new URL() throws on hostile request targets. */
+export function extractPathname(rawUrl: string | undefined): string {
+  return (rawUrl ?? "/").split("?")[0];
+}
+
 /**
  * Owns the single 'upgrade' listener on the HTTP server and routes
  * connections by pathname to registered WebSocketServers (noServer mode).
@@ -24,7 +29,7 @@ export class UpgradeRouter {
 
   constructor(httpServer: Server) {
     httpServer.on("upgrade", (req: IncomingMessage, socket: Duplex, head: Buffer) => {
-      const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
+      const pathname = extractPathname(req.url);
       const wss = this.routes.get(pathname);
       if (!wss || !isAllowedOrigin(req.headers.origin)) {
         socket.write("HTTP/1.1 404 Not Found\r\n\r\n");

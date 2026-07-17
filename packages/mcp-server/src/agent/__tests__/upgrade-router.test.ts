@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createServer, type Server } from "node:http";
 import WebSocket, { WebSocketServer } from "ws";
-import { UpgradeRouter, isAllowedOrigin } from "../upgrade-router.js";
+import { UpgradeRouter, isAllowedOrigin, extractPathname } from "../upgrade-router.js";
 
 const PORT = 9711;
 
@@ -12,6 +12,28 @@ describe("isAllowedOrigin", () => {
     expect(isAllowedOrigin("https://www.figma.com")).toBe(true);
     expect(isAllowedOrigin("https://figma.com")).toBe(true);
     expect(isAllowedOrigin("https://evil.example.com")).toBe(false);
+  });
+});
+
+describe("extractPathname", () => {
+  it("defaults to / when url is undefined", () => {
+    expect(extractPathname(undefined)).toBe("/");
+  });
+
+  it("returns the path as-is when there's no query string", () => {
+    expect(extractPathname("/agent")).toBe("/agent");
+  });
+
+  it("strips the query string", () => {
+    expect(extractPathname("/agent?x=1")).toBe("/agent");
+  });
+
+  it("does not throw on malformed input that would break new URL()", () => {
+    expect(extractPathname("%%invalid")).toBe("%%invalid");
+  });
+
+  it("does not throw on an absolute-form request target", () => {
+    expect(extractPathname("http://[/")).toBe("http://[/");
   });
 });
 
