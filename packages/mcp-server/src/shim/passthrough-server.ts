@@ -42,11 +42,26 @@ export function createShimServer(
     if (!link) {
       return { content: [{ type: "text" as const, text: UNAVAILABLE_TEXT }], isError: true };
     }
-    return await link.callTool(
-      { name: req.params.name, arguments: req.params.arguments },
-      undefined,
-      { timeout: FORWARD_TIMEOUT_MS }
-    );
+    try {
+      return await link.callTool(
+        { name: req.params.name, arguments: req.params.arguments },
+        undefined,
+        { timeout: FORWARD_TIMEOUT_MS }
+      );
+    } catch (err) {
+      // The link died mid-call (daemon restart, forward timeout). Absorb it:
+      // tools/call must ALWAYS resolve to an isError RESULT, never surface a
+      // protocol error to the stdio client.
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `${UNAVAILABLE_TEXT} (link error: ${(err as Error).message})`,
+          },
+        ],
+        isError: true,
+      };
+    }
   });
 
   return server;

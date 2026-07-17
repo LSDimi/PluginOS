@@ -75,4 +75,20 @@ describe("createShimServer", () => {
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("daemon");
   });
+
+  it("returns an isError result (not a protocol error) when the link dies mid-call", async () => {
+    const badLink = {
+      callTool: () => Promise.reject(new Error("Connection closed")),
+    } as unknown as Client;
+    const front = await shimFacingClient(async () => badLink);
+    // Must RESOLVE with an isError result — a rejection here would mean the
+    // shim surfaced a JSON-RPC protocol error instead of absorbing the churn.
+    const result = (await front.callTool({ name: "get_status", arguments: {} })) as {
+      content: Array<{ text: string }>;
+      isError?: boolean;
+    };
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("daemon");
+    expect(result.content[0].text).toContain("Connection closed");
+  });
 });
