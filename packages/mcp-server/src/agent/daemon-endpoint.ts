@@ -43,6 +43,7 @@ export class AgentEndpoint {
 
   private handleConnection(ws: WebSocket): void {
     const timer = setTimeout(() => ws.close(), HANDSHAKE_TIMEOUT_MS);
+    ws.once("close", () => clearTimeout(timer));
     ws.once("message", (data: Buffer | string) => {
       clearTimeout(timer);
       const msg = parseAgentMessage(data.toString());
@@ -76,6 +77,10 @@ export class AgentEndpoint {
 
   async close(): Promise<void> {
     for (const ws of this.sockets) ws.close();
+    // Pre-handshake sockets live only in wss.clients; wss.close() waits for
+    // clients to drain, so terminate them or close() stalls until the
+    // handshake timer fires.
+    for (const ws of this.wss.clients) ws.terminate();
     await new Promise<void>((resolve) => this.wss.close(() => resolve()));
   }
 }

@@ -123,4 +123,13 @@ describe("AgentEndpoint", () => {
     await new Promise<void>((r) => ws.once("close", () => r())); // handshake timeout
     expect(endpoint.getCount()).toBe(0);
   }, 5000);
+
+  it("close() does not stall on a pre-handshake socket", async () => {
+    const ws = new WebSocket(`ws://127.0.0.1:${PORT}/agent`);
+    await new Promise<void>((r) => ws.once("open", () => r()));
+    // No hello sent — socket is pre-handshake, tracked only in wss.clients.
+    const t0 = Date.now();
+    await endpoint.close();
+    expect(Date.now() - t0).toBeLessThan(1000);
+  }, 5000);
 });
