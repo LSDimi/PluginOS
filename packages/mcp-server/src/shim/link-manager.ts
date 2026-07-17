@@ -61,6 +61,14 @@ export class LinkManager {
       if (decision.mode === "attach") {
         return await this.attach(decision.port);
       }
+      if (this.daemon !== null) {
+        // We already host a daemon in this process (the loopback link just
+        // dropped and our own-daemon probe timed out). Re-attach to it
+        // instead of starting a second in-process daemon: the first one
+        // would eventually hit its zero-agent grace and exit(0), killing
+        // this live session's stdio.
+        return await this.attach(this.daemon.port);
+      }
       const started = await this.deps.startDaemon();
       if (this.stopped) {
         // stop()/handleStdioClosed() raced the bind: tear down what we just

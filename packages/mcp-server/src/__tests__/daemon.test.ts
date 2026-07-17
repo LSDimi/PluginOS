@@ -4,9 +4,11 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import WebSocket from "ws";
-import { runDaemon, type DaemonHandle } from "../daemon.js";
+import { runDaemon, buildRecheckAttachable, type DaemonHandle } from "../daemon.js";
 import { probeStateEndpoint } from "../role.js";
 import { createAgentHello, parseAgentMessage } from "../agent/protocol.js";
+import { buildStateFile, writeStateFile } from "../singleton/index.js";
+import type { StateFile } from "../singleton/index.js";
 
 /** Client-side /agent handshake, mirroring daemon-endpoint.test.ts. */
 async function openAgentSocket(port: number): Promise<WebSocket> {
@@ -155,5 +157,88 @@ describe("runDaemon", () => {
     await new Promise((r) => setTimeout(r, 150));
     await expect(access(join(dir, "state.json"))).rejects.toThrow();
     ws.close();
+  });
+});
+
+describe("buildRecheckAttachable", () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "pluginos-recheck-"));
+  });
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  async function writeDisk(overrides: Partial<StateFile>): Promise<StateFile> {
+    const state = {
+      ...buildStateFile({
+        pid: process.pid,
+        port: 9800,
+        serverVersion: "0.8.0",
+        parentPid: process.ppid,
+        parentAlive: true,
+        agentProtocol: 1,
+        attachedAgents: 1,
+      }),
+      ...overrides,
+    };
+    await writeStateFile(join(dir, "state.json"), state);
+    return state;
+  }
+
+  it("attaches instead of reaping when the disk state shows a live equal-version daemon that answers a slow probe", async () => {
+    const onDisk = await writeDisk({ port: 9800, serverVersion: "0.8.0", agentProtocol: 1 });
+    const probe = vi.fn(async (port: number, timeoutMs?: number) => {
+      expect(port).toBe(9800);
+      return timeoutMs === 1500 ? onDisk : null;
+    });
+    const isAlive = vi.fn(() => true);
+    const recheck = buildRecheckAttachable({ stateDir: dir, version: "0.8.0", probe, isAlive });
+
+    const result = await recheck();
+
+    expect(result).toEqual({ port: 9800 });
+    expect(probe).toHaveBeenCalledTimes(2);
+    expect(probe).toHaveBeenNthCalledWith(2, 9800, 1500);
+  });
+
+  it("reaps a wedged same-version daemon when the slow re-probe also fails", async () => {
+    await writeDisk({ port: 9801, serverVersion: "0.8.0", agentProtocol: 1 });
+    const probe = vi.fn(async () => null);
+    const isAlive = vi.fn(() => true);
+    const recheck = buildRecheckAttachable({ stateDir: dir, version: "0.8.0", probe, isAlive });
+
+    const result = await recheck();
+
+    expect(result).toBeNull();
+    expect(probe).toHaveBeenCalledTimes(2);
+    expect(probe).toHaveBeenNthCalledWith(2, 9801, 1500);
+  });
+
+  it("skips the slow re-probe when the on-disk version differs", async () => {
+    await writeDisk({ port: 9802, serverVersion: "0.7.0", agentProtocol: 1 });
+    const probe = vi.fn(async () => null);
+    const isAlive = vi.fn(() => true);
+    const recheck = buildRecheckAttachable({ stateDir: dir, version: "0.8.0", probe, isAlive });
+
+    const result = await recheck();
+
+    expect(result).toBeNull();
+    expect(probe).toHaveBeenCalledTimes(1);
+    expect(probe).not.toHaveBeenCalledWith(expect.anything(), 1500);
+  });
+
+  it("skips the slow re-probe when the on-disk pid is not alive", async () => {
+    await writeDisk({ port: 9803, serverVersion: "0.8.0", agentProtocol: 1, pid: 999999 });
+    const probe = vi.fn(async () => null);
+    const isAlive = vi.fn(() => false);
+    const recheck = buildRecheckAttachable({ stateDir: dir, version: "0.8.0", probe, isAlive });
+
+    const result = await recheck();
+
+    expect(result).toBeNull();
+    expect(probe).toHaveBeenCalledTimes(1);
+    expect(probe).not.toHaveBeenCalledWith(expect.anything(), 1500);
   });
 });

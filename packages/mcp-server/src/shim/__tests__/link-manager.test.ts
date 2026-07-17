@@ -170,6 +170,35 @@ describe("LinkManager", () => {
     expect(secondHandle.close).toHaveBeenCalled();
   });
 
+  it("re-attaches to the already-hosted daemon instead of starting a second one when bind races the loopback drop", async () => {
+    const link1 = fakeLink();
+    const link2 = fakeLink();
+    const handle = fakeHandle(9501);
+    const connectLink = vi.fn().mockResolvedValueOnce(link1).mockResolvedValueOnce(link2);
+    const d = deps({
+      decideRole: vi.fn(async () => ({ mode: "bind" as const })),
+      startDaemon: vi.fn(async () => handle),
+      connectLink,
+    });
+    const mgr = new LinkManager(d);
+    await mgr.start();
+    expect(mgr.isHosting()).toBe(true);
+    expect(d.startDaemon).toHaveBeenCalledTimes(1);
+
+    // Loopback link drops; decideRole is still "bind" (own-daemon probe
+    // timed out), but this.daemon is already set — must re-attach, not
+    // start a second in-process daemon.
+    link1.emitClose();
+    await vi.waitFor(async () => {
+      expect(await mgr.waitForLink(50)).toBe(link2.client);
+    });
+
+    expect(d.startDaemon).toHaveBeenCalledTimes(1); // never called a second time
+    expect(connectLink).toHaveBeenCalledTimes(2);
+    expect(connectLink).toHaveBeenNthCalledWith(2, 9501); // re-attached to the existing daemon
+    await mgr.stop();
+  });
+
   it("handleStdioClosed: exit when not hosting, linger when hosting with other agents", async () => {
     const link = fakeLink();
     const attached = deps({

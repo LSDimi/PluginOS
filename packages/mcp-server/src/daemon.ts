@@ -7,7 +7,7 @@ import { WebSocketPluginBridge } from "./WebSocketPluginBridge.js";
 import { AgentEndpoint } from "./agent/daemon-endpoint.js";
 import { AGENT_PROTOCOL_VERSION } from "./agent/protocol.js";
 import { DaemonLifetime } from "./lifetime.js";
-import { decideRole } from "./role.js";
+import { decideRole, probeStateEndpoint } from "./role.js";
 import {
   acquireSingletonLock,
   releaseSingletonLock,
@@ -15,6 +15,8 @@ import {
   clearSingletonState,
   buildStateFile,
   writeStateFile,
+  readStateFile,
+  isProcessAlive,
 } from "./singleton/index.js";
 import type { SingletonInfo, StateFile } from "./singleton/index.js";
 
@@ -51,16 +53,56 @@ export interface DaemonHandle {
   close(): Promise<void>;
 }
 
+/**
+ * Builds the recheckAttachable closure used by acquireSingletonLock's
+ * pre-reap check. A fast decideRole probe can fail against a LIVE
+ * equal-version daemon whose event loop is momentarily busy (see B1 review
+ * finding: a 300ms probe timeout is too tight to trust for a reap
+ * decision). Before concluding the daemon is unreachable and proceeding to
+ * reap it, give an on-disk equal-version daemon with a live pid one slow,
+ * generous re-probe.
+ */
+export function buildRecheckAttachable(opts: {
+  stateDir: string;
+  version: string;
+  probe?: (port: number, timeoutMs?: number) => Promise<StateFile | null>;
+  isAlive?: (pid: number) => boolean;
+}): () => Promise<{ port: number } | null> {
+  const probe = opts.probe ?? probeStateEndpoint;
+  const isAlive = opts.isAlive ?? isProcessAlive;
+  return async () => {
+    const decision = await decideRole({ stateDir: opts.stateDir, myVersion: opts.version, probe });
+    if (decision.mode === "attach") return { port: decision.port };
+
+    const onDisk = await readStateFile(join(opts.stateDir, "state.json"));
+    if (
+      onDisk &&
+      onDisk.serverVersion === opts.version &&
+      onDisk.agentProtocol === AGENT_PROTOCOL_VERSION &&
+      isAlive(onDisk.pid)
+    ) {
+      const live = await probe(onDisk.port, 1500);
+      if (
+        live &&
+        live.serverVersion === opts.version &&
+        live.agentProtocol === AGENT_PROTOCOL_VERSION
+      ) {
+        return { port: live.port };
+      }
+    }
+    // Alive pid but unresponsive after a generous 1500ms re-probe is a
+    // wedged daemon, not a busy one — it SHOULD be reaped.
+    return null;
+  };
+}
+
 export async function runDaemon(
   opts: DaemonOptions
 ): Promise<DaemonHandle | { attachInsteadPort: number } | null> {
   const info: SingletonInfo = await acquireSingletonLock({
     stateDir: opts.stateDir,
     holdLock: true,
-    recheckAttachable: async () => {
-      const decision = await decideRole({ stateDir: opts.stateDir, myVersion: opts.version });
-      return decision.mode === "attach" ? { port: decision.port } : null;
-    },
+    recheckAttachable: buildRecheckAttachable({ stateDir: opts.stateDir, version: opts.version }),
   });
   if (info.attachInsteadPort !== undefined) {
     return { attachInsteadPort: info.attachInsteadPort };
