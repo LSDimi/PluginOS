@@ -122,6 +122,54 @@ describe("LinkManager", () => {
     await mgr.stop();
   });
 
+  it("discards a link that resolves after stop (stop race)", async () => {
+    const late = fakeLink();
+    let resolveConnect: (l: DaemonLink) => void = () => {};
+    const d = deps({
+      decideRole: vi.fn(async () => ({ mode: "attach" as const, port: 9500 })),
+      connectLink: vi.fn(
+        () =>
+          new Promise<DaemonLink>((resolve) => {
+            resolveConnect = resolve;
+          })
+      ),
+    });
+    const mgr = new LinkManager(d);
+    const startP = mgr.start();
+    await vi.waitFor(() => expect(d.connectLink).toHaveBeenCalled());
+
+    expect(await mgr.handleStdioClosed()).toBe("exit");
+    resolveConnect(late); // in-flight connect resolves AFTER teardown
+    await startP;
+
+    expect(late.close).toHaveBeenCalled();
+    expect(await mgr.waitForLink(50)).toBeNull();
+  });
+
+  it("closes the started daemon when the loopback connect fails, then recovers", async () => {
+    const firstHandle = fakeHandle(9505);
+    const secondHandle = fakeHandle(9506);
+    const link = fakeLink();
+    const startDaemon = vi.fn().mockResolvedValueOnce(firstHandle).mockResolvedValue(secondHandle);
+    const connectLink = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("loopback refused"))
+      .mockResolvedValue(link);
+    const d = deps({
+      decideRole: vi.fn(async () => ({ mode: "bind" as const })),
+      startDaemon,
+      connectLink,
+    });
+    const mgr = new LinkManager(d);
+    await mgr.start();
+
+    expect(firstHandle.close).toHaveBeenCalled(); // failed-loopback daemon torn down
+    expect(mgr.isHosting()).toBe(true); // recovered on the retry
+    expect(await mgr.waitForLink(100)).toBe(link.client);
+    await mgr.stop();
+    expect(secondHandle.close).toHaveBeenCalled();
+  });
+
   it("handleStdioClosed: exit when not hosting, linger when hosting with other agents", async () => {
     const link = fakeLink();
     const attached = deps({

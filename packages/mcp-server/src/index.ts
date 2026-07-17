@@ -61,7 +61,9 @@ async function main(): Promise<void> {
   console.error(
     manager.isHosting()
       ? "PluginOS session layer running on stdio (hosting daemon)"
-      : "PluginOS session layer running on stdio (attached to daemon)"
+      : manager.isLinked()
+        ? "PluginOS session layer running on stdio (attached to daemon)"
+        : "PluginOS session layer running on stdio (no daemon link yet — retrying in background)"
   );
 }
 

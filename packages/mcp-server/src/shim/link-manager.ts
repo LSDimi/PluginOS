@@ -31,16 +31,23 @@ export class LinkManager {
   private everLinked = false;
   private stopped = false;
   private looping = false;
+  private starting = false;
 
   constructor(private deps: LinkManagerDeps) {}
 
   async start(): Promise<void> {
-    const deadline = Date.now() + START_BUDGET_MS;
-    while (!this.stopped && Date.now() < deadline) {
-      if (await this.tryEstablish()) return;
-      await sleep(this.jitter());
+    if (this.starting) return;
+    this.starting = true;
+    try {
+      const deadline = Date.now() + START_BUDGET_MS;
+      while (!this.stopped && Date.now() < deadline) {
+        if (await this.tryEstablish()) return;
+        await sleep(this.jitter());
+      }
+      if (!this.stopped) void this.backgroundLoop();
+    } finally {
+      this.starting = false;
     }
-    if (!this.stopped) void this.backgroundLoop();
   }
 
   private jitter(): number {
@@ -48,26 +55,55 @@ export class LinkManager {
   }
 
   private async tryEstablish(): Promise<boolean> {
+    let startedDaemon: DaemonHandle | null = null;
     try {
       const decision = await this.deps.decideRole();
       if (decision.mode === "attach") {
         return await this.attach(decision.port);
       }
       const started = await this.deps.startDaemon();
+      if (this.stopped) {
+        // stop()/handleStdioClosed() raced the bind: tear down what we just
+        // started before anyone can observe it.
+        if (started && !("attachInsteadPort" in started)) {
+          await started.close().catch(() => {});
+        }
+        return false;
+      }
       if (started === null) return false;
       if ("attachInsteadPort" in started) {
         return await this.attach(started.attachInsteadPort);
       }
+      startedDaemon = started;
       this.daemon = started;
-      return await this.attach(started.port); // loopback
+      const linked = await this.attach(started.port); // loopback
+      if (!linked) {
+        // attach() only returns false when stopped raced us mid-connect —
+        // the daemon we just bound must not outlive the refusal.
+        await started.close().catch(() => {});
+        if (this.daemon === started) this.daemon = null;
+      }
+      return linked;
     } catch (err) {
       console.error(`[shim] link attempt failed: ${(err as Error).message}`);
+      if (startedDaemon) {
+        // The loopback connect failed AFTER we bound a daemon: close it so a
+        // retry doesn't orphan a live, linkless daemon (port + singleton state).
+        await startedDaemon.close().catch(() => {});
+        if (this.daemon === startedDaemon) this.daemon = null;
+      }
       return false;
     }
   }
 
   private async attach(port: number): Promise<boolean> {
     const link = await this.deps.connectLink(port);
+    if (this.stopped) {
+      // stop()/handleStdioClosed() ran while the connect was in flight; the
+      // late link must be discarded, not resurrected as this.link.
+      await link.close().catch(() => {});
+      return false;
+    }
     this.link = link;
     link.onClose(() => {
       if (this.link === link) {
@@ -116,14 +152,28 @@ export class LinkManager {
     return this.daemon !== null;
   }
 
+  isLinked(): boolean {
+    return this.link !== null;
+  }
+
   hostedAgentCount(): number {
     return this.daemon ? this.daemon.agentEndpoint.getCount() : 0;
   }
 
+  /** Resolve every pending waitForLink() with null (their timers are cleared
+   *  by resolving through the same waiter function). */
+  private flushWaiters(): void {
+    const waiters = this.linkWaiters;
+    this.linkWaiters = [];
+    for (const w of waiters) w(null);
+  }
+
   async handleStdioClosed(): Promise<"exit" | "linger"> {
     this.stopped = true;
+    this.flushWaiters();
     if (!this.daemon) {
       await this.link?.close().catch(() => {});
+      this.link = null;
       return "exit";
     }
     // Hosting: release only the loopback link; DaemonLifetime's zero-agent
@@ -135,6 +185,7 @@ export class LinkManager {
 
   async stop(): Promise<void> {
     this.stopped = true;
+    this.flushWaiters();
     await this.link?.close().catch(() => {});
     this.link = null;
     if (this.daemon) {
