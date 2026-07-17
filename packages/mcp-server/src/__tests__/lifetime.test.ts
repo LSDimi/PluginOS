@@ -66,4 +66,13 @@ describe("DaemonLifetime", () => {
     vi.advanceTimersByTime(60_000);
     expect(onExpire).not.toHaveBeenCalled();
   });
+
+  it("update after dispose is a no-op", () => {
+    const onExpire = vi.fn();
+    const lt = new DaemonLifetime({ graceMs: 30_000, onExpire });
+    lt.dispose();
+    lt.update(0); // must not re-arm a disposed lifetime
+    vi.advanceTimersByTime(60_000);
+    expect(onExpire).not.toHaveBeenCalled();
+  });
 });

@@ -10,6 +10,7 @@ export interface LifetimeOptions {
  */
 export class DaemonLifetime {
   private timer: NodeJS.Timeout | null = null;
+  private disposed = false;
   private readonly graceMs: number;
 
   constructor(private opts: LifetimeOptions) {
@@ -17,6 +18,7 @@ export class DaemonLifetime {
   }
 
   update(agentCount: number): void {
+    if (this.disposed) return;
     if (agentCount > 0) {
       if (this.timer) {
         clearTimeout(this.timer);
@@ -32,7 +34,9 @@ export class DaemonLifetime {
     }
   }
 
+  /** Latches: any update() after dispose() is a no-op. */
   dispose(): void {
+    this.disposed = true;
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;

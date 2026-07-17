@@ -1,10 +1,34 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mkdtemp, rm, readFile, access } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import WebSocket from "ws";
 import { runDaemon, type DaemonHandle } from "../daemon.js";
 import { probeStateEndpoint } from "../role.js";
+import { createAgentHello, parseAgentMessage } from "../agent/protocol.js";
+
+/** Client-side /agent handshake, mirroring daemon-endpoint.test.ts. */
+async function openAgentSocket(port: number): Promise<WebSocket> {
+  const ws = new WebSocket(`ws://127.0.0.1:${port}/agent`);
+  await new Promise<void>((resolve, reject) => {
+    ws.once("open", resolve);
+    ws.once("error", reject);
+  });
+  const helloReply = new Promise<void>((resolve, reject) => {
+    ws.once("message", (data) => {
+      const msg = parseAgentMessage(data.toString());
+      if (msg?.type === "DAEMON_HELLO") {
+        resolve();
+      } else {
+        reject(new Error(`bad reply: ${String(data)}`));
+      }
+    });
+  });
+  ws.send(JSON.stringify(createAgentHello("0.8.0")));
+  await helloReply;
+  return ws;
+}
 
 const RANGE: [number, number] = [9720, 9722];
 
@@ -109,5 +133,27 @@ describe("runDaemon", () => {
     } finally {
       await new Promise<void>((r) => blocker.close(() => r()));
     }
+  });
+
+  it("does not resurrect state.json when an agent is still attached at close", async () => {
+    handle = (await runDaemon({
+      stateDir: dir,
+      portRange: RANGE,
+      version: "0.8.0",
+      parentPid: process.ppid,
+      onExpire: () => {}, // a mis-armed grace timer must not exit the test process
+    })) as DaemonHandle;
+
+    const ws = await openAgentSocket(handle.port);
+    await vi.waitFor(() => expect(handle!.agentEndpoint.getCount()).toBe(1));
+
+    // Closing with the agent still attached fires the count-change callback
+    // during teardown; a stale writeStateFile after clearSingletonState would
+    // resurrect state.json.
+    await handle.close();
+    handle = null;
+    await new Promise((r) => setTimeout(r, 150));
+    await expect(access(join(dir, "state.json"))).rejects.toThrow();
+    ws.close();
   });
 });

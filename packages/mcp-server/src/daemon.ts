@@ -119,11 +119,19 @@ export async function runDaemon(
 
   const unregisterShutdownHandlers = registerShutdownHandlers(info);
 
+  let closed = false;
   const cleanup = async (): Promise<void> => {
+    if (closed) return;
+    closed = true;
     lifetime.dispose();
     unregisterShutdownHandlers();
-    await stateWriteChain.catch(() => {});
+    // Quiesce count events BEFORE closing the endpoint: closing attached
+    // sockets fires onCountChange during close, which would otherwise queue
+    // a writeStateFile that lands after clearSingletonState and resurrects
+    // a stale state.json.
+    ep.onCountChange(() => {});
     await ep.close();
+    await stateWriteChain.catch(() => {});
     await pluginBridge.close();
     await new Promise<void>((r) => http.close(() => r()));
     await clearSingletonState(info);
