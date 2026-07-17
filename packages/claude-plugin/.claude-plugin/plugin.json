@@ -1,6 +1,6 @@
 {
   "name": "pluginos",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Token-efficient Figma automation via MCP. Bridges Claude to Figma without burning tokens on raw node dumps.",
   "author": {
     "name": "LSDimi",

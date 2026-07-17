@@ -10,11 +10,14 @@ PluginOS is a **token-efficient MCP bridge** between LLM agents and Figma. It ex
 ## Data Flow
 
 ```
-Agent ──[MCP stdio]──→ MCP Server ──[WebSocket localhost:9500-9510]──→ Figma Bridge Plugin ──[figma.* API]──→ Figma Document
-                           │
-                     [HTTP server]
-                           │
-                    Bootloader UI fetch
+Agent A ──[MCP stdio]──→ pluginos (session layer, hosts daemon role)
+Agent B ──[MCP stdio]──→ pluginos (session layer) ──[WS /agent]──┐
+                                                                 ▼
+                                     daemon role: WS + HTTP (one port, 9500-9510)
+                                        │                    │
+                                        │ WebSocket (path /) │ HTTP: /ui.html, /state.json
+                                        ▼                    ▼
+                              Figma Bridge Plugin      Bootloader UI fetch
 ```
 
 ## Monorepo Packages (`packages/`)
@@ -32,7 +35,7 @@ Agent ──[MCP stdio]──→ MCP Server ──[WebSocket localhost:9500-9510
 
 **Request Correlation**: Each WebSocket message gets a unique ID (`req_${++counter}_${Date.now()}`). Responses are matched back via a `Map<id, resolve/reject>` with timeout handling.
 
-**Port Auto-Discovery**: Server finds first available port in 9500-9510. Plugin scans the same range to connect. Reconnects with backoff `[1s, 3s, 5s, 10s]` and 30s giveup.
+**Port Auto-Discovery**: Server finds first available port in 9500-9510. Plugin scans the same range to connect. Reconnects with backoff `[1s, 3s, 5s, 10s]` for ~30s, then falls back to a quiet 15s slow poll that never gives up; the version-mismatch view stays sticky while polling continues.
 
 **Multi-File Support**: WebSocket server tracks connected files by `fileKey`. Operations can target a specific file. Falls back to most recently active file.
 
@@ -41,3 +44,5 @@ Agent ──[MCP stdio]──→ MCP Server ──[WebSocket localhost:9500-9510
 **Serialization** (`bridge-plugin/src/utils/serializer.ts`): Handles circular refs, caps arrays at 200 items, limits object depth to 5 levels. Operations return structured summaries, not raw node dumps.
 
 **Version Handshake**: MCP server sends `SERVER_HELLO { version }` on WebSocket connect. Plugin compares major versions (minor for 0.x) and shows a mismatch UI if incompatible.
+
+**Multi-Session Daemon** (`mcp-server/src/daemon.ts`, `src/shim/`): every `pluginos` process is a stdio session layer; at most one hosts the daemon role (bridge + HTTP + `/agent`). Equal-version processes attach instead of reaping; the daemon exits 30s after its last agent detaches (`state.json.parentAlive` now means "has clients"). Crash of the host promotes a surviving session via the singleton lock.
