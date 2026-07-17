@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtemp, rm, readFile } from "node:fs/promises";
+import { mkdtemp, rm, readFile, access } from "node:fs/promises";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runDaemon, type DaemonHandle } from "../daemon.js";
@@ -81,5 +82,32 @@ describe("runDaemon", () => {
     const onDisk = JSON.parse(await readFile(join(dir, "state.json"), "utf8"));
     expect(onDisk.attachedAgents).toBe(2);
     expect(onDisk.parentAlive).toBe(true);
+  });
+
+  it("releases the lock and cleans up when no port is available", async () => {
+    const blocker = createServer();
+    await new Promise<void>((r) => blocker.listen(9723, "127.0.0.1", () => r()));
+    try {
+      await expect(
+        runDaemon({
+          stateDir: dir,
+          portRange: [9723, 9723],
+          version: "0.8.0",
+          parentPid: process.ppid,
+        })
+      ).rejects.toThrow(/No available port/);
+      // Lock must not be leaked.
+      await expect(access(join(dir, "server.pid.lock"))).rejects.toThrow();
+      // A fresh daemon on a free range must bind.
+      handle = (await runDaemon({
+        stateDir: dir,
+        portRange: [9724, 9726],
+        version: "0.8.0",
+        parentPid: process.ppid,
+      })) as DaemonHandle;
+      expect(handle.port).toBe(9724);
+    } finally {
+      await new Promise<void>((r) => blocker.close(() => r()));
+    }
   });
 });

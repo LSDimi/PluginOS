@@ -66,36 +66,66 @@ export async function runDaemon(
     return { attachInsteadPort: info.attachInsteadPort };
   }
 
+  // Construction happens while the lock is held: any failure below must
+  // release the lock and tear down whatever was already opened, or the
+  // next runDaemon in this process would find a leaked lock file.
   let currentState: StateFile | null = null;
-  const httpServer = createHttpServer(
-    () => loadUiContent(),
-    () => currentState
-  );
-  const bridge = new WebSocketPluginBridge({ httpServer, portRange: opts.portRange });
-  const port = await bridge.start();
-  console.error(`PluginOS daemon: WebSocket + HTTP on port ${port}`);
+  let httpServer: ReturnType<typeof createHttpServer> | null = null;
+  let bridge: WebSocketPluginBridge | null = null;
+  let agentEndpoint: AgentEndpoint | null = null;
+  let port: number;
+  let state: StateFile;
+  try {
+    httpServer = createHttpServer(
+      () => loadUiContent(),
+      () => currentState
+    );
+    bridge = new WebSocketPluginBridge({ httpServer, portRange: opts.portRange });
+    port = await bridge.start();
+    console.error(`PluginOS daemon: WebSocket + HTTP on port ${port}`);
 
-  const agentEndpoint = new AgentEndpoint(bridge, opts.version);
-  agentEndpoint.register(bridge.getRouter()!);
+    agentEndpoint = new AgentEndpoint(bridge, opts.version);
+    agentEndpoint.register(bridge.getRouter()!);
 
-  const state = buildStateFile({
-    pid: process.pid,
-    port,
-    serverVersion: opts.version,
-    parentPid: opts.parentPid,
-    parentAlive: true,
-    agentProtocol: AGENT_PROTOCOL_VERSION,
-    attachedAgents: 0,
-  });
-  currentState = state;
-  await writeSingletonState(info, state);
-  await releaseSingletonLock(info);
+    state = buildStateFile({
+      pid: process.pid,
+      port,
+      serverVersion: opts.version,
+      parentPid: opts.parentPid,
+      parentAlive: true,
+      agentProtocol: AGENT_PROTOCOL_VERSION,
+      attachedAgents: 0,
+    });
+    currentState = state;
+    await writeSingletonState(info, state);
+    await releaseSingletonLock(info);
+  } catch (err) {
+    if (agentEndpoint) await agentEndpoint.close().catch(() => {});
+    if (bridge) await bridge.close().catch(() => {});
+    if (httpServer) {
+      const server = httpServer;
+      await new Promise<void>((r) => server.close(() => r()));
+    }
+    await releaseSingletonLock(info).catch(() => {});
+    throw err;
+  }
+  const ep = agentEndpoint;
+  const pluginBridge = bridge;
+  const http = httpServer;
+
+  // Serialize state.json rewrites: writeStateFile shares one tmp path, so
+  // two overlapping fire-and-forget writes could land on disk out of order.
+  let stateWriteChain: Promise<void> = Promise.resolve();
+
+  const unregisterShutdownHandlers = registerShutdownHandlers(info);
 
   const cleanup = async (): Promise<void> => {
     lifetime.dispose();
-    await agentEndpoint.close();
-    await bridge.close();
-    await new Promise<void>((r) => httpServer.close(() => r()));
+    unregisterShutdownHandlers();
+    await stateWriteChain.catch(() => {});
+    await ep.close();
+    await pluginBridge.close();
+    await new Promise<void>((r) => http.close(() => r()));
     await clearSingletonState(info);
   };
 
@@ -108,31 +138,40 @@ export async function runDaemon(
         void cleanup().finally(() => process.exit(0));
       }),
   });
-  agentEndpoint.onCountChange((n) => {
+  const applyCount = (n: number): void => {
     lifetime.update(n);
-    currentState = { ...state, parentAlive: n > 0, attachedAgents: n };
-    void writeStateFile(info.stateFilePath, currentState).catch(() => {});
-  });
-  lifetime.update(0);
+    const next: StateFile = { ...state, parentAlive: n > 0, attachedAgents: n };
+    currentState = next;
+    stateWriteChain = stateWriteChain
+      .then(() => writeStateFile(info.stateFilePath, next))
+      .catch(() => {});
+  };
+  ep.onCountChange(applyCount);
+  // Reconcile at boot: an agent may have attached between register() and the
+  // onCountChange wiring above; a hardcoded update(0) would miss it and leave
+  // state.json stale.
+  const bootCount = ep.getCount();
+  if (bootCount > 0) {
+    applyCount(bootCount);
+  } else {
+    lifetime.update(0);
+  }
 
-  registerShutdownHandlers(info);
-  return { port, bridge, agentEndpoint, close: cleanup };
+  return { port, bridge: pluginBridge, agentEndpoint: ep, close: cleanup };
 }
 
-// Moved from index.ts, minus the parent-liveness timers (replaced by DaemonLifetime).
-function registerShutdownHandlers(info: SingletonInfo): void {
+// Moved from index.ts, minus the parent-liveness timers (replaced by
+// DaemonLifetime). Returns an unregister function so repeated
+// runDaemon()+close() cycles don't accumulate process listeners.
+function registerShutdownHandlers(info: SingletonInfo): () => void {
   const cleanup = async (): Promise<void> => {
     await clearSingletonState(info);
   };
-  process.on("SIGTERM", async () => {
+  const onSignal = async (): Promise<void> => {
     await cleanup();
     process.exit(0);
-  });
-  process.on("SIGINT", async () => {
-    await cleanup();
-    process.exit(0);
-  });
-  process.on("exit", () => {
+  };
+  const onExit = (): void => {
     try {
       unlinkSync(info.stateFilePath);
     } catch {
@@ -143,5 +182,13 @@ function registerShutdownHandlers(info: SingletonInfo): void {
     } catch {
       // ignored
     }
-  });
+  };
+  process.on("SIGTERM", onSignal);
+  process.on("SIGINT", onSignal);
+  process.on("exit", onExit);
+  return () => {
+    process.off("SIGTERM", onSignal);
+    process.off("SIGINT", onSignal);
+    process.off("exit", onExit);
+  };
 }
