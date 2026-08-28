@@ -4,6 +4,8 @@
 
 Agent-native Figma operations platform. Run any Figma plugin operation from any LLM agent at **~230 tokens per call** instead of ~28,000.
 
+Built by [Dimitrios Arapis](https://arapis.de) - the full story of this toolchain is at [arapis.de/work/open-tooling](https://arapis.de/work/open-tooling).
+
 ![PluginOS](PluginOS.png)
 
 ## Why PluginOS
