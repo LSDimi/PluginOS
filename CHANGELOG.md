@@ -2,6 +2,12 @@
 
 All notable changes to PluginOS are documented here. Versions are kept in lockstep across `mcp-server`, `shared`, `bridge-plugin`, and `claude-plugin` (see `scripts/check-version-lockstep.cjs`).
 
+## 0.8.1 — 2026-10-14
+
+- **Dependency security lift (#63):** `@modelcontextprotocol/sdk` 1.29.0 → 1.32.1 (GHSA-6qxp-vccf-f47h), `proxy-addr` 2.0.7 → 2.0.8 (GHSA-jqcg-44mw-7w3h), `fast-uri` → 3.1.8, `hono` → 4.13.13, `ip-address` → 10.7.4, `qs` → 6.16.0. `npm audit --audit-level=high --omit=dev` is clean again on `main`.
+- Dev dependencies: `adm-zip` 0.6.1, `browserslist` 4.29.3, `baseline-browser-mapping` 2.11.28.
+- No behaviour or protocol changes. 0.8.0 plugins and servers interoperate with 0.8.1.
+
 ## 0.8.0 — 2026-07-17
 
 - **Multi-session daemon (B1):** concurrent `pluginos` sessions now share one daemon instead of racing to bind a port and reaping each other. Every `pluginos` process starts as a stdio session layer; the first one to start hosts the daemon role (bridge + HTTP + `/agent`), and later sessions attach to it over a WebSocket `/agent` endpoint instead of killing the running server.
